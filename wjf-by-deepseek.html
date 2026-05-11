@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>微积分 — 从零开始的交互式教程</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #f472b6;
+    --accent3: #a78bfa;
+    --accent4: #34d399;
+    --accent5: #fb923c;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+  nav {
+    width: 280px; min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 10;
+  }
+  nav h2 {
+    font-size: 1.2rem; margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  nav a {
+    display: block; padding: 8px 12px; color: var(--text-secondary);
+    text-decoration: none; border-radius: 8px; font-size: 0.9rem;
+    transition: all 0.2s; margin-bottom: 2px;
+  }
+  nav a:hover, nav a.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+  nav a.sub { padding-left: 28px; font-size: 0.82rem; }
+
+  main { flex: 1; padding: 40px 48px; max-width: 960px; }
+  h1 {
+    font-size: 2.2rem; margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  h2 {
+    font-size: 1.5rem; margin: 48px 0 16px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--border); color: var(--accent);
+  }
+  h3 { font-size: 1.15rem; margin: 28px 0 10px; color: var(--accent3); }
+  p, li { color: var(--text-secondary); margin-bottom: 10px; }
+  .highlight { color: var(--accent); font-weight: 600; }
+  .highlight2 { color: var(--accent2); font-weight: 600; }
+  .highlight3 { color: var(--accent3); }
+  .highlight4 { color: var(--accent4); }
+  .highlight5 { color: var(--accent5); font-weight: 600; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin: 20px 0; box-shadow: var(--shadow);
+  }
+  .viz-container {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; margin: 20px 0;
+    text-align: center; box-shadow: var(--shadow); position: relative;
+  }
+  canvas { display: block; margin: 0 auto; border-radius: 8px; }
+
+  .btn {
+    display: inline-block; padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent), #0ea5e9);
+    color: #0f172a; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 0.95rem; font-weight: 600; margin: 4px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,189,248,0.3); }
+  .btn:active { transform: scale(0.97); }
+  .btn.accent2 { background: linear-gradient(135deg, var(--accent2), #e11d48); }
+  .btn.accent3 { background: linear-gradient(135deg, var(--accent3), #7c3aed); }
+  .btn.accent4 { background: linear-gradient(135deg, var(--accent4), #059669); }
+  .btn.accent5 { background: linear-gradient(135deg, var(--accent5), #ea580c); }
+
+  input[type=range] { width: 160px; accent-color: var(--accent); vertical-align: middle; }
+  .slider-val { display: inline-block; width: 42px; text-align: center; font-weight: 600; color: var(--accent); }
+
+  .formula {
+    display: inline-block; background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.2); border-radius: 6px;
+    padding: 4px 10px; font-family: 'Courier New', monospace; margin: 2px; font-size: 0.95rem;
+  }
+  .formula-block {
+    display: block; text-align: center; font-size: 1.2rem; padding: 16px; margin: 16px 0;
+  }
+  .step {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin: 12px 0; padding: 12px;
+    background: rgba(167,139,250,0.05); border-radius: 10px;
+    border-left: 3px solid var(--accent3);
+  }
+  .step-num {
+    background: var(--accent3); color: #0f172a;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+  }
+  code { background: rgba(56,189,248,0.1); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; }
+
+  table {
+    width: 100%; border-collapse: collapse; margin: 16px 0;
+  }
+  th, td {
+    padding: 10px 14px; text-align: center; border: 1px solid var(--border);
+  }
+  th { background: rgba(56,189,248,0.1); color: var(--accent); font-weight: 600; }
+  td { color: var(--text-secondary); font-family: 'Courier New', monospace; }
+
+  .emoji-icon { font-style: normal; margin-right: 6px; }
+  html { scroll-behavior: smooth; }
+
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    nav { width: 100%; min-width: auto; height: auto; position: relative; padding: 12px; }
+    nav a { display: inline-block; margin: 2px; }
+    main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <h2>📈 微积分教程</h2>
+  <a href="#intro">👋 引言：为什么学微积分</a>
+  <a href="#derivative">1️⃣ 导数是什么</a>
+  <a href="#deriv-rules">2️⃣ 基本求导公式</a>
+  <a href="#deriv-laws">3️⃣ 求导法则</a>
+  <a href="#partial">4️⃣ 偏导数</a>
+  <a href="#gradient">5️⃣ 梯度</a>
+  <a href="#chain">6️⃣ 链式法则</a>
+  <a href="#playground">🎮 自由练习场</a>
+</nav>
+
+<main>
+
+<h1>微积分：从零开始的交互式教程</h1>
+<p style="font-size:1.1rem; margin-bottom:32px;">
+  基于《动手学深度学习》2.4节 · 从导数到梯度，每个概念都有<span class="highlight">可拖动的动画演示</span>
+</p>
+
+<!-- ==================== INTRO ==================== -->
+<section id="intro">
+<div class="card">
+  <h3>🤔 为什么深度学习需要微积分？</h3>
+  <p>训练神经网络本质上是在做一件事：<span class="highlight">找到让"错误"最小的参数</span>。这个过程叫<strong>优化</strong>。</p>
+  <p>想象你站在一座山上想下山——你每次都往<span class="highlight">最陡的方向</span>走一步。这个"最陡的方向"就是<strong>梯度</strong>，而梯度来自<strong>导数</strong>。</p>
+  <p>微积分在深度学习中的角色：</p>
+  <p>📉 <strong>导数</strong> → 函数在某点的瞬时变化率（切线的斜率）</p>
+  <p>📊 <strong>偏导数</strong> → 多元函数对某一个变量的变化率</p>
+  <p>🧭 <strong>梯度</strong> → 所有偏导数组成的向量，指向函数增长最快的方向</p>
+  <p>⛓️ <strong>链式法则</strong> → 复合函数求导，反向传播算法的数学基础</p>
+</div>
+</section>
+
+<!-- ==================== DERIVATIVE ==================== -->
+<section id="derivative">
+<h2><span class="emoji-icon">1️⃣</span> 导数 Derivative</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>导数描述函数在某一点的<span class="highlight">瞬时变化率</span>。直观理解：<strong>函数曲线在该点切线的斜率</strong>。</p>
+  <div class="formula-block">
+    <span class="formula">f'(x) = lim[h→0] ( f(x+h) − f(x) ) / h</span>
+  </div>
+  <p>分子 <span class="formula">f(x+h) − f(x)</span> 是函数值的变化量，分母 <span class="formula">h</span> 是自变量的变化量。<span class="highlight">当 h 趋近于 0</span>，这个比值就是那一点的导数。</p>
+  <p>等价记号：<span class="formula">f'(x)</span> = <span class="formula">dy/dx</span> = <span class="formula">df/dx</span> = <span class="formula">Df(x)</span></p>
+</div>
+
+<div class="viz-container">
+  <canvas id="derivCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <label>拖动切点 x₀: </label>
+    <input type="range" min="-45" max="45" value="10" id="tangentX" oninput="drawDeriv()">
+    <span class="slider-val" id="tangentXv">1.0</span>
+    &nbsp;&nbsp;
+    <button class="btn" onclick="derivStep()">🎬 逐步演示极限过程</button>
+    <button class="btn accent3" onclick="switchFunc()">🔄 切换函数</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="derivResult"></p>
+</div>
+</section>
+
+<!-- ==================== DERIVATIVE RULES ==================== -->
+<section id="deriv-rules">
+<h2><span class="emoji-icon">2️⃣</span> 基本求导公式</h2>
+
+<div class="card">
+  <h3>四个最基本的公式</h3>
+  <table>
+    <tr><th>函数 f(x)</th><th>导数 f'(x)</th><th>记忆口诀</th></tr>
+    <tr><td>C（常数）</td><td>0</td><td>常数不变，导数为零</td></tr>
+    <tr><td>xⁿ（幂函数）</td><td>n·xⁿ⁻¹</td><td>指数搬下来，指数减 1</td></tr>
+    <tr><td>eˣ</td><td>eˣ</td><td>eˣ 是"不死之身"，导数还是它自己</td></tr>
+    <tr><td>ln(x)</td><td>1/x</td><td>ln 求导得倒数</td></tr>
+  </table>
+  <p style="margin-top:10px;">其中 <span class="highlight">幂法则</span> 最常用：<span class="formula">d/dx [xⁿ] = n·xⁿ⁻¹</span>，n 可以是任意实数。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="rulesCanvas" width="650" height="360"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="showRule('power')">幂函数 xⁿ</button>
+    <button class="btn accent2" onclick="showRule('exp')">eˣ</button>
+    <button class="btn accent3" onclick="showRule('ln')">ln(x)</button>
+    <button class="btn accent4" onclick="showRule('const')">常数</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="rulesResult"></p>
+</div>
+</section>
+
+<!-- ==================== DERIVATIVE LAWS ==================== -->
+<section id="deriv-laws">
+<h2><span class="emoji-icon">3️⃣</span> 求导法则</h2>
+
+<div class="card">
+  <h3>四大法则</h3>
+  <p><span class="highlight">① 常数相乘：</span><span class="formula">d/dx[C·f(x)] = C·f'(x)</span> — 常数可以"提出来"</p>
+  <p><span class="highlight">② 加法法则：</span><span class="formula">d/dx[f(x)+g(x)] = f'(x) + g'(x)</span> — 和的导数 = 导数的和</p>
+  <p><span class="highlight">③ 乘法法则：</span><span class="formula">d/dx[f(x)·g(x)] = f(x)g'(x) + g(x)f'(x)</span> — <strong>前导后不导 + 后导前不导</strong></p>
+  <p><span class="highlight">④ 除法法则：</span><span class="formula">d/dx[f(x)/g(x)] = (g·f' − f·g') / g²</span> — <strong>分子导分母不导 − 分母导分子不导，除以分母平方</strong></p>
+</div>
+
+<div class="viz-container">
+  <canvas id="lawsCanvas" width="650" height="260"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="lawDemo('constant')">常数相乘</button>
+    <button class="btn accent2" onclick="lawDemo('sum')">加法法则</button>
+    <button class="btn accent3" onclick="lawDemo('product')">乘法法则</button>
+    <button class="btn accent4" onclick="lawDemo('example')">综合例子</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="lawsResult"></p>
+</div>
+</section>
+
+<!-- ==================== PARTIAL DERIVATIVES ==================== -->
+<section id="partial">
+<h2><span class="emoji-icon">4️⃣</span> 偏导数 Partial Derivative</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>当函数有<span class="highlight">多个自变量</span>时（如 <span class="formula">f(x₁, x₂, ..., xₙ)</span>），偏导数 = <strong>只对其中一个变量求导，把其他变量当作常数</strong>。</p>
+  <div class="formula-block">
+    <span class="formula" style="font-size:1.1rem;">∂y/∂xᵢ = lim[h→0] ( f(x₁,...,xᵢ+h,...,xₙ) − f(x₁,...,xᵢ,...,xₙ) ) / h</span>
+  </div>
+  <p>记号：<span class="formula">∂y/∂xᵢ</span> = <span class="formula">∂f/∂xᵢ</span> = <span class="formula">f_{xᵢ}</span> = <span class="formula">Dᵢf</span>（注意用<span class="highlight2">弯的 ∂</span> 而非直的 d）</p>
+  <p>例子：<span class="formula">f(x,y) = 3x² + 5xy + y³</span>，则 <span class="formula">∂f/∂x = 6x + 5y</span>（把 y 当常数），<span class="formula">∂f/∂y = 5x + 3y²</span>（把 x 当常数）。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="partialCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <label>拖动 x: </label>
+    <input type="range" min="-40" max="40" value="0" id="px" oninput="drawPartial()">
+    <span class="slider-val" id="pxv">0.0</span>
+    <label>拖动 y: </label>
+    <input type="range" min="-40" max="40" value="0" id="py" oninput="drawPartial()">
+    <span class="slider-val" id="pyv">0.0</span>
+    &nbsp;
+    <button class="btn" onclick="partialDemo('x')">∂f/∂x（对x偏导）</button>
+    <button class="btn accent2" onclick="partialDemo('y')">∂f/∂y（对y偏导）</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="partialResult"></p>
+</div>
+</section>
+
+<!-- ==================== GRADIENT ==================== -->
+<section id="gradient">
+<h2><span class="emoji-icon">5️⃣</span> 梯度 Gradient</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>梯度是<span class="highlight">所有偏导数组成的向量</span>，指向函数<strong>增长最快</strong>的方向。</p>
+  <div class="formula-block">
+    <span class="formula" style="font-size:1.1rem;">∇f(x) = [∂f/∂x₁, ∂f/∂x₂, ..., ∂f/∂xₙ]ᵀ</span>
+  </div>
+  <p>倒三角 <span class="formula">∇</span> 读作 "nabla"，∇f 就是一个包含所有偏导数的向量。</p>
+  <p>深度学习中的意义：<span class="highlight">梯度指向损失函数增长最快的方向，所以我们要往反方向（负梯度）走，才能让损失变小！</span></p>
+
+  <h3 style="margin-top:20px;">常用梯度公式</h3>
+  <table>
+    <tr><th>表达式</th><th>梯度</th></tr>
+    <tr><td>Ax（A是矩阵，x是向量）</td><td>Aᵀ</td></tr>
+    <tr><td>xᵀA</td><td>A</td></tr>
+    <tr><td>‖x‖² = xᵀx</td><td>2x</td></tr>
+    <tr><td>‖X‖²_F（矩阵 Frobenius 范数平方）</td><td>2X</td></tr>
+  </table>
+</div>
+
+<div class="viz-container">
+  <canvas id="gradCanvas" width="650" height="420"></canvas>
+  <div style="margin-top:12px;">
+    <label>拖动鼠标到曲面上方查看梯度 👆&nbsp;</label>
+    <button class="btn accent2" onclick="gradDemo()">🎬 演示梯度下降一步</button>
+    <button class="btn accent3" onclick="resetGrad()">↺ 重置</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="gradResult"></p>
+</div>
+</section>
+
+<!-- ==================== CHAIN RULE ==================== -->
+<section id="chain">
+<h2><span class="emoji-icon">6️⃣</span> 链式法则 Chain Rule</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>链式法则用于求<span class="highlight">复合函数</span>的导数。如果 <span class="formula">y = f(u)</span> 且 <span class="formula">u = g(x)</span>，则：</p>
+  <div class="formula-block">
+    <span class="formula" style="font-size:1.1rem;">dy/dx = dy/du · du/dx</span>
+  </div>
+
+  <p>多变量情形：如果 y 依赖 u₁, u₂, ..., uₘ，每个 uᵢ 又依赖 x₁, x₂, ..., xₙ，则：</p>
+  <div class="formula-block">
+    <span class="formula" style="font-size:1rem;">∂y/∂xᵢ = Σⱼ (∂y/∂uⱼ · ∂uⱼ/∂xᵢ)</span>
+  </div>
+
+  <p style="color:var(--accent5);">🔥 <strong>深度学习核心：反向传播（Backpropagation）就是链式法则在整个神经网络上的应用！</strong>从输出层往回逐层求梯度，每一步都是链式法则。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="chainCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="chainDemo('simple')">简单链式：y = (3x+2)²</button>
+    <button class="btn accent2" onclick="chainDemo('neural')">神经网络风格</button>
+    <button class="btn accent3" onclick="chainDemo('multivar')">多变量链式</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="chainResult"></p>
+</div>
+</section>
+
+<!-- ==================== PLAYGROUND ==================== -->
+<section id="playground">
+<h2><span class="emoji-icon">🎮</span> 自由练习场</h2>
+
+<div class="viz-container">
+  <canvas id="playCanvas" width="650" height="420"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="playDemo('x2')">f(x)=x²</button>
+    <button class="btn accent2" onclick="playDemo('x3')">f(x)=x³</button>
+    <button class="btn accent3" onclick="playDemo('x3minus')">f(x)=x³−1/x</button>
+    <button class="btn accent4" onclick="playDemo('sigmoid')">σ(x)=1/(1+e⁻ˣ)</button>
+    <button class="btn accent5" onclick="playDemo('combo')">3x²−4x</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="playResult"></p>
+</div>
+</section>
+
+<p style="text-align:center; padding:40px 0; color:var(--text-secondary); font-size:0.85rem;">
+  基于《动手学深度学习》2.4节 · 交互式教程由 DeepSeek 生成 · 拖动滑块、点击按钮来感受微积分！
+</p>
+
+</main>
+
+<script>
+// ==================== UTILS ====================
+let animId = null;
+function stopAnim() { if(animId) { cancelAnimationFrame(animId); animId = null; } }
+
+// ==================== 1. DERIVATIVE ====================
+let currentFunc = 'cube'; // 'cube' or 'square' or 'combo'
+
+function fVal(x) {
+  if (currentFunc === 'cube') return x*x*x/20;
+  if (currentFunc === 'square') return x*x/10;
+  return (3*x*x - 4*x)/15; // combo
+}
+function fDeriv(x) {
+  if (currentFunc === 'cube') return 3*x*x/20;
+  if (currentFunc === 'square') return 2*x/10;
+  return (6*x - 4)/15;
+}
+function fName() {
+  if (currentFunc === 'cube') return 'f(x)=x³/20';
+  if (currentFunc === 'square') return 'f(x)=x²/10';
+  return 'f(x)=(3x²−4x)/15';
+}
+
+function drawDeriv() {
+  stopAnim();
+  const c = document.getElementById('derivCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const margin = 50;
+  const plotW = W - 2*margin, plotH = H - 2*margin;
+  const cx = margin, cy = margin;
+
+  // Grid
+  ctx.strokeStyle = '#1e3a5f';
+  ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i++) {
+    const y = cy + (plotH/10)*i;
+    ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx+plotW, y); ctx.stroke();
+  }
+  for (let i = 0; i <= 10; i++) {
+    const x = cx + (plotW/10)*i;
+    ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x, cy+plotH); ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 2;
+  const zeroX = cx + plotW/2, zeroY = cy + plotH/2;
+  ctx.beginPath(); ctx.moveTo(cx, zeroY); ctx.lineTo(cx+plotW, zeroY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(zeroX, cy); ctx.lineTo(zeroX, cy+plotH); ctx.stroke();
+
+  // Labels
+  ctx.fillStyle = '#94a3b8'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('x', cx+plotW+10, zeroY+4);
+  ctx.fillText('y', zeroX, cy-10);
+
+  // Function curve
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  const xMin = -5, xMax = 5;
+  let firstPoint = true;
+  for (let px = 0; px <= plotW; px += 1) {
+    const x = xMin + (px/plotW) * (xMax - xMin);
+    const y = fVal(x);
+    const sx = cx + px;
+    const sy = zeroY - y * (plotH/10);
+    if (firstPoint) { ctx.moveTo(sx, sy); firstPoint = false; }
+    else ctx.lineTo(sx, sy);
+  }
+  ctx.stroke();
+
+  // Tangent point
+  const rawX = parseInt(document.getElementById('tangentX').value) / 10;
+  const x0 = rawX;
+  const y0 = fVal(x0);
+  const slope = fDeriv(x0);
+  document.getElementById('tangentXv').textContent = x0.toFixed(1);
+
+  // Tangent line
+  const sx0 = cx + (x0 - xMin) / (xMax - xMin) * plotW;
+  const sy0 = zeroY - y0 * (plotH/10);
+
+  // Tangent line: y - y0 = slope * (x - x0)
+  const tx1 = xMin, ty1 = y0 + slope * (tx1 - x0);
+  const tx2 = xMax, ty2 = y0 + slope * (tx2 - x0);
+  const stx1 = cx, sty1 = zeroY - ty1 * (plotH/10);
+  const stx2 = cx + plotW, sty2 = zeroY - ty2 * (plotH/10);
+
+  ctx.strokeStyle = '#f472b6';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(stx1, sty1); ctx.lineTo(stx2, sty2); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Point
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(sx0, sy0, 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Info
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText(`f(${x0.toFixed(1)}) = ${y0.toFixed(2)}`, sx0 + 12, sy0 - 20);
+  ctx.fillText(`斜率 f'(${x0.toFixed(1)}) = ${slope.toFixed(2)}`, sx0 + 12, sy0);
+
+  if (currentFunc === 'cube') {
+    document.getElementById('derivResult').innerHTML =
+      `✅ <strong>f(x)=x³/20</strong>，f'(${x0.toFixed(1)})=${slope.toFixed(2)}。导数 = <span class="highlight2">切线的斜率</span>（粉色虚线）。试试拖动 x₀！`;
+  } else if (currentFunc === 'square') {
+    document.getElementById('derivResult').innerHTML =
+      `✅ <strong>f(x)=x²/10</strong>，f'(${x0.toFixed(1)})=${slope.toFixed(2)}。x>0 时斜率为正（上升），x<0 时斜率为负（下降）。`;
+  } else {
+    document.getElementById('derivResult').innerHTML =
+      `✅ <strong>f(x)=(3x²−4x)/15</strong>，f'(${x0.toFixed(1)})=${slope.toFixed(2)}。在 x=2/3 ≈ 0.67 处导数为 0（极小值点）。`;
+  }
+}
+
+function switchFunc() {
+  stopAnim();
+  const funcs = ['cube', 'square', 'combo'];
+  const idx = funcs.indexOf(currentFunc);
+  currentFunc = funcs[(idx + 1) % 3];
+  drawDeriv();
+}
+
+function derivStep() {
+  stopAnim();
+  const c = document.getElementById('derivCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const rawX = parseInt(document.getElementById('tangentX').value) / 10;
+  const x0 = rawX;
+
+  let frame = 0;
+  const steps = [1.0, 0.5, 0.2, 0.1, 0.05];
+  function anim() {
+    ctx.clearRect(0, 0, W, H);
+    drawDeriv(); // background
+
+    const margin = 50, plotW = W - 100, plotH = H - 100, cx = margin, zeroX = cx + plotW/2, zeroY = margin + plotH/2;
+    const xMin = -5, xMax = 5;
+    const sx0 = cx + (x0 - xMin)/(xMax - xMin) * plotW;
+    const sy0 = zeroY - fVal(x0) * (plotH/10);
+
+    const stepIdx = Math.min(Math.floor(frame / 25), steps.length - 1);
+    const h = steps[stepIdx];
+    const xh = x0 + h;
+    const yh = fVal(xh);
+    const sxh = cx + (xh - xMin)/(xMax - xMin) * plotW;
+    const syh = zeroY - yh * (plotH/10);
+    const secantSlope = (yh - fVal(x0)) / h;
+
+    // Secant line
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(sx0, sy0);
+    const extX = xMax;
+    const extY = fVal(x0) + secantSlope * (extX - x0);
+    ctx.lineTo(cx + plotW, zeroY - extY * (plotH/10));
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Points
+    ctx.fillStyle = '#38bdf8'; ctx.beginPath(); ctx.arc(sx0, sy0, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.arc(sxh, syh, 5, 0, Math.PI*2); ctx.fill();
+
+    // h indicator
+    ctx.fillStyle = '#fb923c';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(`h = ${h.toFixed(2)}`, (sx0+sxh)/2, Math.max(sy0, syh) + 20);
+    ctx.fillText(`割线斜率 = ${secantSlope.toFixed(2)}`, (sx0+sxh)/2, Math.max(sy0, syh) + 38);
+
+    if (stepIdx >= steps.length - 1 && frame % 25 > 15) {
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.fillText(`当 h→0 时，割线斜率 → 切线斜率 = ${fDeriv(x0).toFixed(2)}`, W/2, H - 20);
+    }
+
+    frame++;
+    if (frame < steps.length * 25 + 20) animId = requestAnimationFrame(anim);
+    else drawDeriv();
+  }
+  anim();
+  document.getElementById('derivResult').innerHTML =
+    '🎬 <span class="highlight5">极限过程演示</span>：h 越来越小，割线（橙色虚线）逼近切线（粉色虚线）！';
+}
+
+// Initialize
+drawDeriv();
+
+// ==================== 2. DERIVATIVE RULES ====================
+function showRule(rule) {
+  stopAnim();
+  const c = document.getElementById('rulesCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const margin = 50, plotW = W - 2*margin, plotH = H - 2*margin;
+  const cx = margin, cy = margin, zeroX = cx + plotW/2, zeroY = cy + plotH/2;
+  const xMin = -4, xMax = 4;
+
+  function drawGrid() {
+    ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 0.5;
+    for (let i = 0; i <= 10; i++) {
+      const y = cy + (plotH/10)*i; ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx+plotW, y); ctx.stroke();
+      const x = cx + (plotW/10)*i; ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x, cy+plotH); ctx.stroke();
+    }
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, zeroY); ctx.lineTo(cx+plotW, zeroY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(zeroX, cy); ctx.lineTo(zeroX, cy+plotH); ctx.stroke();
+  }
+
+  function plotFunc(fn, color, width) {
+    ctx.strokeStyle = color; ctx.lineWidth = width;
+    ctx.beginPath();
+    let first = true;
+    for (let px = 0; px <= plotW; px++) {
+      const x = xMin + (px/plotW)*(xMax-xMin);
+      const y = fn(x);
+      const sy = zeroY - y * (plotH/8);
+      if (sy < cy-20 || sy > cy+plotH+20) { first = true; continue; }
+      if (first) { ctx.moveTo(cx+px, sy); first = false; }
+      else ctx.lineTo(cx+px, sy);
+    }
+    ctx.stroke();
+  }
+
+  drawGrid();
+
+  if (rule === 'power') {
+    const n = 2;
+    plotFunc(x => Math.pow(Math.abs(x), n) * Math.sign(x) / 8, '#38bdf8', 2.5);
+    plotFunc(x => n * Math.pow(Math.abs(x), n-1) * (x>=0?1:-1) / 8, '#f472b6', 2);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('蓝色: x²', 100, H-20);
+    ctx.fillText('粉色: 导数 2x', 250, H-20);
+    document.getElementById('rulesResult').innerHTML =
+      '✅ <strong>幂法则</strong>：d/dx[x²] = 2x。指数 2 搬下来，指数减 1 得 x¹ = x';
+  } else if (rule === 'exp') {
+    plotFunc(x => Math.exp(x) / 20, '#38bdf8', 2.5);
+    plotFunc(x => Math.exp(x) / 20, '#f472b6', 2);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('蓝色和粉色完全重合！eˣ 的导数就是 eˣ', W/2, H-20);
+    document.getElementById('rulesResult').innerHTML =
+      '✅ <strong>d/dx[eˣ] = eˣ</strong>。唯一导数等于自身的函数！指数函数是"不死之身"';
+  } else if (rule === 'ln') {
+    plotFunc(x => Math.log(Math.max(x, 0.01)) / 4, '#38bdf8', 2.5);
+    plotFunc(x => 1 / Math.max(x, 0.01) / 4, '#f472b6', 2);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('蓝色: ln(x)', 100, H-20);
+    ctx.fillText('粉色: 导数 1/x', 250, H-20);
+    document.getElementById('rulesResult').innerHTML =
+      '✅ <strong>d/dx[ln(x)] = 1/x</strong>。x 越大导数越小，说明 ln(x) 增长越来越慢';
+  } else if (rule === 'const') {
+    plotFunc(x => 5, '#38bdf8', 2.5);
+    plotFunc(x => 0, '#f472b6', 2);
+    ctx.fillStyle = '#e2e8f0'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('蓝色: y=5 (水平线)', 130, H-20);
+    ctx.fillText('粉色: 导数=0 (与x轴重合)', 300, H-20);
+    document.getElementById('rulesResult').innerHTML =
+      '✅ <strong>常数的导数为 0</strong>。常数不变，变化率为零，切线是水平的';
+  }
+}
+
+showRule('power');
+
+// ==================== 3. DERIVATIVE LAWS ====================
+function lawDemo(type) {
+  stopAnim();
+  const c = document.getElementById('lawsCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '15px monospace';
+  ctx.textAlign = 'left';
+
+  if (type === 'constant') {
+    ctx.fillText('法则：d/dx[C·f(x)] = C·f\'(x)', 20, 40);
+    ctx.fillText('', 20, 65);
+    ctx.fillText('例：d/dx[5x³]', 20, 100);
+    ctx.fillText('  = 5 · d/dx[x³]         （常数5提出来）', 20, 130);
+    ctx.fillText('  = 5 · 3x²               （幂法则：x³→3x²）', 20, 160);
+    ctx.fillText('  = 15x²  ✅', 20, 190);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif';
+    ctx.fillText('常数相乘法则：常数可以直接"提取"到导数外面', 20, 230);
+    document.getElementById('lawsResult').innerHTML =
+      '✅ 常数可以直接提到导数外面：d/dx[Cf] = C·df/dx';
+  } else if (type === 'sum') {
+    ctx.fillText('法则：d/dx[f(x)+g(x)] = f\'(x) + g\'(x)', 20, 40);
+    ctx.fillText('', 20, 65);
+    ctx.fillText('例：d/dx[x³ + sin(x)]', 20, 100);
+    ctx.fillText('  = d/dx[x³] + d/dx[sin(x)]    （分别求导）', 20, 130);
+    ctx.fillText('  = 3x² + cos(x)  ✅', 20, 160);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif';
+    ctx.fillText('和的导数 = 导数的和。每一项独立求导再相加', 20, 230);
+    document.getElementById('lawsResult').innerHTML =
+      '✅ 加法法则：和的导数 = 导数的和，逐项求导即可';
+  } else if (type === 'product') {
+    ctx.fillText('法则：d/dx[f·g] = f·g\' + g·f\'', 20, 40);
+    ctx.fillText('口诀："前导后不导 + 后导前不导"', 20, 65);
+    ctx.fillText('例：d/dx[x²·eˣ]', 20, 100);
+    ctx.fillText('  f=x², g=eˣ', 20, 125);
+    ctx.fillText('  f\'=2x, g\'=eˣ', 20, 150);
+    ctx.fillText('  = x²·eˣ + eˣ·2x             （前导后不导+后导前不导）', 20, 180);
+    ctx.fillText('  = eˣ(x² + 2x)  ✅', 20, 210);
+    ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif';
+    ctx.fillText('乘法法则：不是简单地把导数乘起来！要交叉相乘再相加', 20, 240);
+    document.getElementById('lawsResult').innerHTML =
+      '✅ 乘法法则：(fg)\' = f\'g + fg\'。前导后不导 + 后导前不导！';
+  } else if (type === 'example') {
+    ctx.fillText('综合例：f(x) = 3x² − 4x', 20, 40);
+    ctx.fillText('', 20, 65);
+    ctx.fillText('f\'(x) = d/dx[3x²] − d/dx[4x]        （加法法则：逐项求导）', 20, 90);
+    ctx.fillText('       = 3·d/dx[x²] − 4·d/dx[x]      （常数相乘法则）', 20, 120);
+    ctx.fillText('       = 3·2x − 4·1                    （幂法则）', 20, 150);
+    ctx.fillText('       = 6x − 4  ✅', 20, 180);
+    ctx.fillText('在 x=1 处：f\'(1) = 6·1−4 = 2', 20, 210);
+    ctx.fillText('切线方程：y = 2(x−1) + (−1) = 2x−3', 20, 240);
+    document.getElementById('lawsResult').innerHTML =
+      '✅ f\'(x)=6x−4，在 x=1 处斜率为 2。多个法则可以组合使用！';
+  }
+}
+
+lawDemo('example');
+
+// ==================== 4. PARTIAL DERIVATIVES ====================
+let pxVal = 0, pyVal = 0;
+
+function drawPartial() {
+  stopAnim();
+  const c = document.getElementById('partialCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  pxVal = parseInt(document.getElementById('px').value) / 10;
+  pyVal = parseInt(document.getElementById('py').value) / 10;
+  document.getElementById('pxv').textContent = pxVal.toFixed(1);
+  document.getElementById('pyv').textContent = pyVal.toFixed(1);
+
+  // f(x,y) = 3x² + 5xy + y³, simplified visualization
+  const f_xy = 3*pxVal*pxVal + 5*pxVal*pyVal + pyVal*pyVal*pyVal;
+  const df_dx = 6*pxVal + 5*pyVal;
+  const df_dy = 5*pxVal + 3*pyVal*pyVal;
+
+  // Draw 3D-like projection
+  const ox = 100, oy = 240;
+  const scale = 35;
+
+  // "Ground plane" grid
+  ctx.strokeStyle = '#1e3a5f';
+  ctx.lineWidth = 0.5;
+  for (let i = -4; i <= 4; i++) {
+    const sx1 = ox + i*scale*0.7, sy1 = oy + i*scale*0.4 - 4*scale*0.4;
+    const sx2 = ox + i*scale*0.7 + 8*scale*0.7, sy2 = oy + i*scale*0.4 + 8*scale*0.4;
+    ctx.beginPath(); ctx.moveTo(sx1, sy1); ctx.lineTo(sx2, sy2); ctx.stroke();
+    const sx3 = ox + i*scale*0.7, sy3 = oy - i*scale*0.4 - 4*scale*0.4;
+  }
+
+  // Surface points
+  ctx.fillStyle = '#38bdf8';
+  for (let ix = -4; ix <= 4; ix += 0.4) {
+    for (let iy = -4; iy <= 4; iy += 0.4) {
+      const fVal2 = 3*ix*ix + 5*ix*iy + iy*iy*iy;
+      const sx = ox + (ix+4)*scale*0.7 + (iy+4)*scale*0.3;
+      const sy = oy - fVal2*0.03 + (iy+4)*scale*0.15;
+      if (sx > 30 && sx < W-30 && sy > 20 && sy < H-20) {
+        ctx.globalAlpha = 0.5;
+        ctx.beginPath(); ctx.arc(sx, sy, 3, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Current point
+  const pSx = ox + (pxVal+4)*scale*0.7 + (pyVal+4)*scale*0.3;
+  const pSy = oy - f_xy*0.03 + (pyVal+4)*scale*0.15;
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(pSx, pSy, 7, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Info panel
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`f(x,y) = 3x² + 5xy + y³`, W-280, 30);
+  ctx.fillText(`在点 (${pxVal.toFixed(1)}, ${pyVal.toFixed(1)}) 处：`, W-280, 55);
+  ctx.fillText(`f = ${f_xy.toFixed(2)}`, W-280, 80);
+  ctx.fillText(`∂f/∂x = 6x+5y = ${df_dx.toFixed(2)}`, W-280, 105);
+  ctx.fillText(`∂f/∂y = 5x+3y² = ${df_dy.toFixed(2)}`, W-280, 130);
+
+  document.getElementById('partialResult').innerHTML =
+    `移动点 (${pxVal.toFixed(1)}, ${pyVal.toFixed(1)})：∂f/∂x=<span class="highlight">${df_dx.toFixed(2)}</span>（y当常数），∂f/∂y=<span class="highlight2">${df_dy.toFixed(2)}</span>（x当常数）`;
+}
+
+function partialDemo(v) {
+  stopAnim();
+  const c = document.getElementById('partialCanvas');
+  const ctx = c.getContext('2d');
+
+  let frame = 0;
+  const targetX = v === 'x' ? 2 : pxVal;
+  const targetY = v === 'y' ? 2 : pyVal;
+
+  function anim() {
+    const t = Math.min(frame/30, 1);
+    const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+    if (v === 'x') {
+      document.getElementById('px').value = Math.round((pxVal + (targetX-pxVal)*ease)*10);
+    } else {
+      document.getElementById('py').value = Math.round((pyVal + (targetY-pyVal)*ease)*10);
+    }
+    drawPartial();
+    frame++;
+    if (frame < 40) animId = requestAnimationFrame(anim);
+  }
+  anim();
+
+  if (v === 'x') {
+    document.getElementById('partialResult').innerHTML =
+      '🎬 <strong>∂f/∂x</strong>：把 y 当作常数，只对 x 求导。y 的项当常数处理（导数为0）';
+  } else {
+    document.getElementById('partialResult').innerHTML =
+      '🎬 <strong>∂f/∂y</strong>：把 x 当作常数，只对 y 求导。x 的项当常数处理（导数为0）';
+  }
+}
+
+drawPartial();
+
+// ==================== 5. GRADIENT ====================
+let gradX = 1.5, gradY = 1.5;
+let gradPath = [];
+
+function fGrad(x, y) { return x*x + y*y; }
+function dfGradX(x, y) { return 2*x; }
+function dfGradY(x, y) { return 2*y; }
+
+function drawGradient() {
+  const c = document.getElementById('gradCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Contour plot of f(x,y) = x² + y²
+  const ox = W/2, oy = H/2 - 20;
+  const scale = 50;
+
+  // Draw contours
+  for (let r = 0.5; r <= 4; r += 0.5) {
+    ctx.strokeStyle = `rgba(56,189,248,${0.15 + r*0.05})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let a = 0; a < Math.PI*2; a += 0.05) {
+      const sx = ox + r*scale * Math.cos(a);
+      const sy = oy + r*scale * Math.sin(a);
+      if (a === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // Gradient vector field (light)
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  for (let gx = -3; gx <= 3; gx += 1) {
+    for (let gy = -3; gy <= 3; gy += 1) {
+      if (gx === 0 && gy === 0) continue;
+      const dx = dfGradX(gx, gy), dy = dfGradY(gx, gy);
+      const len = Math.sqrt(dx*dx+dy*dy);
+      const sx = ox + gx*scale, sy = oy + gy*scale;
+      const ex = sx + dx/len*15, ey = sy + dy/len*15;
+      ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+  }
+
+  // Current point
+  const sx = ox + gradX*scale, sy = oy + gradY*scale;
+  const grX = dfGradX(gradX, gradY), grY = dfGradY(gradX, gradY);
+
+  // Gradient arrow
+  ctx.strokeStyle = '#f472b6';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(sx, sy);
+  ctx.lineTo(sx + grX*20, sy + grY*20); ctx.stroke();
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(sx + grX*20, sy + grY*20, 6, 0, Math.PI*2); ctx.fill();
+
+  // Point
+  ctx.fillStyle = '#34d399';
+  ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Info
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'left';
+  const fVal2 = fGrad(gradX, gradY);
+  ctx.fillText(`f(x,y) = x² + y²`, W-250, 25);
+  ctx.fillText(`位置: (${gradX.toFixed(2)}, ${gradY.toFixed(2)})`, W-250, 50);
+  ctx.fillText(`f = ${fVal2.toFixed(2)}`, W-250, 75);
+  ctx.fillText(`∇f = [2x, 2y] = [${grX.toFixed(1)}, ${grY.toFixed(1)}]`, W-250, 100);
+  ctx.fillText(`梯度大小 = ${Math.sqrt(grX*grX+grY*grY).toFixed(2)}`, W-250, 125);
+  ctx.fillText('粉色箭头 = 梯度方向（增长最快）', W-250, 155);
+
+  // Path
+  if (gradPath.length > 1) {
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    for (let i = 0; i < gradPath.length; i++) {
+      const p = gradPath[i];
+      const psx = ox + p[0]*scale, psy = oy + p[1]*scale;
+      if (i === 0) ctx.moveTo(psx, psy); else ctx.lineTo(psx, psy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    for (const p of gradPath) {
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath(); ctx.arc(ox + p[0]*scale, oy + p[1]*scale, 3, 0, Math.PI*2); ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '13px sans-serif';
+    ctx.fillText('点击"演示梯度下降"看如何', W-250, 185);
+    ctx.fillText('沿着负梯度方向走到最小值', W-250, 205);
+  }
+
+  document.getElementById('gradResult').innerHTML =
+    `∇f=[<span class="highlight">${grX.toFixed(1)}</span>, <span class="highlight2">${grY.toFixed(1)}</span>]。梯度指向函数值增长最快的方向，负梯度就是下降最快的方向！`;
+}
+
+function gradDemo() {
+  stopAnim();
+  gradPath = [[gradX, gradY]];
+  let step = 0;
+  const lr = 0.3;
+
+  function anim() {
+    const last = gradPath[gradPath.length - 1];
+    const gx = dfGradX(last[0], last[1]);
+    const gy = dfGradY(last[0], last[1]);
+    const newX = last[0] - lr * gx;
+    const newY = last[1] - lr * gy;
+
+    if (Math.abs(newX) < 0.02 && Math.abs(newY) < 0.02) {
+      gradX = 0; gradY = 0;
+      drawGradient();
+      document.getElementById('gradResult').innerHTML =
+        '✅ <span class="highlight4">到达最小值点 (0,0)！</span>梯度下降：每一步向负梯度方向走，最终到达谷底。这就是深度学习的训练方式！';
+      return;
+    }
+
+    gradPath.push([newX, newY]);
+    gradX = newX; gradY = newY;
+    drawGradient();
+    step++;
+    if (step < 15) animId = requestAnimationFrame(anim);
+  }
+  anim();
+}
+
+function resetGrad() {
+  stopAnim();
+  gradX = 1.5; gradY = 1.5;
+  gradPath = [];
+  drawGradient();
+}
+
+// Mouse move on grad canvas
+document.getElementById('gradCanvas').addEventListener('mousemove', function(e) {
+  if (animId) return;
+  const rect = this.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const ox = 325, oy = 190;
+  const scale = 50;
+  const gx = (mx - ox) / scale;
+  const gy = (my - oy) / scale;
+  if (Math.abs(gx) <= 3.5 && Math.abs(gy) <= 3.5) {
+    gradX = gx; gradY = gy;
+    drawGradient();
+  }
+});
+
+drawGradient();
+
+// ==================== 6. CHAIN RULE ====================
+function chainDemo(type) {
+  stopAnim();
+  const c = document.getElementById('chainCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '16px monospace';
+  ctx.textAlign = 'left';
+
+  if (type === 'simple') {
+    // y = (3x+2)², u = 3x+2, y = u²
+    ctx.fillText('链式法则：dy/dx = dy/du · du/dx', 20, 35);
+    ctx.fillText('', 20, 55);
+    ctx.fillText('例：y = (3x+2)²', 20, 80);
+    ctx.fillText('设 u = 3x+2，则 y = u²', 20, 110);
+    ctx.fillText('', 20, 135);
+    ctx.fillText('dy/du = d[u²]/du = 2u', 20, 160);
+    ctx.fillText('du/dx = d[3x+2]/dx = 3', 20, 190);
+    ctx.fillText('', 20, 215);
+    ctx.fillText('dy/dx = 2u · 3 = 6u = 6(3x+2) = 18x + 12  ✅', 20, 240);
+
+    // Diagram
+    const cx2 = 420, cy2 = 160;
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath(); ctx.arc(cx2, cy2-40, 35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('x', cx2, cy2-35);
+
+    ctx.fillStyle = '#a78bfa';
+    ctx.beginPath(); ctx.arc(cx2+100, cy2-40, 35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.fillText('u = 3x+2', cx2+100, cy2-35);
+
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath(); ctx.arc(cx2+50, cy2+40, 35, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#0f172a'; ctx.fillText('y = u²', cx2+50, cy2+45);
+
+    // Arrows
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx2+30, cy2-25); ctx.lineTo(cx2+65, cy2-25); ctx.stroke();
+    ctx.fillText('×3', cx2+48, cy2-35);
+
+    ctx.strokeStyle = '#a78bfa'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx2+75, cy2-10); ctx.lineTo(cx2+70, cy2+10); ctx.stroke();
+    ctx.fillText('×2u', cx2+55, cy2+5);
+
+    ctx.strokeStyle = '#34d399'; ctx.lineWidth = 3;
+    ctx.setLineDash([5,3]);
+    ctx.beginPath(); ctx.moveTo(cx2+5, cy2-10); ctx.lineTo(cx2+30, cy2+15); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillText('dy/dx = 2u·3', cx2+10, cy2+10);
+
+    document.getElementById('chainResult').innerHTML =
+      '✅ dy/dx = dy/du · du/dx。就像链条，一环扣一环地求导再相乘！';
+  } else if (type === 'neural') {
+    ctx.fillText('神经网络中的链式法则（反向传播的核心）', 20, 35);
+    ctx.fillText('', 20, 60);
+    ctx.fillText('输入 x ──→ 隐藏层 h = σ(wx+b) ──→ 输出 ŷ = h·v', 20, 90);
+    ctx.fillText('', 20, 120);
+    ctx.fillText('损失 L = (ŷ−y)²', 20, 145);
+    ctx.fillText('', 20, 175);
+    ctx.fillText('∂L/∂v = ∂L/∂ŷ · ∂ŷ/∂v', 20, 200);
+    ctx.fillText('       = 2(ŷ−y) · h', 20, 225);
+    ctx.fillText('', 20, 255);
+    ctx.fillText('∂L/∂w = ∂L/∂ŷ · ∂ŷ/∂h · ∂h/∂w', 20, 280);
+    ctx.fillText('       = 2(ŷ−y)·v · σ\'(wx+b)·x', 20, 305);
+
+    // Simple NN diagram
+    const nnX = 430;
+    // Input layer
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(nnX, 80, 40, 40);
+    ctx.fillStyle = '#0f172a'; ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('x', nnX+20, 105);
+    // Hidden
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillRect(nnX+80, 80, 40, 40);
+    ctx.fillText('h', nnX+100, 105);
+    // Output
+    ctx.fillStyle = '#f472b6';
+    ctx.fillRect(nnX+160, 80, 40, 40);
+    ctx.fillText('ŷ', nnX+180, 105);
+    // Loss
+    ctx.fillStyle = '#34d399';
+    ctx.fillRect(nnX+120, 160, 40, 40);
+    ctx.fillText('L', nnX+140, 185);
+    // Arrows
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(nnX+40, 100); ctx.lineTo(nnX+80, 100); ctx.stroke();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '11px sans-serif';
+    ctx.fillText('w', nnX+55, 92);
+    ctx.beginPath(); ctx.moveTo(nnX+120, 100); ctx.lineTo(nnX+160, 100); ctx.stroke();
+    ctx.fillText('v', nnX+135, 92);
+    ctx.beginPath(); ctx.moveTo(nnX+160, 120); ctx.lineTo(nnX+140, 160); ctx.stroke();
+
+    // Backward arrows
+    ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(nnX+130, 175); ctx.lineTo(nnX+120, 120); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(nnX+110, 115); ctx.lineTo(nnX+50, 120); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f472b6'; ctx.font = '12px sans-serif';
+    ctx.fillText('反向传播', nnX+40, 190);
+
+    document.getElementById('chainResult').innerHTML =
+      '🔥 <strong>反向传播 = 链式法则</strong>：从输出层向输入层逐层计算梯度，每一步都是链式法则！';
+  } else if (type === 'multivar') {
+    ctx.fillText('多变量链式法则', 20, 35);
+    ctx.fillText('∂y/∂xᵢ = Σⱼ (∂y/∂uⱼ · ∂uⱼ/∂xᵢ)', 20, 65);
+    ctx.fillText('', 20, 95);
+    ctx.fillText('例：u = f(x, y, z)', 20, 120);
+    ctx.fillText('x = x(a,b), y = y(a,b), z = z(a,b)', 20, 150);
+    ctx.fillText('', 20, 180);
+    ctx.fillText('∂u/∂a = ∂u/∂x·∂x/∂a + ∂u/∂y·∂y/∂a + ∂u/∂z·∂z/∂a', 20, 210);
+    ctx.fillText('∂u/∂b = ∂u/∂x·∂x/∂b + ∂u/∂y·∂y/∂b + ∂u/∂z·∂z/∂b', 20, 245);
+
+    // Tree diagram
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.fillText('u', 520, 110);
+
+    // Level 2
+    ctx.fillStyle = '#a78bfa';
+    ctx.fillText('x', 450, 170);
+    ctx.fillText('y', 520, 170);
+    ctx.fillText('z', 590, 170);
+
+    // Level 3
+    ctx.fillStyle = '#f472b6';
+    ctx.fillText('a', 440, 230);
+    ctx.fillText('b', 490, 230);
+    ctx.fillText('a', 510, 230);
+    ctx.fillText('b', 560, 230);
+    ctx.fillText('a', 580, 230);
+    ctx.fillText('b', 630, 230);
+
+    // Lines
+    ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(450, 155); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(520, 155); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(590, 155); ctx.stroke();
+
+    ctx.beginPath(); ctx.moveTo(450, 175); ctx.lineTo(440, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(450, 175); ctx.lineTo(490, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 175); ctx.lineTo(510, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 175); ctx.lineTo(560, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(590, 175); ctx.lineTo(580, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(590, 175); ctx.lineTo(630, 215); ctx.stroke();
+
+    // Highlight path for ∂u/∂a
+    ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 3;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(450, 155); ctx.lineTo(440, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(520, 155); ctx.lineTo(510, 215); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(520, 115); ctx.lineTo(590, 155); ctx.lineTo(580, 215); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#f472b6'; ctx.font = '13px sans-serif';
+    ctx.fillText('∂u/∂a 有3条路径！', 400, 260);
+
+    document.getElementById('chainResult').innerHTML =
+      '✅ <strong>多变量链式法则</strong>：找出所有从输出到输入的路径，每条路径的偏导数相乘，再全部加起来！';
+  }
+}
+
+chainDemo('simple');
+
+// ==================== 7. PLAYGROUND ====================
+function playDemo(func) {
+  stopAnim();
+  const c = document.getElementById('playCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const margin = 50, plotW = W - 2*margin, plotH = H - 2*margin;
+  const cx = margin, cy = margin, zeroX = cx + plotW/2, zeroY = cy + plotH/2;
+  const xMin = -4, xMax = 4;
+
+  let fn, derivFn, name, derivName;
+  switch (func) {
+    case 'x2': fn = x => x*x/4; derivFn = x => 2*x/4; name = 'f(x)=x²/4'; derivName = "f'(x)=x/2"; break;
+    case 'x3': fn = x => x*x*x/10; derivFn = x => 3*x*x/10; name = 'f(x)=x³/10'; derivName = "f'(x)=3x²/10"; break;
+    case 'x3minus': fn = x => (x*x*x - 1/Math.max(Math.abs(x),0.01)*Math.sign(x))/10; derivFn = x => (3*x*x + 1/(Math.max(x,0.01)*Math.max(x,0.01)))/10; name = 'f(x)=(x³−1/x)/10'; derivName = "f'(x)=(3x²+1/x²)/10"; break;
+    case 'sigmoid': fn = x => 1/(1+Math.exp(-x))*6 - 3; derivFn = x => { const s = 1/(1+Math.exp(-x)); return s*(1-s)*6; }; name = 'σ(x)=1/(1+e⁻ˣ) 缩放'; derivName = "σ'(x)=σ(x)(1−σ(x))"; break;
+    case 'combo': fn = x => (3*x*x - 4*x)/4; derivFn = x => (6*x - 4)/4; name = 'f(x)=(3x²−4x)/4'; derivName = "f'(x)=(6x−4)/4"; break;
+  }
+
+  // Grid
+  ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 0.5;
+  for (let i = 0; i <= 10; i++) {
+    const y = cy + (plotH/10)*i; ctx.beginPath(); ctx.moveTo(cx, y); ctx.lineTo(cx+plotW, y); ctx.stroke();
+    const x = cx + (plotW/10)*i; ctx.beginPath(); ctx.moveTo(x, cy); ctx.lineTo(x, cy+plotH); ctx.stroke();
+  }
+  ctx.strokeStyle = '#94a3b8'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, zeroY); ctx.lineTo(cx+plotW, zeroY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(zeroX, cy); ctx.lineTo(zeroX, cy+plotH); ctx.stroke();
+
+  // Function
+  ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  let first = true;
+  for (let px = 0; px <= plotW; px += 1) {
+    const x = xMin + (px/plotW)*(xMax-xMin);
+    const y = fn(x);
+    const sy = zeroY - y * (plotH/8);
+    if (sy < cy-30 || sy > cy+plotH+30) { first = true; continue; }
+    if (first) { ctx.moveTo(cx+px, sy); first = false; }
+    else ctx.lineTo(cx+px, sy);
+  }
+  ctx.stroke();
+
+  // Derivative
+  ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2;
+  ctx.setLineDash([5,4]);
+  ctx.beginPath();
+  first = true;
+  for (let px = 0; px <= plotW; px += 1) {
+    const x = xMin + (px/plotW)*(xMax-xMin);
+    const y = derivFn(x);
+    const sy = zeroY - y * (plotH/8);
+    if (sy < cy-30 || sy > cy+plotH+30 || !isFinite(sy)) { first = true; continue; }
+    if (first) { ctx.moveTo(cx+px, sy); first = false; }
+    else ctx.lineTo(cx+px, sy);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Legend
+  ctx.fillStyle = '#38bdf8'; ctx.font = '14px sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText(name + ' (蓝色)', 20, H-30);
+  ctx.fillStyle = '#f472b6';
+  ctx.fillText(derivName + ' (粉色虚线)', 300, H-30);
+
+  // Find min/max of derivative for special points
+  if (func === 'combo') {
+    const critX = 2/3;
+    const sx0 = cx + (critX - xMin)/(xMax-xMin)*plotW;
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath(); ctx.arc(sx0, zeroY - fn(critX)*(plotH/8), 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillText('极小值点 x=2/3', sx0+10, zeroY - fn(critX)*(plotH/8));
+  }
+
+  document.getElementById('playResult').innerHTML =
+    `✅ <strong>${name}</strong>，导数 <strong>${derivName}</strong>。蓝色 = 原函数，粉色虚线 = 导数曲线！`;
+}
+
+playDemo('x2');
+
+// ==================== NAV HIGHLIGHT ====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if(window.scrollY >= s.offsetTop - 100) current = s.id; });
+  navLinks.forEach(a => { a.classList.toggle('active', a.getAttribute('href') === '#'+current); });
+});
+</script>
+
+</body>
+</html>

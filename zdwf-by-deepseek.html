@@ -1,0 +1,1396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自动微分 — 从零开始的交互式教程</title>
+<style>
+  :root {
+    --bg: #0f172a; --surface: #1e293b; --border: #334155;
+    --text: #e2e8f0; --text-secondary: #94a3b8;
+    --accent: #38bdf8; --accent2: #f472b6; --accent3: #a78bfa;
+    --accent4: #34d399; --accent5: #fb923c; --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7; display: flex; min-height: 100vh;
+  }
+  nav {
+    width: 280px; min-width: 280px; background: var(--surface);
+    border-right: 1px solid var(--border); padding: 24px 16px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; z-index: 10;
+  }
+  nav h2 {
+    font-size: 1.2rem; margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  nav a {
+    display: block; padding: 8px 12px; color: var(--text-secondary);
+    text-decoration: none; border-radius: 8px; font-size: 0.9rem;
+    transition: all 0.2s; margin-bottom: 2px;
+  }
+  nav a:hover, nav a.active { background: rgba(56,189,248,0.1); color: var(--accent); }
+  nav a.sub { padding-left: 28px; font-size: 0.82rem; }
+
+  main { flex: 1; padding: 40px 48px; max-width: 960px; }
+  h1 {
+    font-size: 2.2rem; margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  h2 { font-size: 1.5rem; margin: 48px 0 16px; padding-bottom: 8px; border-bottom: 2px solid var(--border); color: var(--accent); }
+  h3 { font-size: 1.15rem; margin: 28px 0 10px; color: var(--accent3); }
+  p, li { color: var(--text-secondary); margin-bottom: 10px; }
+  .highlight { color: var(--accent); font-weight: 600; }
+  .highlight2 { color: var(--accent2); font-weight: 600; }
+  .highlight3 { color: var(--accent3); font-weight: 600; }
+  .highlight4 { color: var(--accent4); font-weight: 600; }
+  .highlight5 { color: var(--accent5); font-weight: 600; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; margin: 20px 0; box-shadow: var(--shadow);
+  }
+  .viz-container {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; margin: 20px 0;
+    text-align: center; box-shadow: var(--shadow); position: relative;
+  }
+  canvas { display: block; margin: 0 auto; border-radius: 8px; }
+
+  .btn {
+    display: inline-block; padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent), #0ea5e9);
+    color: #0f172a; border: none; border-radius: 8px;
+    cursor: pointer; font-size: 0.95rem; font-weight: 600; margin: 4px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,189,248,0.3); }
+  .btn:active { transform: scale(0.97); }
+  .btn.accent2 { background: linear-gradient(135deg, var(--accent2), #e11d48); }
+  .btn.accent3 { background: linear-gradient(135deg, var(--accent3), #7c3aed); }
+  .btn.accent4 { background: linear-gradient(135deg, var(--accent4), #059669); }
+  .btn.accent5 { background: linear-gradient(135deg, var(--accent5), #ea580c); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  input[type=range] { width: 140px; accent-color: var(--accent); vertical-align: middle; }
+  .slider-val { display: inline-block; width: 38px; text-align: center; font-weight: 600; color: var(--accent); }
+  .slider-val2 { display: inline-block; width: 38px; text-align: center; font-weight: 600; color: var(--accent2); }
+
+  .formula {
+    display: inline-block; background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.2); border-radius: 6px;
+    padding: 4px 10px; font-family: 'Courier New', monospace; margin: 2px; font-size: 0.95rem;
+  }
+  .formula-block { display: block; text-align: center; font-size: 1.15rem; padding: 16px; margin: 16px 0; }
+
+  .code-block {
+    background: #0f172a; border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; margin: 12px 0; font-family: 'Courier New', monospace;
+    font-size: 0.9rem; line-height: 1.6; text-align: left; overflow-x: auto;
+  }
+  .code-block .kw { color: #c084fc; }
+  .code-block .fn { color: #38bdf8; }
+  .code-block .num { color: #34d399; }
+  .code-block .cm { color: #64748b; font-style: italic; }
+  .code-block .var { color: #f472b6; }
+  .code-block .op { color: #fb923c; }
+  .code-block .grad { color: #fbbf24; font-weight: bold; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { padding: 10px 14px; text-align: center; border: 1px solid var(--border); }
+  th { background: rgba(56,189,248,0.1); color: var(--accent); font-weight: 600; }
+  td { color: var(--text-secondary); font-family: 'Courier New', monospace; font-size: 0.85rem; }
+
+  .step {
+    display: flex; align-items: flex-start; gap: 12px;
+    margin: 12px 0; padding: 12px;
+    background: rgba(167,139,250,0.05); border-radius: 10px;
+    border-left: 3px solid var(--accent3);
+  }
+  .step-num {
+    background: var(--accent3); color: #0f172a;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem; flex-shrink: 0;
+  }
+
+  .framework-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 0.8rem; font-weight: 600; margin: 2px;
+  }
+  .badge-pytorch { background: rgba(238,76,44,0.2); color: #ee4c2c; }
+  .badge-tf { background: rgba(255,185,0,0.2); color: #ffb900; }
+  .badge-mxnet { background: rgba(0,155,200,0.2); color: #009bc8; }
+  .badge-paddle { background: rgba(41,62,213,0.2); color: #4e6ef2; }
+
+  html { scroll-behavior: smooth; }
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    nav { width: 100%; min-width: auto; height: auto; position: relative; padding: 12px; }
+    nav a { display: inline-block; margin: 2px; }
+    main { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <h2>🤖 自动微分教程</h2>
+  <a href="#intro">👋 为什么需要自动微分</a>
+  <a href="#comp-graph">1️⃣ 计算图</a>
+  <a href="#forward-backward">2️⃣ 前向传播 & 反向传播</a>
+  <a href="#grad-basic">3️⃣ 基础用法</a>
+  <a href="#grad-accum">4️⃣ 梯度累加与清除</a>
+  <a href="#nonscalar">5️⃣ 非标量的反向传播</a>
+  <a href="#detach">6️⃣ 分离计算图 (Detach)</a>
+  <a href="#control-flow">7️⃣ 控制流梯度</a>
+  <a href="#playground">🎮 自由练习场</a>
+</nav>
+
+<main>
+
+<h1>自动微分：从零开始的交互式教程</h1>
+<p style="font-size:1.1rem; margin-bottom:32px;">
+  基于《动手学深度学习》2.5节 · 理解框架如何自动求导，<span class="highlight">反向传播的核心引擎</span>
+</p>
+
+<!-- ==================== INTRO ==================== -->
+<section id="intro">
+<div class="card">
+  <h3>🤔 为什么需要自动微分？</h3>
+  <p>训练深度学习模型 = <span class="highlight">最小化损失函数</span>。这需要计算损失对每个参数的<span class="highlight2">梯度</span>。</p>
+  <p>想象一个 100 层的神经网络——如果<strong>手工求导</strong>，你需要推导成千上万个偏导数公式，任何一个错误都会导致训练失败。</p>
+  <p><span class="highlight">自动微分</span>解决了这个问题：你只需要写<strong>前向计算</strong>的代码，框架自动构建<span class="highlight3">计算图</span>，然后通过<span class="highlight2">反向传播</span>算出所有参数的梯度。</p>
+  <p>具体流程：<span class="formula">附加梯度到变量</span> → <span class="formula">记录计算</span> → <span class="formula">调用 .backward()</span> → <span class="formula">读取 .grad</span></p>
+</div>
+</section>
+
+<!-- ==================== COMPUTATION GRAPH ==================== -->
+<section id="comp-graph">
+<h2><span class="emoji-icon">1️⃣</span> 计算图 Computational Graph</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>计算图是深度学习框架的<strong>核心数据结构</strong>：每个<span class="highlight">节点</span>代表一次运算，每条<span class="highlight3">边</span>代表数据流动。</p>
+  <p>框架在你写 <span class="formula">y = 2 * (x₁·x₂)</span> 时，自动构建一张图：</p>
+  <p>
+    <span class="formula">x₁</span> ──┐<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="formula">·</span> ── <span class="formula">×2</span> ── <span class="formula">y</span><br>
+    <span class="formula">x₂</span> ──┘
+  </p>
+  <p>这张图记录了"<span class="highlight">哪些数据通过哪些操作产生了输出</span>"，反向传播时沿图逆向追溯，逐节点应用链式法则。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="compGraphCanvas" width="650" height="340"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="compGraphDemo('build')">🏗️ 构建计算图</button>
+    <button class="btn accent2" onclick="compGraphDemo('forward')">➡️ 前向传播</button>
+    <button class="btn accent3" onclick="compGraphDemo('backward')">⬅️ 反向传播</button>
+    <button class="btn accent5" onclick="compGraphDemo('full')">🎬 完整过程动画</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="compGraphResult"></p>
+</div>
+</section>
+
+<!-- ==================== FORWARD & BACKWARD ==================== -->
+<section id="forward-backward">
+<h2><span class="emoji-icon">2️⃣</span> 前向传播 & 反向传播</h2>
+
+<div class="card">
+  <h3>两步走</h3>
+  <p><span class="highlight">① 前向传播</span>：从输入到输出，逐节点计算中间值和最终结果。<strong>同时偷偷记录每一步的运算类型和输入值。</strong></p>
+  <p><span class="highlight2">② 反向传播</span>："跟踪整个计算图，<strong>从输出端反向走到输入端</strong>，沿途用链式法则填充每个参数的偏导数。"</p>
+  <p>对于 <span class="formula">y = 2·(x₁·x₂)</span>：</p>
+  <p>&nbsp;&nbsp;反向传播：∂y/∂(x₁x₂) = 2，然后 ∂(x₁x₂)/∂x₁ = x₂，最终 ∂y/∂x₁ = 2x₂</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="fbCanvas" width="650" height="400"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="fbDemo('simple')">y = 2·(x₁·x₂)</button>
+    <button class="btn accent2" onclick="fbDemo('complex')">y = x₁² + 3x₁·x₂</button>
+    <button class="btn accent5" onclick="fbStep()">🎬 逐步反传（含梯度值）</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="fbResult"></p>
+</div>
+</section>
+
+<!-- ==================== GRADIENT BASICS ==================== -->
+<section id="grad-basic">
+<h2><span class="emoji-icon">3️⃣</span> 基础用法（PyTorch 风格）</h2>
+
+<div class="card">
+  <h3>标准步骤</h3>
+  <div class="step">
+    <div class="step-num">1</div>
+    <div>创建带梯度记录的张量：<span class="formula">x = torch.arange(4.0, requires_grad=True)</span></div>
+  </div>
+  <div class="step">
+    <div class="step-num">2</div>
+    <div>定义计算（构建计算图）：<span class="formula">y = 2 * torch.dot(x, x)</span></div>
+  </div>
+  <div class="step">
+    <div class="step-num">3</div>
+    <div>触发反向传播：<span class="formula">y.backward()</span></div>
+  </div>
+  <div class="step">
+    <div class="step-num">4</div>
+    <div>读取梯度：<span class="formula">x.grad</span></div>
+  </div>
+</div>
+
+<div class="viz-container">
+  <canvas id="basicCanvas" width="650" height="360"></canvas>
+  <div style="margin-top:12px;">
+    <label>调整 x 值（用滑块改变输入）：</label><br>
+    <input type="range" min="0" max="50" value="0" id="bx0" oninput="updateBasic()"><span class="slider-val" id="bx0v">0</span>
+    <input type="range" min="0" max="50" value="10" id="bx1" oninput="updateBasic()"><span class="slider-val" id="bx1v">1.0</span>
+    <input type="range" min="0" max="50" value="20" id="bx2" oninput="updateBasic()"><span class="slider-val" id="bx2v">2.0</span>
+    <input type="range" min="0" max="50" value="30" id="bx3" oninput="updateBasic()"><span class="slider-val" id="bx3v">3.0</span>
+    <br>
+    <button class="btn" onclick="basicDemo('compute')">🖥️ 计算 y = 2xᵀx</button>
+    <button class="btn accent2" onclick="basicDemo('backward')">⬅️ 执行 backward()</button>
+    <button class="btn accent3" onclick="basicDemo('verify')">✅ 验证梯度</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="basicResult"></p>
+</div>
+</section>
+
+<!-- ==================== GRADIENT ACCUMULATION ==================== -->
+<section id="grad-accum">
+<h2><span class="emoji-icon">4️⃣</span> 梯度累加与清除</h2>
+
+<div class="card">
+  <h3>关键陷阱</h3>
+  <p><span class="highlight" style="color:var(--accent5);">⚠️ PyTorch 和 Paddle 默认累加梯度！</span>每次调用 <span class="formula">.backward()</span>，梯度会<strong>累加</strong>到 <span class="formula">.grad</span> 上，而不是覆盖。</p>
+  <p>这是有意设计——方便处理<strong>梯度累积</strong>（多次小批次累积梯度后再更新参数）。</p>
+  <p>但如果你忘了<span class="highlight2">手动清零</span>（<span class="formula">x.grad.zero_()</span>），就会用错误的梯度更新模型！</p>
+
+  <table>
+    <tr><th>框架</th><th>默认行为</th><th>清零方式</th></tr>
+    <tr><td>PyTorch</td><td>累积 (累加)</td><td>x.grad.zero_()</td></tr>
+    <tr><td>Paddle</td><td>累积 (累加)</td><td>x.clear_gradient()</td></tr>
+    <tr><td>MXNet</td><td>覆盖</td><td>无需手动清除</td></tr>
+    <tr><td>TensorFlow</td><td>每次新建 tape</td><td>重新建 GradientTape</td></tr>
+  </table>
+</div>
+
+<div class="viz-container">
+  <canvas id="accumCanvas" width="650" height="340"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="accumDemo('first')">1️⃣ 第一次 backward()</button>
+    <button class="btn accent2" onclick="accumDemo('second')">2️⃣ 第二次 backward()（不加清零）</button>
+    <button class="btn accent3" onclick="accumDemo('zero')">🔄 先清零再 backward()</button>
+    <button class="btn accent5" onclick="accumDemo('reset')">↺ 重置演示</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="accumResult"></p>
+</div>
+</section>
+
+<!-- ==================== NON-SCALAR BACKWARD ==================== -->
+<section id="nonscalar">
+<h2><span class="emoji-icon">5️⃣</span> 非标量的反向传播</h2>
+
+<div class="card">
+  <h3>问题</h3>
+  <p>当 <span class="formula">y</span> 不是标量（是向量或矩阵）时，<span class="formula">y.backward()</span> 需要什么？</p>
+  <p>理论上，向量对向量的导数是一个<strong>矩阵</strong>（雅可比矩阵）。但在深度学习中，我们通常<strong>不需要完整的矩阵</strong>——只需要批量中每个样本偏导数之和。</p>
+  <p>框架的做法：<span class="highlight">要么自动求和再 backprop，要么要求你传入一个 gradient 参数指定"外层梯度"</span>。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="nonscalarCanvas" width="650" height="340"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="nonscalarDemo('scalar')">y 是标量（正常）</button>
+    <button class="btn accent2" onclick="nonscalarDemo('vector')">y 是向量（需要 sum）</button>
+    <button class="btn accent3" onclick="nonscalarDemo('explain')">📖 解释原理</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="nonscalarResult"></p>
+</div>
+</section>
+
+<!-- ==================== DETACH ==================== -->
+<section id="detach">
+<h2><span class="emoji-icon">6️⃣</span> 分离计算图 Detach</h2>
+
+<div class="card">
+  <h3>场景</h3>
+  <p>有时你希望把某个中间结果<span class="highlight">当作常数</span>，阻断梯度向更早的节点传播。</p>
+  <p>典型场景：GAN 训练时冻结判别器；强化学习中的目标网络；或者你只是想"停掉"一部分梯度。</p>
+  <p><span class="formula">u = y.detach()</span>（PyTorch）或 <span class="formula">u = tf.stop_gradient(y)</span>（TF）：<strong>值相同，但梯度不会流过 u 回到 y 的输入</strong>。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="detachCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn accent3" onclick="detachDemo('without')">不加 detach：z = y·x</button>
+    <button class="btn accent2" onclick="detachDemo('with')">加 detach：z = detach(y)·x</button>
+    <button class="btn" onclick="detachDemo('compare')">🔄 对比两者</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="detachResult"></p>
+</div>
+</section>
+
+<!-- ==================== CONTROL FLOW ==================== -->
+<section id="control-flow">
+<h2><span class="emoji-icon">7️⃣</span> 控制流的梯度计算</h2>
+
+<div class="card">
+  <h3>超能力</h3>
+  <p>自动微分的一个惊人特性：<span class="highlight">即使计算图中包含 Python 原生的 if/while/任意函数调用，也能正确计算梯度！</span></p>
+  <p>因为计算图是<span class="highlight">动态构建</span>的——每次前向传播都会根据当前数据创建新的计算图，反向传播沿着这次实际走过的路径计算梯度。</p>
+  <p>示例函数（分段线性）：</p>
+  <div class="code-block">
+    <span class="kw">def</span> <span class="fn">f</span>(a):<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;b = a * <span class="num">2</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">while</span> b.norm() < <span class="num">1000</span>:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;b = b * <span class="num">2</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> b.sum() > <span class="num">0</span>:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c = b<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>:<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;c = <span class="num">100</span> * b<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> c
+  </div>
+  <p>该函数是分段线性的：存在某个常数 k 使得 <span class="formula">f(a) = k·a</span>，因此梯度恒为 k。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="ctrlFlowCanvas" width="650" height="360"></canvas>
+  <div style="margin-top:12px;">
+    <div>
+      <label>输入 a: </label>
+      <input type="range" min="1" max="200" value="5" id="cfa" oninput="updateCtrlFlow()">
+      <span class="slider-val" id="cfav">5.0</span>
+      &nbsp;
+      <button class="btn" onclick="ctrlFlowDemo('run')">▶️ 运行 f(a)</button>
+      <button class="btn accent2" onclick="ctrlFlowDemo('grad')">⬅️ backward 求梯度</button>
+      <button class="btn accent3" onclick="ctrlFlowDemo('scan')">🔍 扫描不同 a 值</button>
+    </div>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="ctrlFlowResult"></p>
+</div>
+</section>
+
+<!-- ==================== PLAYGROUND ==================== -->
+<section id="playground">
+<h2><span class="emoji-icon">🎮</span> 自由练习场</h2>
+
+<div class="viz-container">
+  <canvas id="playCanvas" width="650" height="400"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="playDemo('dot')">2·(xᵀx) 梯度=4x</button>
+    <button class="btn accent2" onclick="playDemo('square')">x² 梯度=2x</button>
+    <button class="btn accent3" onclick="playDemo('combo')">x₁²+3x₁x₂</button>
+    <button class="btn accent4" onclick="playDemo('sin')">sin(x) 梯度=cos(x)</button>
+    <button class="btn accent5" onclick="playDemo('exp')">自定义表达式</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="playResult"></p>
+</div>
+</section>
+
+<p style="text-align:center; padding:40px 0; color:var(--text-secondary); font-size:0.85rem;">
+  基于《动手学深度学习》2.5节 · 交互式教程由 DeepSeek 生成 · 点击按钮来感受自动微分的魔法！
+</p>
+
+</main>
+
+<script>
+// ==================== UTILS ====================
+let animId = null;
+function stopAnim() { if(animId) { cancelAnimationFrame(animId); animId = null; } }
+
+function drawNode(ctx, x, y, w, h, text, color='#38bdf8', alpha=1) {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  const r = Math.min(w, h) / 2;
+  ctx.roundRect(x - w/2, y - h/2, w, h, r);
+  ctx.fill();
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y);
+  ctx.globalAlpha = 1;
+}
+
+function drawArrow(ctx, x1, y1, x2, y2, color='#94a3b8', width=2, dashed=false) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  if (dashed) ctx.setLineDash([5, 4]);
+  else ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // Arrowhead
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const len = 10;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - len * Math.cos(angle - 0.5), y2 - len * Math.sin(angle - 0.5));
+  ctx.lineTo(x2 - len * Math.cos(angle + 0.5), y2 - len * Math.sin(angle + 0.5));
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ==================== 1. COMPUTATION GRAPH ====================
+function compGraphDemo(type) {
+  stopAnim();
+  const c = document.getElementById('compGraphCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Node positions
+  const x1Pos = [150, 100], x2Pos = [150, 200];
+  const dotPos = [300, 150];
+  const mul2Pos = [460, 150];
+  const yPos = [570, 150];
+
+  function drawBaseGraph(alpha=1) {
+    // Inputs
+    drawNode(ctx, x1Pos[0], x1Pos[1], 70, 44, 'x₁ = 3', '#38bdf8', alpha);
+    drawNode(ctx, x2Pos[0], x2Pos[1], 70, 44, 'x₂ = 5', '#38bdf8', alpha);
+    // Op nodes
+    drawNode(ctx, dotPos[0], dotPos[1], 85, 48, '· (点积)', '#a78bfa', alpha);
+    drawNode(ctx, mul2Pos[0], mul2Pos[1], 80, 48, '× 2', '#a78bfa', alpha);
+    // Output
+    drawNode(ctx, yPos[0], yPos[1], 70, 44, 'y = 30', '#f472b6', alpha);
+    // Edges
+    drawArrow(ctx, x1Pos[0]+35, x1Pos[1]-5, dotPos[0]-42, dotPos[1]-10, '#94a3b8', 2, alpha<1);
+    drawArrow(ctx, x2Pos[0]+35, x2Pos[1]+5, dotPos[0]-42, dotPos[1]+10, '#94a3b8', 2, alpha<1);
+    drawArrow(ctx, dotPos[0]+42, dotPos[1], mul2Pos[0]-40, mul2Pos[1], '#94a3b8', 2, alpha<1);
+    drawArrow(ctx, mul2Pos[0]+40, mul2Pos[1], yPos[0]-35, yPos[1], '#94a3b8', 2, alpha<1);
+  }
+
+  if (type === 'build') {
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      const t = Math.min(frame / 30, 1);
+      if (t < 0.25) {
+        const a = Math.min(t / 0.25, 1);
+        drawNode(ctx, x1Pos[0], x1Pos[1], 70, 44, 'x₁ = 3', '#38bdf8', a);
+        drawNode(ctx, x2Pos[0], x2Pos[1], 70, 44, 'x₂ = 5', '#38bdf8', a);
+      } else if (t < 0.5) {
+        drawBaseGraph(1);
+        const a = Math.min((t - 0.25) / 0.25, 1);
+        drawNode(ctx, dotPos[0], dotPos[1], 85, 48, '· (点积)', '#a78bfa', a);
+        drawArrow(ctx, x1Pos[0]+35, x1Pos[1]-5, dotPos[0]-42, dotPos[1]-10, '#94a3b8', 2);
+        drawArrow(ctx, x2Pos[0]+35, x2Pos[1]+5, dotPos[0]-42, dotPos[1]+10, '#94a3b8', 2);
+      } else if (t < 0.75) {
+        drawBaseGraph(1);
+        const a = Math.min((t - 0.5) / 0.25, 1);
+        drawNode(ctx, mul2Pos[0], mul2Pos[1], 80, 48, '× 2', '#a78bfa', a);
+        drawArrow(ctx, dotPos[0]+42, dotPos[1], mul2Pos[0]-40, mul2Pos[1], '#94a3b8', 2);
+      } else {
+        const a = Math.min((t - 0.75) / 0.25, 1);
+        drawBaseGraph(0.8);
+        drawNode(ctx, yPos[0], yPos[1], 70, 44, 'y', '#f472b6', a);
+      }
+      frame++;
+      if (frame < 90) animId = requestAnimationFrame(anim);
+      else drawBaseGraph(1);
+    }
+    anim();
+    document.getElementById('compGraphResult').innerHTML =
+      '🏗️ 框架按你写的代码<strong>自底向上</strong>构建计算图。每个运算变成一个节点，数据顺着边流动。';
+  } else if (type === 'forward') {
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      const step = Math.floor(frame / 30);
+      drawNode(ctx, x1Pos[0], x1Pos[1], 70, 44, 'x₁ = 3', '#38bdf8', step>=0?1:0.3);
+      drawNode(ctx, x2Pos[0], x2Pos[1], 70, 44, 'x₂ = 5', '#38bdf8', step>=0?1:0.3);
+      drawNode(ctx, dotPos[0], dotPos[1], 85, 48, '3·5 = 15', '#a78bfa', step>=1?1:0.3);
+      drawNode(ctx, mul2Pos[0], mul2Pos[1], 80, 48, '15×2 = 30', '#a78bfa', step>=2?1:0.3);
+      drawNode(ctx, yPos[0], yPos[1], 70, 44, 'y = 30', '#f472b6', step>=3?1:0.3);
+      drawArrow(ctx, x1Pos[0]+35, x1Pos[1]-5, dotPos[0]-42, dotPos[1]-10, '#38bdf8', 3, false);
+      drawArrow(ctx, x2Pos[0]+35, x2Pos[1]+5, dotPos[0]-42, dotPos[1]+10, '#38bdf8', 3, false);
+      drawArrow(ctx, dotPos[0]+42, dotPos[1], mul2Pos[0]-40, mul2Pos[1], '#a78bfa', step>=1?3:1, false);
+      drawArrow(ctx, mul2Pos[0]+40, mul2Pos[1], yPos[0]-35, yPos[1], '#a78bfa', step>=2?3:1, false);
+      if (step > 0) {
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 14px sans-serif';
+        ctx.textAlign = 'center';
+        if (step >= 1) ctx.fillText('3×5=15', dotPos[0], dotPos[1]+40);
+        if (step >= 2) ctx.fillText('15×2=30', mul2Pos[0], mul2Pos[1]+40);
+      }
+      frame++;
+      if (frame < 130) animId = requestAnimationFrame(anim);
+    }
+    anim();
+    document.getElementById('compGraphResult').innerHTML =
+      '➡️ <strong>前向传播</strong>：从输入开始，沿图的方向逐节点计算值，最终得到输出 y=30。';
+  } else if (type === 'backward') {
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      drawBaseGraph(1);
+      const step = Math.floor(frame / 30);
+      // Backward pass highlights
+      const edges = [
+        { from: mul2Pos, to: yPos, dx: 40, dy: 0, label: '∂y/∂(mid)=2', grad: '2' },
+        { from: dotPos, to: mul2Pos, dx: 42, dy: 0, label: '∂(2·mid)/∂mid=2 → 传给上一步：2', grad: '×2 → 2' },
+        { from: x1Pos, to: dotPos, dx: 35, dy: -5, label: '∂(x₁x₂)/∂x₁=x₂=5 → 最终: 2×5=10', grad: '∂y/∂x₁=10' },
+        { from: x2Pos, to: dotPos, dx: 35, dy: 5, label: '∂(x₁x₂)/∂x₂=x₁=3 → 最终: 2×3=6', grad: '∂y/∂x₂=6' },
+      ];
+      if (step < edges.length) {
+        const e = edges[step];
+        drawArrow(ctx, e.from[0]-e.dx, e.from[1], e.from[0]-e.dx-60, e.from[1], '#f472b6', 3, false);
+        ctx.fillStyle = '#f472b6';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(e.label, e.from[0]-e.dx-110, e.from[1]-18);
+        ctx.fillText(e.grad, e.from[0]-e.dx-60, e.from[1]+5);
+      } else if (step >= edges.length) {
+        ctx.fillStyle = '#34d399';
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✅ 梯度: x₁.grad=10, x₂.grad=6', W/2, H-20);
+        ctx.fillText('验证: ∂y/∂x₁=2x₂=10 ✓  ∂y/∂x₂=2x₁=6 ✓', W/2, H-40);
+      }
+      frame++;
+      if (frame < 160) animId = requestAnimationFrame(anim);
+    }
+    anim();
+    document.getElementById('compGraphResult').innerHTML =
+      '⬅️ <strong>反向传播</strong>：从输出 y 逆向走到输入，链式法则逐层传递梯度。∂y/∂x₁ = 2·x₂ = 10';
+  } else if (type === 'full') {
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      // Phase 1: forward (0-60)
+      // Phase 2: backward (60-140)
+      const t = frame;
+      if (t < 60) {
+        const step = Math.floor(t / 20);
+        drawNode(ctx, x1Pos[0], x1Pos[1], 70, 44, 'x₁=3', '#38bdf8', step>=0?1:0.3);
+        drawNode(ctx, x2Pos[0], x2Pos[1], 70, 44, 'x₂=5', '#38bdf8', step>=0?1:0.3);
+        drawNode(ctx, dotPos[0], dotPos[1], 85, 48, step>=1?'3·5=15':'·', '#a78bfa', step>=1?1:0.3);
+        drawNode(ctx, mul2Pos[0], mul2Pos[1], 80, 48, step>=2?'15×2=30':'×2', '#a78bfa', step>=2?1:0.3);
+        if (step >= 1) { drawArrow(ctx, x1Pos[0]+35, x1Pos[1], dotPos[0]-42, dotPos[1], '#38bdf8', 3); drawArrow(ctx, x2Pos[0]+35, x2Pos[1], dotPos[0]-42, dotPos[1], '#38bdf8', 3); }
+        if (step >= 2) drawArrow(ctx, dotPos[0]+42, dotPos[1], mul2Pos[0]-40, mul2Pos[1], '#38bdf8', 3);
+        drawNode(ctx, yPos[0], yPos[1], 70, 44, 'y=30', '#f472b6', step>=2?1:0.3);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⬇️ 前向传播', W/2, 30);
+      } else {
+        drawBaseGraph(1);
+        const bt = t - 60;
+        const step = Math.floor(bt / 25);
+        const labels = [
+          '① ∂y/∂y = 1 (起始)',
+          '② ∂y/∂mid = ∂y/∂(2mid) · 2 = 2',
+          '③ ∂y/∂(x₁x₂) = 2',
+          '④ ∂(x₁x₂)/∂x₁ = x₂ = 5 → ∂y/∂x₁ = 10',
+        ];
+        for (let i = 0; i <= Math.min(step, labels.length - 1); i++) {
+          ctx.fillStyle = i <= step ? '#f472b6' : '#334155';
+          ctx.font = 'bold 13px monospace';
+          ctx.textAlign = 'left';
+          ctx.fillText(labels[i], 20, 270 + i * 22);
+        }
+        if (step >= 3) {
+          ctx.fillStyle = '#34d399';
+          ctx.font = 'bold 15px monospace';
+          ctx.fillText('✅ x₁.grad = 10, x₂.grad = 6', 20, 270 + 4*22);
+        }
+        // Gradient flow arrows
+        if (step >= 1) drawArrow(ctx, yPos[0]-35, yPos[1], mul2Pos[0]+40, mul2Pos[1], '#f472b6', 3);
+        if (step >= 2) drawArrow(ctx, mul2Pos[0]-40, mul2Pos[1], dotPos[0]+42, dotPos[1], '#f472b6', 3);
+        if (step >= 3) {
+          drawArrow(ctx, dotPos[0]-42, dotPos[1]-10, x1Pos[0]+35, x1Pos[1]-5, '#f472b6', 3);
+          drawArrow(ctx, dotPos[0]-42, dotPos[1]+10, x2Pos[0]+35, x2Pos[1]+5, '#f472b6', 3);
+        }
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⬆️ 反向传播（链式法则）', W/2, 30);
+      }
+      frame++;
+      if (frame < 180) animId = requestAnimationFrame(anim);
+    }
+    anim();
+    document.getElementById('compGraphResult').innerHTML =
+      '🎬 <strong>完整过程</strong>：前向计算值并记录图结构 → 反向按链式法则 ∂y/∂x=∂y/∂u·∂u/∂x 逐层传递梯度';
+  }
+}
+
+compGraphDemo('build');
+
+// ==================== 2. FORWARD & BACKWARD DEMO ====================
+function fbDemo(type) {
+  stopAnim();
+  const c = document.getElementById('fbCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (type === 'simple') {
+    // y = 2*(x1*x2)
+    const nodes = {
+      x1: {x:80, y:120, w:80, h:40, label:'x₁=3', color:'#38bdf8'},
+      x2: {x:80, y:220, w:80, h:40, label:'x₂=5', color:'#38bdf8'},
+      mul: {x:240, y:170, w:80, h:40, label:'u=x₁x₂=15', color:'#a78bfa'},
+      m2: {x:400, y:170, w:80, h:40, label:'2·u=30', color:'#a78bfa'},
+      y: {x:560, y:170, w:80, h:40, label:'y=30', color:'#f472b6'},
+    };
+
+    for (const n of Object.values(nodes)) drawNode(ctx, n.x, n.y, n.w, n.h, n.label, n.color);
+    drawArrow(ctx, nodes.x1.x+40, nodes.x1.y-8, nodes.mul.x-40, nodes.mul.y-12, '#38bdf8', 3);
+    drawArrow(ctx, nodes.x2.x+40, nodes.x2.y+8, nodes.mul.x-40, nodes.mul.y+12, '#38bdf8', 3);
+    drawArrow(ctx, nodes.mul.x+40, nodes.mul.y, nodes.m2.x-40, nodes.m2.y, '#94a3b8', 2);
+    drawArrow(ctx, nodes.m2.x+40, nodes.m2.y, nodes.y.x-40, nodes.y.y, '#94a3b8', 2);
+
+    // Chain rule formula
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('链式法则分解：', 20, 300);
+    ctx.fillText('∂y/∂x₁ = ∂y/∂u · ∂u/∂x₁', 30, 325);
+    ctx.fillText('       = 2 · x₂', 30, 350);
+    ctx.fillText('       = 2 · 5 = 10  ✅', 30, 375);
+
+    ctx.fillText('∂y/∂x₂ = ∂y/∂u · ∂u/∂x₂', 380, 325);
+    ctx.fillText('       = 2 · x₁', 380, 350);
+    ctx.fillText('       = 2 · 3 = 6   ✅', 380, 375);
+
+    document.getElementById('fbResult').innerHTML =
+      '✅ y = 2(x₁x₂)，梯度：∂y/∂x₁ = <span class="highlight4">10</span>, ∂y/∂x₂ = <span class="highlight4">6</span>';
+  } else if (type === 'complex') {
+    // y = x1² + 3x1x2
+    const nodes = {
+      x1: {x:60, y:100, w:75, h:40, label:'x₁=2', color:'#38bdf8'},
+      x2: {x:60, y:230, w:75, h:40, label:'x₂=3', color:'#38bdf8'},
+      sq: {x:200, y:100, w:75, h:40, label:'x₁²=4', color:'#a78bfa'},
+      mul: {x:200, y:230, w:85, h:40, label:'3x₁x₂=18', color:'#a78bfa'},
+      add: {x:370, y:165, w:75, h:40, label:'y=22', color:'#f472b6'},
+    };
+
+    for (const n of Object.values(nodes)) drawNode(ctx, n.x, n.y, n.w, n.h, n.label, n.color);
+    drawArrow(ctx, nodes.x1.x+37, nodes.x1.y, nodes.sq.x-37, nodes.sq.y, '#38bdf8', 2);
+    drawArrow(ctx, nodes.x1.x+37, nodes.x1.y+5, nodes.mul.x-42, nodes.mul.y-10, '#38bdf8', 2);
+    drawArrow(ctx, nodes.x2.x+37, nodes.x2.y-5, nodes.mul.x-42, nodes.mul.y+10, '#38bdf8', 2);
+    drawArrow(ctx, nodes.sq.x+37, nodes.sq.y+5, nodes.add.x-37, nodes.add.y-10, '#94a3b8', 2);
+    drawArrow(ctx, nodes.mul.x+42, nodes.mul.y-5, nodes.add.x-37, nodes.add.y+10, '#94a3b8', 2);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('∂y/∂x₁ = 2x₁ + 3x₂ = 4 + 9 = 13', 30, 310);
+    ctx.fillText('∂y/∂x₂ = 3x₁ = 6', 30, 340);
+    ctx.fillText('注意：x₁ 有两条路径到 y！（x₁² 和 3x₁x₂）', 30, 375);
+
+    document.getElementById('fbResult').innerHTML =
+      '✅ <strong>多路径梯度累加</strong>：x₁ 通过两条路径影响 y（x₁² 和 3x₁x₂），梯度相加：4+9=<span class="highlight4">13</span>';
+  }
+}
+fbDemo('simple');
+
+function fbStep() {
+  stopAnim();
+  const c = document.getElementById('fbCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+
+  let frame = 0;
+  const nodes = {
+    x1: {x:80, y:120, w:75, h:40, label:'x₁=3', color:'#38bdf8'},
+    x2: {x:80, y:220, w:75, h:40, label:'x₂=5', color:'#38bdf8'},
+    mul: {x:240, y:170, w:80, h:40, label:'u=15', color:'#a78bfa'},
+    m2: {x:400, y:170, w:80, h:40, label:'2u=30', color:'#a78bfa'},
+    y: {x:560, y:170, w:80, h:40, label:'y=30', color:'#f472b6'},
+  };
+
+  const steps = [
+    { title:'前向传播完成', nodes:['x1','x2','mul','m2','y'], grad:null, arrow:null },
+    { title:'步骤1: ∂y/∂y = 1', nodes:['x1','x2','mul','m2','y'], grad:'起始梯度为1', arrow:{from:'y',to:'m2',dir:'back'} },
+    { title:'步骤2: ∂y/∂(2u) = 1, ∂(2u)/∂u = 2', nodes:['x1','x2','mul','m2','y'], grad:'链式: 1×2 = 2', arrow:{from:'m2',to:'mul',dir:'back'} },
+    { title:'步骤3: ∂u/∂x₁ = x₂ = 5', nodes:['x1','x2','mul','m2','y'], grad:'∂y/∂x₁ = 2×5 = 10', arrow:{from:'mul',to:'x1',dir:'back'} },
+    { title:'步骤4: ∂u/∂x₂ = x₁ = 3', nodes:['x1','x2','mul','m2','y'], grad:'∂y/∂x₂ = 2×3 = 6', arrow:{from:'mul',to:'x2',dir:'back'} },
+  ];
+
+  function anim() {
+    ctx.clearRect(0, 0, W, H);
+    const stepIdx = Math.min(Math.floor(frame / 35), steps.length - 1);
+    const step = steps[stepIdx];
+
+    for (const n of Object.values(nodes)) {
+      const isActive = step.nodes.includes(Object.keys(nodes).find(k => nodes[k] === n));
+      drawNode(ctx, n.x, n.y, n.w, n.h, n.label, n.color, isActive ? 1 : 0.5);
+    }
+
+    // Forward arrows
+    drawArrow(ctx, nodes.x1.x+37, nodes.x1.y-8, nodes.mul.x-40, nodes.mul.y-12, '#334155', 2);
+    drawArrow(ctx, nodes.x2.x+37, nodes.x2.y+8, nodes.mul.x-40, nodes.mul.y+12, '#334155', 2);
+    drawArrow(ctx, nodes.mul.x+40, nodes.mul.y, nodes.m2.x-40, nodes.m2.y, '#334155', 2);
+    drawArrow(ctx, nodes.m2.x+40, nodes.m2.y, nodes.y.x-40, nodes.y.y, '#334155', 2);
+
+    // Backward arrow
+    if (step.arrow) {
+      const aFrom = nodes[step.arrow.from];
+      const aTo = nodes[step.arrow.to];
+      const fromX = aFrom.x, fromY = aFrom.y;
+      const toX = aTo.x, toY = aTo.y;
+      drawArrow(ctx, fromX, fromY+40, toX, toY-40, '#f472b6', 3);
+    }
+
+    // Text
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(step.title, W/2, 30);
+    if (step.grad) {
+      ctx.fillStyle = '#f472b6';
+      ctx.font = '14px monospace';
+      ctx.fillText(step.grad, W/2, H - 10);
+    }
+
+    frame++;
+    if (frame < steps.length * 35) animId = requestAnimationFrame(anim);
+  }
+  anim();
+  document.getElementById('fbResult').innerHTML =
+    '🎬 <strong>逐步反向传播</strong>：从输出 y 开始，逆向追踪计算图，每一步用链式法则乘以当前节点的局部梯度';
+}
+
+// ==================== 3. BASIC USAGE ====================
+let bxValues = [0, 1.0, 2.0, 3.0];
+let bGrad = null;
+
+function updateBasic() {
+  bxValues[0] = parseInt(document.getElementById('bx0').value) / 10;
+  bxValues[1] = parseInt(document.getElementById('bx1').value) / 10;
+  bxValues[2] = parseInt(document.getElementById('bx2').value) / 10;
+  bxValues[3] = parseInt(document.getElementById('bx3').value) / 10;
+  document.getElementById('bx0v').textContent = bxValues[0];
+  document.getElementById('bx1v').textContent = bxValues[1];
+  document.getElementById('bx2v').textContent = bxValues[2];
+  document.getElementById('bx3v').textContent = bxValues[3];
+  bGrad = null;
+  drawBasic();
+}
+
+function drawBasic(highlightGrad=false, verify=false) {
+  const c = document.getElementById('basicCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // x values
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('输入 x', 80, 30);
+  for (let i = 0; i < 4; i++) {
+    drawNode(ctx, 30, 55 + i*55, 90, 44, `x[${i}]=${bxValues[i]}`, '#38bdf8');
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px monospace';
+    ctx.fillText(`idx ${i}`, 100, 77 + i*55);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px sans-serif';
+  }
+
+  // y = 2*dot(x,x)
+  const dot = bxValues.reduce((s,v)=>s+v*v, 0);
+  const y = 2 * dot;
+  ctx.fillText('y = 2·xᵀx', 280, 30);
+  ctx.fillText(`= 2·(${bxValues.map(v=>v.toFixed(1)+'²').join('+')})`, 280, 55);
+  ctx.fillText(`= 2·${dot.toFixed(2)}`, 280, 80);
+  ctx.fillText(`= ${y.toFixed(2)}`, 280, 105);
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText(`y = ${y.toFixed(2)}`, 280, 135);
+
+  // Expected gradient = 4x
+  ctx.fillText('理论梯度 ∇y = 4x', 280, 180);
+  const expectedGrad = bxValues.map(v => 4*v);
+  ctx.font = '13px monospace';
+  ctx.fillText(`= [${expectedGrad.map(v=>v.toFixed(1)).join(', ')}]`, 280, 205);
+
+  // Computed gradient
+  if (bGrad) {
+    ctx.fillStyle = highlightGrad ? '#f472b6' : '#34d399';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('计算梯度 x.grad', 450, 30);
+    for (let i = 0; i < 4; i++) {
+      drawNode(ctx, 420, 55 + i*55, 90, 44, bGrad[i].toFixed(1), '#34d399', 1);
+    }
+
+    if (verify) {
+      const allMatch = bGrad.every((v, i) => Math.abs(v - expectedGrad[i]) < 0.01);
+      ctx.fillStyle = allMatch ? '#34d399' : '#ef4444';
+      ctx.font = 'bold 18px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(allMatch ? '✅ 验证通过！' : '❌ 不匹配', 465, 260);
+      ctx.fillText(`x.grad == 4*x ? ${allMatch}`, 465, 285);
+    }
+  } else {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('尚未计算梯度', 465, 160);
+    ctx.fillText('点击 "执行 backward()" ', 465, 185);
+  }
+
+  // Code box
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(15, 260, W - 440, 90);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(15, 260, W - 440, 90);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('1 x = torch.arange(4.0,', 20, 280);
+  ctx.fillText('2     requires_grad=True)', 20, 298);
+  ctx.fillText('3 y = 2 * torch.dot(x, x)', 20, 316);
+  ctx.fillText('4 y.backward()  ← 触发反传', 20, 334);
+}
+
+function basicDemo(type) {
+  stopAnim();
+  if (type === 'compute') { bGrad = null; drawBasic(); document.getElementById('basicResult').innerHTML = '🖥️ 前向计算完成。y = 2·xᵀx，计算图已构建，等待 backward()。'; }
+  else if (type === 'backward') {
+    // Simulate gradient computation
+    bGrad = bxValues.map(v => 4*v);
+    drawBasic(true);
+    document.getElementById('basicResult').innerHTML = '⬅️ <strong>backward() 执行完毕！</strong>梯度已存入 x.grad。x.grad = 4x = [' + bGrad.map(v=>v.toFixed(1)).join(', ') + ']';
+  }
+  else if (type === 'verify') {
+    if (!bGrad) { bGrad = bxValues.map(v => 4*v); }
+    drawBasic(true, true);
+    document.getElementById('basicResult').innerHTML = '✅ <strong>验证结果：x.grad == 4*x → True</strong>，自动微分的结果与手动推导完全一致！';
+  }
+}
+drawBasic();
+
+// ==================== 4. GRADIENT ACCUMULATION ====================
+let accumGrad = [0, 0, 0, 0];
+let accumCount = 0;
+
+function drawAccum(highlight='') {
+  const c = document.getElementById('accumCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+
+  // Show gradient values
+  ctx.fillText('x.grad 当前值', 80, 30);
+  for (let i = 0; i < 4; i++) {
+    const isHighlighted = highlight === 'first' || highlight === 'second' || highlight === 'zero';
+    const color = (highlight === 'second' && i === 0) ? '#f472b6' : '#34d399';
+    drawNode(ctx, 30, 55 + i*55, 90, 44, accumGrad[i].toFixed(1), color);
+  }
+
+  // Accumulation state
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px monospace';
+  ctx.fillText(`已执行 backward() 次数: ${accumCount}`, 200, 60);
+  ctx.fillText('期望值（每次 backward）:', 200, 90);
+  ctx.fillText('[1.0, 1.0, 1.0, 1.0]  (∂(sum(x))/∂x = 1)', 200, 115);
+
+  // Show what happens with accumulation
+  if (accumCount >= 2 && highlight === 'second') {
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('⚠️ 梯度累加了！', 200, 160);
+    ctx.fillText(`x.grad = [${accumGrad.join(', ')}]`, 200, 185);
+    ctx.fillText('应该是 [1,1,1,1]，却变成了 [2,2,2,2]！', 200, 210);
+  } else if (highlight === 'zero' && accumCount === 1) {
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('✅ 先清零再 backward:', 200, 160);
+    ctx.fillText(`x.grad = [${accumGrad.join(', ')}] 正确！`, 200, 185);
+  }
+
+  // Code
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(16, 265, W - 32, 65);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(16, 265, W - 32, 65);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('# 不恰当的代码：', 22, 285);
+  ctx.fillText('y = x.sum(); y.backward()  # grad=[1,1,1,1]', 22, 303);
+  ctx.fillText('y = x.sum(); y.backward()  # grad=[2,2,2,2]  ← 累加了！（PyTorch下）', 22, 321);
+}
+
+function accumDemo(type) {
+  stopAnim();
+  if (type === 'first') {
+    accumGrad = [1, 1, 1, 1];
+    accumCount = 1;
+    drawAccum('first');
+    document.getElementById('accumResult').innerHTML = '1️⃣ <strong>第一次 backward()</strong>：x.grad = [1,1,1,1]，正常！';
+  } else if (type === 'second') {
+    accumGrad = accumGrad.map(v => v + 1);
+    accumCount = 2;
+    drawAccum('second');
+    document.getElementById('accumResult').innerHTML = '⚠️ <strong>第二次 backward()（未清零）</strong>：x.grad = <span style="color:#ef4444;">[2,2,2,2]</span>！梯度被累加了，这是 bug 的常见来源！';
+  } else if (type === 'zero') {
+    accumGrad = [0, 0, 0, 0];
+    accumGrad = [1, 1, 1, 1];
+    accumCount = 1;
+    drawAccum('zero');
+    document.getElementById('accumResult').innerHTML = '✅ <strong>先 x.grad.zero_() 再 backward()</strong>：每次 backward 前先清零，梯度正确。养成良好的习惯！';
+  } else if (type === 'reset') {
+    accumGrad = [0, 0, 0, 0];
+    accumCount = 0;
+    drawAccum();
+    document.getElementById('accumResult').innerHTML = '↺ 已重置。PyTorch/Paddle 用户注意：<code>x.grad.zero_()</code> 或 <code>x.clear_gradient()</code> 是必须的！';
+  }
+}
+drawAccum();
+
+// ==================== 5. NON-SCALAR BACKWARD ====================
+function nonscalarDemo(type) {
+  stopAnim();
+  const c = document.getElementById('nonscalarCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'left';
+
+  if (type === 'scalar') {
+    ctx.fillText('输入: x = [0., 1., 2., 3.]', 20, 40);
+    ctx.fillText('', 20, 60);
+    ctx.fillText('# 标量 y - 正常反向传播', 20, 80);
+    ctx.fillText('y = x.sum()           # y = 6 (标量!)', 20, 105);
+    ctx.fillText('y.backward()          # 直接调用', 20, 130);
+    ctx.fillText('x.grad = [1., 1., 1., 1.]  ✅', 20, 155);
+    ctx.fillText('', 20, 185);
+    ctx.fillText('∂(sum(x))/∂xᵢ = 1', 20, 210);
+    ctx.fillText('每个元素对求和贡献相等，导数都是1', 20, 235);
+
+    // Visual
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    for (let i = 0; i < 4; i++) {
+      drawNode(ctx, 400, 60 + i*60, 60, 44, i+'.0', '#38bdf8');
+      drawArrow(ctx, 430, 82 + i*60, 480, 180, '#38bdf8', 2);
+    }
+    drawNode(ctx, 480, 200, 70, 44, 'Σ=6', '#f472b6');
+    ctx.fillText('标量输出', 480, 170);
+    ctx.fillText('backward() ✅', 480, 260);
+
+    document.getElementById('nonscalarResult').innerHTML =
+      '✅ <strong>y 是标量</strong>：直接 .backward() 即可。标量对向量的梯度是一个向量，形状与输入相同。';
+  } else if (type === 'vector') {
+    ctx.fillText('输入: x = [0., 1., 2., 3.]', 20, 40);
+    ctx.fillText('', 20, 60);
+    ctx.fillText('# 向量 y - 需要先转为标量', 20, 80);
+    ctx.fillText('y = x * x          # y = [0,1,4,9] (向量!)', 20, 105);
+    ctx.fillText('', 20, 130);
+    ctx.fillText('# 方式1: 先 sum 再 backward', 20, 150);
+    ctx.fillText('y.sum().backward()', 20, 170);
+    ctx.fillText('x.grad = [0., 2., 4., 6.]  ✅', 20, 195);
+    ctx.fillText('', 20, 225);
+    ctx.fillText('# 方式2: 传入 gradient 参数', 20, 245);
+    ctx.fillText('y.backward(torch.ones_like(x))', 20, 265);
+    ctx.fillText('x.grad = [0., 2., 4., 6.]  ✅', 20, 290);
+    ctx.fillText('∂(x²)/∂x = 2x  ✓', 20, 320);
+
+    document.getElementById('nonscalarResult').innerHTML =
+      '⚠️ <strong>y 是向量</strong>：需先 sum() 转为标量，或传入 gradient 参数（PyTorch）。梯度 = 2x = <span class="highlight4">[0,2,4,6]</span>';
+  } else if (type === 'explain') {
+    ctx.fillText('为什么不能直接对向量 backward？', 20, 40);
+    ctx.fillText('', 20, 65);
+    ctx.fillText('向量 y=[y₀,y₁,y₂,y₃]ᵀ 对向量 x=[x₀,x₁,x₂,x₃]ᵀ 的导数', 20, 85);
+    ctx.fillText('是一个 4×4 的雅可比矩阵：', 20, 110);
+    ctx.fillText('', 20, 130);
+    ctx.fillText('     [∂y₀/∂x₀  ∂y₀/∂x₁  ∂y₀/∂x₂  ∂y₀/∂x₃]', 20, 150);
+    ctx.fillText('J =  [∂y₁/∂x₀  ∂y₁/∂x₁  ∂y₁/∂x₂  ∂y₁/∂x₃]', 20, 170);
+    ctx.fillText('     [∂y₂/∂x₀  ∂y₂/∂x₁  ∂y₂/∂x₂  ∂y₂/∂x₃]', 20, 190);
+    ctx.fillText('     [∂y₃/∂x₀  ∂y₃/∂x₁  ∂y₃/∂x₂  ∂y₃/∂x₃]', 20, 210);
+    ctx.fillText('', 20, 235);
+    ctx.fillText('在深度学习中，我们通常只需要', 20, 255);
+    ctx.fillText('"每个样本偏导数之和"，不是完整矩阵。', 20, 280);
+    ctx.fillText('所以框架默认对 y.sum() 求梯度！', 20, 305);
+
+    document.getElementById('nonscalarResult').innerHTML =
+      '📖 向量对向量的导数 = 雅可比矩阵。深度学习不需要完整矩阵，只求每个样本偏导数之和，所以框架默认 sum 后再 backward。';
+  }
+}
+nonscalarDemo('scalar');
+
+// ==================== 6. DETACH ====================
+function detachDemo(type) {
+  stopAnim();
+  const c = document.getElementById('detachCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (type === 'without') {
+    // z = y * x where y = x*x, so z = x³. ∂z/∂x = 3x²
+    drawNode(ctx, 80, 120, 70, 40, 'x=2', '#38bdf8');
+    drawNode(ctx, 240, 60, 80, 40, 'y = x² = 4', '#a78bfa');
+    drawNode(ctx, 240, 180, 80, 40, 'z = y·x = 8', '#f472b6');
+    drawNode(ctx, 400, 120, 90, 45, '∂z/∂x=3x²=12', '#34d399');
+
+    drawArrow(ctx, 115, 120, 200, 75, '#38bdf8', 2);
+    drawArrow(ctx, 115, 120, 200, 170, '#38bdf8', 2);
+    drawArrow(ctx, 280, 75, 280, 155, '#a78bfa', 2);
+    drawArrow(ctx, 320, 120, 355, 120, '#f472b6', 2);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('z = x³，∂z/∂x = 3x²', 30, 280);
+    ctx.fillText('完整梯度: 3·2² = 12', 30, 305);
+
+    document.getElementById('detachResult').innerHTML =
+      '不加 detach：y = x², z = y·x = x³, ∂z/∂x = <span class="highlight">3x² = 12</span>。梯度流经 y 到达 x';
+  } else if (type === 'with') {
+    // z = detach(y) * x where y = x*x. detach(y) treated as constant u.
+    // ∂z/∂x = u = x² = 4 (NOT 3x²)
+    drawNode(ctx, 80, 120, 70, 40, 'x=2', '#38bdf8');
+    drawNode(ctx, 240, 60, 80, 40, 'y = x² = 4', '#a78bfa');
+    drawNode(ctx, 240, 180, 90, 45, 'u = detach(y)=4', '#fb923c');
+    drawNode(ctx, 400, 120, 90, 45, 'z = u·x = 8', '#f472b6');
+    drawNode(ctx, 550, 120, 90, 45, '∂z/∂x=u=4', '#34d399');
+
+    drawArrow(ctx, 115, 120, 200, 75, '#38bdf8', 2);
+    drawArrow(ctx, 280, 60, 240, 170, '#64748b', 2, true); // detach - dashed
+    drawArrow(ctx, 285, 180, 355, 135, '#fb923c', 2);
+    drawArrow(ctx, 115, 120, 200, 170, '#38bdf8', 2);
+    drawArrow(ctx, 330, 120, 355, 120, '#f472b6', 2);
+    drawArrow(ctx, 445, 120, 505, 120, '#34d399', 2);
+
+    // Cross mark on detach edge
+    ctx.fillStyle = '#ef4444';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('✂️', 260, 120);
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('z = detach(x²)·x，∂z/∂x = x² = 4', 30, 280);
+    ctx.fillText('detach 切断了梯度流！', 30, 305);
+
+    document.getElementById('detachResult').innerHTML =
+      '加 detach：u = y.detach()，z = u·x，梯度<span class="highlight5">不流经 y</span>！∂z/∂x = <span class="highlight">u = 4</span>（不是 12）';
+  } else if (type === 'compare') {
+    // Side by side
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('不加 detach', 160, 30);
+    ctx.fillText('加 detach', 480, 30);
+
+    // Left: without detach
+    drawNode(ctx, 80, 80, 70, 40, 'x=2', '#38bdf8');
+    drawNode(ctx, 240, 80, 80, 40, 'y=x²=4', '#a78bfa');
+    drawNode(ctx, 240, 180, 80, 40, 'z=y·x=8', '#f472b6');
+    drawArrow(ctx, 115, 90, 200, 90, '#38bdf8', 2);
+    drawArrow(ctx, 115, 100, 200, 175, '#38bdf8', 2);
+    drawArrow(ctx, 280, 90, 280, 155, '#a78bfa', 2);
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('∂z/∂x = 3x² = 12', 160, 260);
+    ctx.fillText('梯度完整流过 y', 160, 285);
+
+    // Right: with detach
+    drawNode(ctx, 400, 80, 70, 40, 'x=2', '#38bdf8');
+    drawNode(ctx, 560, 80, 90, 45, 'u=detach(y)=4', '#fb923c');
+    drawNode(ctx, 560, 180, 80, 40, 'z=u·x=8', '#f472b6');
+    drawArrow(ctx, 435, 90, 515, 90, '#38bdf8', 2);
+    drawArrow(ctx, 435, 100, 520, 175, '#38bdf8', 2);
+    drawArrow(ctx, 560, 120, 560, 155, '#fb923c', 2);
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText('∂z/∂x = u = 4', 480, 260);
+    ctx.fillText('梯度在 detach 处被截断', 480, 285);
+
+    document.getElementById('detachResult').innerHTML =
+      '🔄 <strong>对比</strong>：不加 detach 梯度 = <span class="highlight4">12 (3x²)</span>，加 detach 后梯度 = <span class="highlight">4 (x²)</span>，y 对梯度的影响被切断了';
+  }
+}
+detachDemo('without');
+
+// ==================== 7. CONTROL FLOW ====================
+let cfA = 5.0;
+function updateCtrlFlow() {
+  cfA = parseInt(document.getElementById('cfa').value) / 10;
+  document.getElementById('cfav').textContent = cfA.toFixed(1);
+  drawCtrlFlow();
+}
+
+function ctrlFlowF(a) {
+  let b = a * 2;
+  while (Math.abs(b) < 1000) b = b * 2;
+  let c = b > 0 ? b : 100 * b;
+  return c;
+}
+
+function drawCtrlFlow(showResult=false, showGrad=false, scanData=null) {
+  const c = document.getElementById('ctrlFlowCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px monospace';
+  ctx.textAlign = 'left';
+
+  // Trace the function for current a
+  let b0 = cfA * 2;
+  let b = b0;
+  let loopCount = 0;
+  while (Math.abs(b) < 1000) { b = b * 2; loopCount++; }
+  let c = b > 0 ? b : 100 * b;
+  const ks = [cfA * 2, c]; // slope = c/a
+
+  ctx.fillText(`输入 a = ${cfA.toFixed(1)}`, 20, 35);
+  ctx.fillText(`b₀ = a × 2 = ${b0.toFixed(1)}`, 20, 60);
+  ctx.fillText(`while b.norm() < 1000:  b = b × 2`, 20, 85);
+  ctx.fillText(`  → 循环 ${loopCount} 次, b = ${b.toFixed(1)}`, 30, 110);
+  ctx.fillText(`if b > 0: c = b = ${c.toFixed(1)}`, 20, 135);
+  ctx.fillText(`输出 c = ${c.toFixed(1)}`, 20, 165);
+
+  // f(a) = k*a where k = c/a
+  const k = c / cfA;
+  ctx.fillStyle = '#38bdf8';
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText(`f(a) = k·a = ${k.toFixed(2)}·a`, 20, 200);
+  ctx.fillText(`这是分段线性函数！`, 20, 225);
+
+  if (showGrad) {
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 16px monospace';
+    ctx.fillText(`梯度 = k = ${k.toFixed(2)}`, 20, 260);
+    ctx.fillText(`即 f'(a) = ${k.toFixed(2)} (常数)`, 20, 285);
+  }
+
+  if (scanData) {
+    ctx.fillStyle = '#34d399';
+    ctx.font = '14px monospace';
+    ctx.fillText(`扫描结果:`, 20, 265);
+    for (const d of scanData) {
+      ctx.fillText(`a=${d.a.toFixed(1)} → c=${d.c.toFixed(1)} → k=${d.k.toFixed(2)}`, 20, 285 + scanData.indexOf(d)*20);
+    }
+  }
+
+  // Mini graph of f(a) vs a
+  const gx = 450, gy = 60, gw = 180, gh = 160;
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(gx, gy, gw, gh);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(gx, gy, gw, gh);
+
+  // Axes
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(gx, gy+gh/2); ctx.lineTo(gx+gw, gy+gh/2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(gx+gw/2, gy); ctx.lineTo(gx+gw/2, gy+gh); ctx.stroke();
+
+  // Plot f(a) = k*a
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let i = 0; i <= gw; i += 2) {
+    const aa = (i / gw - 0.5) * 10;
+    const cc = k * aa;
+    const sx = gx + i;
+    const sy = gy + gh/2 - cc * (gh/20);
+    if (sx >= gx && sx <= gx+gw && sy >= gy && sy <= gy+gh) {
+      if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+  }
+  ctx.stroke();
+
+  // Mark current point
+  const ptX = gx + gw/2;
+  const ptY = gy + gh/2 - k * cfA * (gh/20);
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(ptX, ptY, 5, 0, Math.PI*2); ctx.fill();
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '11px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(`斜率 = ${k.toFixed(2)}`, gx+gw/2, ptY - 12);
+  ctx.fillText('f(a)=k·a 局部', gx+gw/2, gy+gh+15);
+}
+
+function ctrlFlowDemo(type) {
+  stopAnim();
+  if (type === 'run') {
+    drawCtrlFlow(true);
+    const c = ctrlFlowF(cfA);
+    document.getElementById('ctrlFlowResult').innerHTML = `▶️ f(${cfA.toFixed(1)}) = ${c.toFixed(1)}。此函数是分段线性的，梯度为常数。`;
+  } else if (type === 'grad') {
+    drawCtrlFlow(true, true);
+    const k = ctrlFlowF(cfA) / cfA;
+    document.getElementById('ctrlFlowResult').innerHTML = `⬅️ <strong>梯度 = ${k.toFixed(2)}</strong>。虽然函数有 while 循环和 if 条件，但自动微分仍能正确计算！`;
+  } else if (type === 'scan') {
+    const scanData = [];
+    for (let a = 1; a <= 10; a += 1.5) {
+      const c = ctrlFlowF(a);
+      scanData.push({a, c, k: c / a});
+    }
+    const lastData = scanData.slice(-5);
+    cfA = 5;
+    document.getElementById('cfa').value = 50;
+    document.getElementById('cfav').textContent = '5.0';
+    drawCtrlFlow(true, true, lastData);
+    document.getElementById('ctrlFlowResult').innerHTML = `🔍 <strong>扫描不同 a 值</strong>：每个 a 都得到 f(a)=k·a，k 等于 2^循环次数。自动微分在每次前向传播时动态构建计算图，正确计算梯度！`;
+  }
+}
+updateCtrlFlow();
+
+// ==================== 8. PLAYGROUND ====================
+function playDemo(type) {
+  stopAnim();
+  const c = document.getElementById('playCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  let expr, forwardCode, backwardCode, result;
+
+  if (type === 'dot') {
+    expr = 'y = 2·(xᵀx)'; forwardCode = 'x = [0,1,2,3]; y = 2·sum(x²) = 28'; backwardCode = '∇y = 4x = [0,4,8,12]';
+    result = '梯度 = 4x';
+    // Show graph
+    drawNode(ctx, 80, 160, 80, 44, 'x=[0,1,2,3]', '#38bdf8');
+    drawNode(ctx, 280, 160, 90, 44, 'y=2·xᵀx=28', '#a78bfa');
+    drawNode(ctx, 500, 160, 100, 44, '∇y=[0,4,8,12]', '#34d399');
+    drawArrow(ctx, 120, 160, 235, 160, '#38bdf8', 2);
+    drawArrow(ctx, 325, 160, 450, 160, '#f472b6', 3);
+  } else if (type === 'square') {
+    expr = 'y = x²'; forwardCode = '设 x=3; y = x² = 9'; backwardCode = '∂y/∂x = 2x = 6';
+    result = '梯度 = 2x';
+    drawNode(ctx, 200, 80, 70, 44, 'x=3', '#38bdf8');
+    drawNode(ctx, 200, 200, 70, 44, 'y=x²=9', '#a78bfa');
+    drawArrow(ctx, 235, 102, 235, 178, '#38bdf8', 2);
+    // backward
+    drawArrow(ctx, 165, 140, 100, 140, '#f472b6', 3, true);
+    drawNode(ctx, 460, 80, 100, 44, '∇y=2x=6', '#34d399');
+    drawArrow(ctx, 200, 220, 200, 280, '#f472b6', 3, true);
+  } else if (type === 'combo') {
+    expr = 'y = x₁² + 3x₁x₂'; forwardCode = 'x₁=2, x₂=3; y=4+18=22'; backwardCode = '∂y/∂x₁=2x₁+3x₂=13, ∂y/∂x₂=3x₁=6';
+    result = '∂y/∂x₁=13, ∂y/∂x₂=6';
+    drawNode(ctx, 80, 100, 75, 40, 'x₁=2', '#38bdf8');
+    drawNode(ctx, 80, 220, 75, 40, 'x₂=3', '#38bdf8');
+    drawNode(ctx, 250, 100, 80, 40, 'x₁²=4', '#a78bfa');
+    drawNode(ctx, 250, 220, 85, 40, '3x₁x₂=18', '#a78bfa');
+    drawNode(ctx, 420, 160, 70, 40, 'y=22', '#f472b6');
+    drawArrow(ctx, 117, 100, 210, 110, '#38bdf8', 2);
+    drawArrow(ctx, 117, 220, 210, 210, '#38bdf8', 2);
+    drawArrow(ctx, 290, 110, 380, 150, '#94a3b8', 2);
+    drawArrow(ctx, 290, 210, 380, 170, '#94a3b8', 2);
+    drawArrow(ctx, 117, 110, 210, 200, '#38bdf8', 2);
+    // backward
+    drawArrow(ctx, 420, 180, 420, 280, '#f472b6', 3, true);
+    ctx.fillStyle = '#34d399';
+    ctx.font = '14px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('∇y=[13, 6]', 460, 300);
+  } else if (type === 'sin') {
+    expr = 'y = sin(x)'; forwardCode = '设 x=1.0; y = sin(1.0) ≈ 0.841'; backwardCode = '∂y/∂x = cos(x) = cos(1.0) ≈ 0.540';
+    result = '梯度 = cos(x) ≈ 0.540';
+    // Plot sin and cos
+    const ox = 100, oy = 180, scale = 120;
+    ctx.strokeStyle = '#334155'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(ox-80, oy); ctx.lineTo(ox+200, oy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ox, oy-120); ctx.lineTo(ox, oy+120); ctx.stroke();
+    ctx.strokeStyle = '#38bdf8'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const x = (i/200)*4;
+      const y = Math.sin(x);
+      const sx = ox+i, sy = oy-y*scale;
+      if (i===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#f472b6'; ctx.lineWidth = 2; ctx.setLineDash([5,4]);
+    ctx.beginPath();
+    for (let i = 0; i <= 200; i++) {
+      const x = (i/200)*4;
+      const y = Math.cos(x);
+      const sx = ox+i, sy = oy-y*scale;
+      if (i===0) ctx.moveTo(sx,sy); else ctx.lineTo(sx,sy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('蓝色: sin(x)', ox+210, 40);
+    ctx.fillText('粉色: cos(x) (梯度)', ox+210, 65);
+    ctx.fillText('自动微分无需知道', ox+210, 90);
+    ctx.fillText('cos(x) 公式, 也能', ox+210, 115);
+    ctx.fillText('算出准确的梯度值!', ox+210, 140);
+  } else if (type === 'exp') {
+    expr = '自定义: y = eˣ + x²'; forwardCode = '设 x=1; y = e¹ + 1² = e + 1 ≈ 3.718'; backwardCode = '∂y/∂x = eˣ + 2x = e + 2 ≈ 4.718';
+    result = '梯度 = eˣ + 2x';
+    // Display
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '16px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText('自动微分的强大之处：', 20, 40);
+    ctx.fillText('任何可微的表达式，框架都能自动求梯度！', 20, 70);
+    ctx.fillText('y = eˣ + x²', 20, 110);
+    ctx.fillText('∇y = eˣ + 2x (自动得出)', 20, 145);
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText('不需要手写求导公式！', 20, 200);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('只需写前向代码, .backward() 自动算出所有梯度', 20, 240);
+  }
+
+  // Code block
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(16, 350, W - 32, 44);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(16, 350, W - 32, 44);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(`前向: ${forwardCode}`, 22, 368);
+  ctx.fillText(`反向: ${backwardCode}`, 22, 386);
+
+  document.getElementById('playResult').innerHTML = `✅ <strong>${expr}</strong> → ${result}。`;
+}
+playDemo('dot');
+
+// ==================== NAV HIGHLIGHT ====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if(window.scrollY >= s.offsetTop - 100) current = s.id; });
+  navLinks.forEach(a => { a.classList.toggle('active', a.getAttribute('href') === '#'+current); });
+});
+</script>
+
+</body>
+</html>

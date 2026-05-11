@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线性代数 — 从零开始的交互式教程</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #f472b6;
+    --accent3: #a78bfa;
+    --accent4: #34d399;
+    --accent5: #fb923c;
+    --danger: #ef4444;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    display: flex;
+    min-height: 100vh;
+  }
+  /* Sidebar */
+  nav {
+    width: 280px;
+    min-width: 280px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 10;
+  }
+  nav h2 {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  nav a {
+    display: block;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+    margin-bottom: 2px;
+  }
+  nav a:hover, nav a.active {
+    background: rgba(56,189,248,0.1);
+    color: var(--accent);
+  }
+  nav a.sub { padding-left: 28px; font-size: 0.82rem; }
+  /* Main */
+  main {
+    flex: 1;
+    padding: 40px 48px;
+    max-width: 960px;
+  }
+  h1 {
+    font-size: 2.2rem;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  h2 {
+    font-size: 1.5rem;
+    margin: 48px 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    color: var(--accent);
+  }
+  h3 {
+    font-size: 1.15rem;
+    margin: 28px 0 10px;
+    color: var(--accent3);
+  }
+  p, li { color: var(--text-secondary); margin-bottom: 10px; }
+  .highlight { color: var(--accent); font-weight: 600; }
+  .highlight2 { color: var(--accent2); font-weight: 600; }
+  .highlight3 { color: var(--accent3); }
+  .highlight4 { color: var(--accent4); }
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    margin: 20px 0;
+    box-shadow: var(--shadow);
+  }
+  /* Canvas containers */
+  .viz-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+  }
+  canvas { display: block; margin: 0 auto; border-radius: 8px; }
+  /* Buttons */
+  .btn {
+    display: inline-block;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, var(--accent), #0ea5e9);
+    color: #0f172a;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 4px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,189,248,0.3); }
+  .btn:active { transform: scale(0.97); }
+  .btn.accent2 { background: linear-gradient(135deg, var(--accent2), #e11d48); }
+  .btn.accent3 { background: linear-gradient(135deg, var(--accent3), #7c3aed); }
+  .btn.accent4 { background: linear-gradient(135deg, var(--accent4), #059669); }
+  /* Sliders */
+  input[type=range] {
+    width: 160px;
+    accent-color: var(--accent);
+    vertical-align: middle;
+  }
+  .slider-val {
+    display: inline-block;
+    width: 36px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  /* Formula */
+  .formula {
+    display: inline-block;
+    background: rgba(56,189,248,0.08);
+    border: 1px solid rgba(56,189,248,0.2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Courier New', monospace;
+    margin: 2px;
+    font-size: 0.95rem;
+  }
+  .formula-block {
+    display: block;
+    text-align: center;
+    font-size: 1.2rem;
+    padding: 16px;
+    margin: 16px 0;
+  }
+  /* Steps */
+  .step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 12px 0;
+    padding: 12px;
+    background: rgba(167,139,250,0.05);
+    border-radius: 10px;
+    border-left: 3px solid var(--accent3);
+  }
+  .step-num {
+    background: var(--accent3);
+    color: #0f172a;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+  /* Code */
+  code {
+    background: rgba(56,189,248,0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  /* Animated cell */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  @keyframes highlight-cell { 0%{filter:brightness(2)} 100%{filter:brightness(1)} }
+  .pulse { animation: pulse 1.2s ease-in-out infinite; }
+  /* Tooltip */
+  .tooltip {
+    position: absolute;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 20;
+    box-shadow: var(--shadow);
+  }
+  /* Responsive */
+  @media (max-width: 768px) {
+    body { flex-direction: column; }
+    nav { width: 100%; min-width: auto; height: auto; position: relative; padding: 12px; }
+    nav a { display: inline-block; margin: 2px; }
+    main { padding: 20px; }
+  }
+  /* Smooth scroll */
+  html { scroll-behavior: smooth; }
+  .emoji-icon { font-style: normal; margin-right: 6px; }
+</style>
+</head>
+<body>
+
+<nav id="nav">
+  <h2>📐 线性代数教程</h2>
+  <a href="#intro">👋 引言</a>
+  <a href="#scalar">1️⃣ 标量 Scalar</a>
+  <a href="#vector">2️⃣ 向量 Vector</a>
+  <a href="#matrix">3️⃣ 矩阵 Matrix</a>
+  <a href="#tensor">4️⃣ 张量 Tensor</a>
+  <a href="#elemwise">5️⃣ 按元素运算</a>
+  <a href="#transpose">6️⃣ 转置</a>
+  <a href="#dot">7️⃣ 点积</a>
+  <a href="#matvec">8️⃣ 矩阵-向量积</a>
+  <a href="#matmul">9️⃣ 矩阵乘法</a>
+  <a href="#reduce">🔟 降维操作</a>
+  <a href="#norm">1️⃣1️⃣ 范数</a>
+  <a href="#playground">🎮 自由练习场</a>
+</nav>
+
+<main>
+<h1>线性代数：从零开始的交互式教程</h1>
+<p style="font-size:1.1rem; margin-bottom:32px;">
+  基于《动手学深度学习》2.3节 · 每个概念都有<span class="highlight">可交互的动画演示</span>
+</p>
+
+<!-- ==================== INTRO ==================== -->
+<section id="intro">
+<div class="card">
+  <h3>🤔 为什么需要线性代数？</h3>
+  <p>想象你在用一张表格记录学生的成绩——每行是一个学生，每列是一门课。这个表格就是<strong>矩阵</strong>。</p>
+  <p>当你想算"加权总分"时，就是在做<strong>向量点积</strong>。当你想把所有分数统一乘以一个系数，就是在做<strong>标量乘法</strong>。</p>
+  <p>深度学习的核心——神经网络——本质上就是一层层的<strong>矩阵乘法</strong>。理解线性代数是理解深度学习的入场券。</p>
+  <p>本文从四个基本对象出发：<span class="highlight">标量 → 向量 → 矩阵 → 张量</span>，逐一介绍它们的运算规则。</p>
+</div>
+</section>
+
+<!-- ==================== SCALAR ==================== -->
+<section id="scalar">
+<h2><span class="emoji-icon">1️⃣</span> 标量 Scalar</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>标量就是<span class="highlight">单个数字</span>。比如你的年龄 <code>25</code>，气温 <code>36.5°C</code>，或者圆周率 <code>π ≈ 3.14159</code>。</p>
+  <p>数学上用一个普通小写字母表示，如 <span class="formula">x = 42</span>，并写作 <span class="formula">x ∈ ℝ</span>（读作 "x 属于实数集"）。</p>
+  <p>在代码中，标量就是<span class="highlight">只有一个元素的张量</span>。</p>
+</div>
+
+<div class="viz-container" id="scalar-viz">
+  <canvas id="scalarCanvas" width="500" height="200"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="scalarDemo('add')">➕ 加法 x + y</button>
+    <button class="btn accent2" onclick="scalarDemo('mul')">✖️ 乘法 x × y</button>
+    <button class="btn accent3" onclick="scalarDemo('div')">➗ 除法 x ÷ y</button>
+    <button class="btn accent4" onclick="scalarDemo('pow')">^ 幂 xʸ</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="scalarResult">点击按钮看看效果 👆</p>
+</div>
+</section>
+
+<!-- ==================== VECTOR ==================== -->
+<section id="vector">
+<h2><span class="emoji-icon">2️⃣</span> 向量 Vector</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>向量就是<span class="highlight">一组有序的数字</span>。可以把它想象成一个有方向的箭头，或者一张只有一列的迷你表格。</p>
+  <p>数学上用<strong>粗体小写字母</strong>表示，如 <span class="formula">x = [x₁, x₂, x₃]ᵀ</span>。默认是<strong>列向量</strong>（竖着写）。</p>
+  <p>向量的<span class="highlight">维度</span> = 它包含的元素个数。比如 <span class="formula">[2, 7, 1]</span> 是一个 3 维向量。</p>
+</div>
+
+<div class="viz-container" id="vector-viz">
+  <canvas id="vectorCanvas" width="600" height="320"></canvas>
+  <div style="margin-top:12px;">
+    <label>向量 x: </label>
+    <input type="range" min="-5" max="5" value="3" id="vx0" oninput="updateVec('x')"> <span class="slider-val" id="vx0v">3</span>
+    <input type="range" min="-5" max="5" value="2" id="vx1" oninput="updateVec('x')"> <span class="slider-val" id="vx1v">2</span>
+    &nbsp;&nbsp;
+    <label>向量 y: </label>
+    <input type="range" min="-5" max="5" value="1" id="vy0" oninput="updateVec('y')"> <span class="slider-val" id="vy0v">1</span>
+    <input type="range" min="-5" max="5" value="4" id="vy1" oninput="updateVec('y')"> <span class="slider-val" id="vy1v">4</span>
+  </div>
+  <div style="margin-top:8px;">
+    <button class="btn" onclick="vecOp('add')">x + y（向量加法）</button>
+    <button class="btn accent2" onclick="vecOp('sub')">x - y（向量减法）</button>
+    <button class="btn accent3" onclick="vecOp('dot')">x · y（点积）</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="vecResult">拖动滑块改变向量，点击按钮看运算 👆</p>
+</div>
+</section>
+
+<!-- ==================== MATRIX ==================== -->
+<section id="matrix">
+<h2><span class="emoji-icon">3️⃣</span> 矩阵 Matrix</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>矩阵就是<span class="highlight">一个二维的数字表格</span>（有行和列）。用<strong>粗体大写字母</strong>表示，如 <span class="formula">A ∈ ℝ³ˣ²</span> 表示 3 行 2 列的矩阵。</p>
+  <p>每个数据样本通常作为矩阵中的一行（<strong>行向量</strong>）。行数 = 列数时叫 <span class="highlight">方阵</span>。</p>
+  <p>元素 <span class="formula">aᵢⱼ</span> 表示第 i 行、第 j 列的值。</p>
+</div>
+
+<div class="viz-container" id="matrix-viz">
+  <canvas id="matrixCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="matrixDemo('add')">A + B（矩阵加法）</button>
+    <button class="btn accent2" onclick="matrixDemo('scalar')">3 × A（标量乘法）</button>
+    <button class="btn accent3" onclick="matrixDemo('transpose')">Aᵀ（转置）</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="matrixResult">点击按钮看矩阵运算的动画 👆</p>
+</div>
+</section>
+
+<!-- ==================== TENSOR ==================== -->
+<section id="tensor">
+<h2><span class="emoji-icon">4️⃣</span> 张量 Tensor</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>张量是<span class="highlight">"任意数量轴的n维数组"的通用叫法</span>。</p>
+  <p>
+    <span class="highlight">标量</span> = 0 阶张量（没有轴）→ 一个数<br>
+    <span class="highlight">向量</span> = 1 阶张量（1 个轴）→ 一维数组<br>
+    <span class="highlight">矩阵</span> = 2 阶张量（2 个轴）→ 二维数组<br>
+    <span class="highlight">3阶+张量</span> = 3个以上轴 → 彩色图像就是3阶张量！
+  </p>
+  <p>一张 256×256 的彩色照片 = 形状 <span class="formula">(256, 256, 3)</span> 的三阶张量（高 × 宽 × RGB通道）。</p>
+  <p style="color:var(--accent5);">⚠️ 注意："维度"一词在向量中指<strong>长度</strong>（几个元素），在张量中指<strong>轴的数量</strong>（几阶），容易混淆！</p>
+</div>
+
+<div class="viz-container" id="tensor-viz">
+  <canvas id="tensorCanvas" width="650" height="360"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="tensorLevel(0)">0阶：标量</button>
+    <button class="btn accent2" onclick="tensorLevel(1)">1阶：向量</button>
+    <button class="btn accent3" onclick="tensorLevel(2)">2阶：矩阵</button>
+    <button class="btn accent4" onclick="tensorLevel(3)">3阶：图像张量</button>
+  </div>
+</div>
+</section>
+
+<!-- ==================== ELEMENT-WISE ==================== -->
+<section id="elemwise">
+<h2><span class="emoji-icon">5️⃣</span> 按元素运算 & Hadamard 积</h2>
+
+<div class="card">
+  <h3>核心规则</h3>
+  <p>两个<strong>相同形状</strong>的矩阵/向量，可以<strong>逐个位置</strong>进行加减乘除。结果形状不变。</p>
+  <p><span class="formula">A ⊙ B</span> 叫 <span class="highlight">Hadamard 积</span>——就是按元素做乘法，<strong>不是矩阵乘法</strong>！</p>
+  <p>标量与张量运算：<span class="highlight">张量 ±/* 标量 = 每个元素都 ±/* 那个标量</span>，形状不变。</p>
+</div>
+
+<div class="viz-container" id="hadamard-viz">
+  <canvas id="hadamardCanvas" width="600" height="320"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="hadamardDemo('add')">A + B（逐元素加）</button>
+    <button class="btn accent2" onclick="hadamardDemo('hadamard')">A ⊙ B（Hadamard积）</button>
+    <button class="btn accent3" onclick="hadamardDemo('scalar')">A + 2（标量加）</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="hadamardResult">点击按钮 👆 Hadamard积 ≠ 矩阵乘法！</p>
+</div>
+</section>
+
+<!-- ==================== TRANSPOSE ==================== -->
+<section id="transpose">
+<h2><span class="emoji-icon">6️⃣</span> 转置 Transpose</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>转置就是<span class="highlight">交换矩阵的行和列</span>。记作 <span class="formula">Aᵀ</span>。</p>
+  <p>如果 <span class="formula">B = Aᵀ</span>，那么 <span class="formula">bᵢⱼ = aⱼᵢ</span>——第 i 行第 j 列变成了第 j 行第 i 列。</p>
+  <p>形状从 <span class="formula">m × n</span> 变成 <span class="formula">n × m</span>。</p>
+  <p>如果 <span class="formula">A = Aᵀ</span>（必须是方阵），叫<span class="highlight">对称矩阵</span>。</p>
+  <p>性质：<span class="formula">(Aᵀ)ᵀ = A</span>，<span class="formula">Aᵀ + Bᵀ = (A + B)ᵀ</span>。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="transposeCanvas" width="600" height="260"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="transposeDemo()">🔄 执行转置动画</button>
+  </div>
+</div>
+</section>
+
+<!-- ==================== DOT PRODUCT ==================== -->
+<section id="dot">
+<h2><span class="emoji-icon">7️⃣</span> 点积 Dot Product</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>两个<strong>相同长度</strong>的向量 <span class="formula">x, y ∈ ℝᵈ</span>，点积 = <span class="highlight">对应位置相乘再求和</span>。</p>
+  <div class="formula-block"><span class="formula">xᵀy = x₁y₁ + x₂y₂ + ... + xₙyₙ = Σ xᵢyᵢ</span></div>
+  <p>应用：<span class="highlight">加权平均</span>（权重非负且和为1时）、两个向量夹角的余弦值（归一化后）。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="dotCanvas" width="650" height="300"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="dotDemo()">🎬 逐步演示点积计算</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="dotResult"></p>
+</div>
+</section>
+
+<!-- ==================== MATRIX-VECTOR ==================== -->
+<section id="matvec">
+<h2><span class="emoji-icon">8️⃣</span> 矩阵-向量积</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p>矩阵 <span class="formula">A ∈ ℝᵐˣⁿ</span> 乘以向量 <span class="formula">x ∈ ℝⁿ</span>，得到长度为 m 的向量。</p>
+  <p>结果的第 i 个元素 = <span class="highlight">矩阵第 i 行与向量 x 的点积</span>。</p>
+  <p><strong>前提：</strong>矩阵的列数必须 = 向量的维度！</p>
+  <p>这可以理解为：<span class="highlight">从 n 维空间到 m 维空间的线性变换</span>。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="matvecCanvas" width="650" height="340"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="matvecDemo()">🎬 逐步演示矩阵×向量</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="matvecResult"></p>
+</div>
+</section>
+
+<!-- ==================== MATRIX MULTIPLICATION ==================== -->
+<section id="matmul">
+<h2><span class="emoji-icon">9️⃣</span> 矩阵乘法 Matrix Multiplication</h2>
+
+<div class="card">
+  <h3>定义</h3>
+  <p><span class="formula">A ∈ ℝⁿˣᵏ</span> × <span class="formula">B ∈ ℝᵏˣᵐ</span> = <span class="formula">C ∈ ℝⁿˣᵐ</span></p>
+  <p>每个元素 <span class="formula">cᵢⱼ = A第i行 与 B第j列 的点积</span>。</p>
+  <p><strong>前提：</strong>A 的列数必须 = B 的行数（都是 k）！</p>
+  <p style="color:var(--accent5);">⚠️ 矩阵乘法 ≠ Hadamard积！前者是"行×列的点积"，后者是"逐位置相乘"。</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="matmulCanvas" width="650" height="380"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="matmulDemo()">🎬 逐步演示矩阵乘法</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="matmulResult"></p>
+</div>
+</section>
+
+<!-- ==================== REDUCTION ==================== -->
+<section id="reduce">
+<h2><span class="emoji-icon">🔟</span> 降维操作 Sum & Mean</h2>
+
+<div class="card">
+  <h3>核心操作</h3>
+  <p><span class="formula">sum()</span> — 沿所有轴求和，降维为标量</p>
+  <p><span class="formula">sum(axis=0)</span> — 沿第 0 轴（行方向）求和，消掉行维度</p>
+  <p><span class="formula">sum(axis=1)</span> — 沿第 1 轴（列方向）求和，消掉列维度</p>
+  <p><span class="formula">mean()</span> — 平均值 = 总和 ÷ 元素个数</p>
+  <p><span class="formula">cumsum(axis=0)</span> — 累积和，不降维</p>
+</div>
+
+<div class="viz-container">
+  <canvas id="reduceCanvas" width="650" height="340"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="reduceDemo('all')">sum() 全部求和</button>
+    <button class="btn accent2" onclick="reduceDemo('axis0')">sum(axis=0)</button>
+    <button class="btn accent3" onclick="reduceDemo('axis1')">sum(axis=1)</button>
+    <button class="btn accent4" onclick="reduceDemo('mean')">mean() 平均值</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="reduceResult"></p>
+</div>
+</section>
+
+<!-- ==================== NORMS ==================== -->
+<section id="norm">
+<h2><span class="emoji-icon">1️⃣1️⃣</span> 范数 Norm</h2>
+
+<div class="card">
+  <h3>定义与性质</h3>
+  <p>范数是<span class="highlight">衡量向量"大小"的函数</span>，记作 <span class="formula">‖x‖</span>。满足：</p>
+  <p>① 齐次性：<span class="formula">‖αx‖ = |α| ‖x‖</span>（缩放 α 倍，范数也缩放 |α| 倍）</p>
+  <p>② 三角不等式：<span class="formula">‖x + y‖ ≤ ‖x‖ + ‖y‖</span></p>
+  <p>③ 非负性：<span class="formula">‖x‖ ≥ 0</span></p>
+  <p>④ 正定性：仅当所有元素为 0 时范数为 0</p>
+
+  <h3 style="margin-top:20px;">常用范数</h3>
+  <p><span class="highlight">L₂ 范数</span>（欧几里得距离）：<span class="formula">‖x‖₂ = √(Σ xᵢ²)</span> — 最常用！</p>
+  <p><span class="highlight">L₁ 范数</span>（曼哈顿距离）：<span class="formula">‖x‖₁ = Σ |xᵢ|</span> — 对异常值不敏感</p>
+  <p><span class="highlight">Frobenius 范数</span>：矩阵版的 L₂，<span class="formula">‖X‖_F = √(ΣΣ xᵢⱼ²)</span></p>
+</div>
+
+<div class="viz-container">
+  <canvas id="normCanvas" width="650" height="320"></canvas>
+  <div style="margin-top:12px;">
+    <label>向量: </label>
+    <input type="range" min="-8" max="8" value="3" id="nv0" oninput="updateNorm()"> <span class="slider-val" id="nv0v">3</span>
+    <input type="range" min="-8" max="8" value="4" id="nv1" oninput="updateNorm()"> <span class="slider-val" id="nv1v">4</span>
+    <button class="btn accent2" onclick="normDemo('l2')">L₂ 范数</button>
+    <button class="btn accent3" onclick="normDemo('l1')">L₁ 范数</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="normResult"></p>
+</div>
+</section>
+
+<!-- ==================== PLAYGROUND ==================== -->
+<section id="playground">
+<h2><span class="emoji-icon">🎮</span> 自由练习场</h2>
+
+<div class="viz-container">
+  <canvas id="playCanvas" width="650" height="400"></canvas>
+  <div style="margin-top:12px;">
+    <button class="btn" onclick="playDemo('add')">矩阵加法</button>
+    <button class="btn accent2" onclick="playDemo('hadamard')">Hadamard 积</button>
+    <button class="btn accent3" onclick="playDemo('matmul')">矩阵乘法</button>
+    <button class="btn accent4" onclick="playDemo('transpose')">转置</button>
+    <button class="btn" style="background:linear-gradient(135deg,var(--accent5),#ea580c);" onclick="playRandom()">🎲 随机矩阵</button>
+  </div>
+  <p style="margin-top:10px; font-size:0.9rem;" id="playResult"></p>
+</div>
+</section>
+
+<p style="text-align:center; padding:40px 0; color:var(--text-secondary); font-size:0.85rem;">
+  基于《动手学深度学习》2.3节 · 交互式教程由 DeepSeek 生成 · 拖动滑块、点击按钮来感受线性代数！
+</p>
+
+</main>
+
+<script>
+// ==================== UTILS ====================
+function lerpColor(c1, c2, t) {
+  const r1=parseInt(c1.slice(1,3),16), g1=parseInt(c1.slice(3,5),16), b1=parseInt(c1.slice(5,7),16);
+  const r2=parseInt(c2.slice(1,3),16), g2=parseInt(c2.slice(3,5),16), b2=parseInt(c2.slice(5,7),16);
+  const r=Math.round(r1+(r2-r1)*t), g=Math.round(g1+(g2-g1)*t), b=Math.round(b1+(b2-b1)*t);
+  return `rgb(${r},${g},${b})`;
+}
+function drawCell(ctx, x, y, w, h, text, color='#38bdf8', alpha=1) {
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 15px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + w/2, y + h/2);
+  ctx.globalAlpha = 1;
+}
+
+let animId = null;
+function stopAnim() { if(animId) { cancelAnimationFrame(animId); animId = null; } }
+
+// ==================== 1. SCALAR ====================
+function scalarDemo(op) {
+  stopAnim();
+  const c = document.getElementById('scalarCanvas');
+  const ctx = c.getContext('2d');
+  const x = 5, y = 3;
+  let result;
+  if (op === 'add') result = x + y;
+  else if (op === 'mul') result = x * y;
+  else if (op === 'div') result = (x / y).toFixed(2);
+  else result = Math.pow(x, y);
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    const t = Math.min(frame / 40, 1);
+    const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+
+    // x
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '18px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('标量 x', 80, 50);
+    drawCell(ctx, 30 + (1-ease)*20, 70, 70, 70, x, '#38bdf8');
+
+    // operator
+    let opSym = op === 'add' ? '+' : op === 'mul' ? '×' : op === 'div' ? '÷' : '^';
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(opSym, 200, 110);
+
+    // y
+    ctx.fillText('标量 y', 250, 50);
+    drawCell(ctx, 230 + (1-ease)*20, 70, 70, 70, y, '#f472b6');
+
+    // equals
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('=', 330, 110);
+
+    // result
+    ctx.fillText('结果', 400, 50);
+    const rAlpha = Math.min((frame - 20) / 20, 1);
+    if (rAlpha > 0) drawCell(ctx, 380 - (1-rAlpha)*10, 70, 70, 70, result, '#34d399', rAlpha);
+
+    frame++;
+    if (frame < 60) animId = requestAnimationFrame(draw);
+  }
+  draw();
+  const opNames = {add:'加法', mul:'乘法', div:'除法', pow:'幂运算'};
+  document.getElementById('scalarResult').innerHTML =
+    `✅ <span class="highlight">${x}</span> ${opSym} <span class="highlight2">${y}</span> = <span class="highlight4">${result}</span> （标量${opNames[op]}：两个数字直接运算）`;
+}
+
+// ==================== 2. VECTOR ====================
+function updateVec(which) {
+  stopAnim();
+  const c = document.getElementById('vectorCanvas');
+  const ctx = c.getContext('2d');
+  const x0 = parseInt(document.getElementById('vx0').value);
+  const x1 = parseInt(document.getElementById('vx1').value);
+  const y0 = parseInt(document.getElementById('vy0').value);
+  const y1 = parseInt(document.getElementById('vy1').value);
+  document.getElementById('vx0v').textContent = x0;
+  document.getElementById('vx1v').textContent = x1;
+  document.getElementById('vy0v').textContent = y0;
+  document.getElementById('vy1v').textContent = y1;
+
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // Draw vector x
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('向量 x', 100, 30);
+  drawCell(ctx, 50, 50, 60, 60, x0, '#38bdf8');
+  drawCell(ctx, 50, 120, 60, 60, x1, '#38bdf8');
+  ctx.fillText('['+x0+', '+x1+']ᵀ', 80, 220);
+
+  // Draw vector y
+  ctx.fillText('向量 y', 250, 30);
+  drawCell(ctx, 200, 50, 60, 60, y0, '#f472b6');
+  drawCell(ctx, 200, 120, 60, 60, y1, '#f472b6');
+  ctx.fillText('['+y0+', '+y1+']ᵀ', 230, 220);
+
+  // Arrow visualization
+  const ox = 380, oy = 150;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ox-80, oy); ctx.lineTo(ox+80, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, oy-80); ctx.lineTo(ox, oy+80); ctx.stroke();
+
+  // x arrow
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+x0*20, oy-x1*20); ctx.stroke();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath(); ctx.arc(ox+x0*20, oy-x1*20, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillText('x', ox+x0*20+12, oy-x1*20+4);
+
+  // y arrow
+  ctx.strokeStyle = '#f472b6';
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+y0*20, oy-y1*20); ctx.stroke();
+  ctx.fillStyle = '#f472b6';
+  ctx.beginPath(); ctx.arc(ox+y0*20, oy-y1*20, 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillText('y', ox+y0*20+12, oy-y1*20+4);
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '12px sans-serif';
+  ctx.fillText('2D 空间可视化', ox, oy+90);
+}
+updateVec('x');
+
+function vecOp(op) {
+  stopAnim();
+  const c = document.getElementById('vectorCanvas');
+  const ctx = c.getContext('2d');
+  const x0 = parseInt(document.getElementById('vx0').value);
+  const x1 = parseInt(document.getElementById('vx1').value);
+  const y0 = parseInt(document.getElementById('vy0').value);
+  const y1 = parseInt(document.getElementById('vy1').value);
+
+  updateVec('x');
+
+  let r0, r1, symbol, name;
+  if (op === 'add') { r0 = x0+y0; r1 = x1+y1; symbol = '+'; name = '加法'; }
+  else if (op === 'sub') { r0 = x0-y0; r1 = x1-y1; symbol = '-'; name = '减法'; }
+  else { r0 = x0*y0 + x1*y1; symbol = '·'; name = '点积'; }
+
+  // Show result
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'center';
+
+  if (op !== 'dot') {
+    ctx.fillText('结果', 400, 30);
+    drawCell(ctx, 350, 50, 60, 60, r0, '#34d399');
+    drawCell(ctx, 350, 120, 60, 60, r1, '#34d399');
+    ctx.fillText('['+r0+', '+r1+']ᵀ', 380, 220);
+
+    // Result arrow
+    const ox=380, oy=150;
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+r0*20, oy-r1*20); ctx.stroke();
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath(); ctx.arc(ox+r0*20, oy-r1*20, 6, 0, Math.PI*2); ctx.fill();
+    ctx.fillText('x'+symbol+'y', ox+r0*20+15, oy-r1*20+4);
+  }
+
+  if (op === 'dot') {
+    document.getElementById('vecResult').innerHTML =
+      `✅ <strong>点积</strong>：${x0}×${y0} + ${x1}×${y1} = <span class="highlight4">${r0}</span>（对应位置相乘再求和，结果是一个<strong>标量</strong>！）`;
+  } else {
+    document.getElementById('vecResult').innerHTML =
+      `✅ <strong>向量${name}</strong>：对应位置分别运算，形状不变 → [${r0}, ${r1}]ᵀ`;
+  }
+}
+
+// ==================== 3. MATRIX ====================
+function drawMatrix(ctx, data, x, y, cellW, cellH, color, label, highlightCells=null) {
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(label, x + data[0].length*cellW/2, y - 10);
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j < data[i].length; j++) {
+      let c = color;
+      let a = 1;
+      if (highlightCells && highlightCells.some(h => h[0]===i && h[1]===j)) {
+        c = '#fb923c';
+        a = 1;
+      }
+      drawCell(ctx, x + j*cellW, y + i*cellH, cellW, cellH, data[i][j], c, a);
+    }
+  }
+}
+
+const matA = [[2,1,4],[3,5,2]];
+const matB = [[1,3,2],[2,1,3]];
+
+function drawMatrices(ctx, hlA, hlB, hlR, resData, opLabel) {
+  ctx.clearRect(0, 0, 650, 380);
+  drawMatrix(ctx, matA, 20, 40, 55, 55, '#38bdf8', '矩阵 A (2×3)', hlA);
+  ctx.fillStyle = '#f472b6';
+  ctx.font = 'bold 28px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(opLabel, 215, 130);
+  drawMatrix(ctx, matB, 260, 40, 55, 55, '#f472b6', '矩阵 B (2×3)', hlB);
+  if (resData) {
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText('=', 455, 130);
+    const rColor = opLabel === 'ᵀ' ? '#a78bfa' : '#34d399';
+    drawMatrix(ctx, resData, 490, 40, 55, 55, rColor, '结果', hlR);
+  }
+}
+
+function matrixDemo(op) {
+  stopAnim();
+  const c = document.getElementById('matrixCanvas');
+  const ctx = c.getContext('2d');
+
+  if (op === 'add') {
+    const res = matA.map((row,i) => row.map((v,j) => v + matB[i][j]));
+    drawMatrices(ctx, null, null, null, res, '+');
+    document.getElementById('matrixResult').innerHTML =
+      '✅ <strong>矩阵加法</strong>：对应位置相加，形状不变。A[0][0]=2 + B[0][0]=1 = <span class="highlight4">3</span>';
+  } else if (op === 'scalar') {
+    const res = matA.map(row => row.map(v => v * 3));
+    drawMatrices(ctx, null, null, null, res, '×3');
+    document.getElementById('matrixResult').innerHTML =
+      '✅ <strong>标量乘法</strong>：每个元素都乘以 3，形状不变 → 每个值都变成原来的 3 倍';
+  } else if (op === 'transpose') {
+    // Animate transpose
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, 650, 380);
+      const t = Math.min(frame / 40, 1);
+      const ease = t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2;
+
+      drawMatrix(ctx, matA, 20, 40, 55, 55, '#38bdf8', '矩阵 A (2×3)', null);
+      ctx.fillStyle = '#f472b6';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('→ 转置 →', 215, 130);
+
+      // Animate the transposed result appearing
+      const resT = [[2,3],[1,5],[4,2]];
+      if (t > 0.2) drawMatrix(ctx, resT, 340 + (1-Math.min((t-0.2)/0.8,1))*30, 40 - (1-Math.min((t-0.2)/0.8,1))*10, 55, 55, '#a78bfa', 'Aᵀ (3×2)', null, Math.min((t-0.2)/0.8,1));
+
+      // Highlight shape change
+      if (t > 0.5) {
+        ctx.fillStyle = '#fb923c';
+        ctx.font = 'bold 15px sans-serif';
+        ctx.fillText('形状: 2×3 → 3×2', 200, 260);
+        ctx.fillText('行 ↔ 列 互换！', 200, 285);
+      }
+
+      frame++;
+      if (frame < 60) { animId = requestAnimationFrame(anim); }
+    }
+    anim();
+    document.getElementById('matrixResult').innerHTML =
+      '✅ <strong>转置</strong>：行变列、列变行。第 i 行第 j 列 → 第 j 行第 i 列。形状从 2×3 翻转为 3×2';
+  }
+}
+
+// Initialize matrix canvas
+function initMatrix() {
+  const c = document.getElementById('matrixCanvas');
+  const ctx = c.getContext('2d');
+  drawMatrices(ctx, null, null, null, null, '');
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('点击下方按钮查看矩阵运算', 325, 260);
+}
+initMatrix();
+
+// ==================== 4. TENSOR ====================
+function tensorLevel(level) {
+  stopAnim();
+  const c = document.getElementById('tensorCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  const levels = [
+    { name:'标量 (0阶张量)', desc:'就是一个数', shape:'形状: ()', data:'42', color:'#38bdf8' },
+    { name:'向量 (1阶张量)', desc:'一维数组，1个轴', shape:'形状: (4,)', data:'[3, 7, 2, 5]', color:'#f472b6' },
+    { name:'矩阵 (2阶张量)', desc:'二维数组，2个轴', shape:'形状: (3×3)', data:[[2,1,3],[4,5,0],[1,7,2]], color:'#a78bfa' },
+    { name:'图像张量 (3阶张量)', desc:'三维数组，3个轴 (高×宽×通道)', shape:'形状: (4×4×3)', data:'RGB 彩色图像', color:'#34d399' },
+  ];
+  const l = levels[level];
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 20px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(l.name, 325, 40);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '15px sans-serif';
+  ctx.fillText(l.desc + ' · ' + l.shape, 325, 65);
+
+  if (level === 0) {
+    drawCell(ctx, 275, 100, 100, 100, '42', '#38bdf8');
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('1个数字，0个轴', 325, 240);
+  } else if (level === 1) {
+    const vals = [3,7,2,5];
+    for (let i=0; i<4; i++) drawCell(ctx, 140 + i*85, 100, 70, 70, vals[i], '#f472b6');
+    ctx.strokeStyle = '#f472b6';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(140, 90); ctx.lineTo(140, 180); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(480, 90); ctx.lineTo(480, 180); ctx.stroke();
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('1个轴 (axis=0)，长度=4', 325, 220);
+  } else if (level === 2) {
+    const m = [[2,1,3],[4,5,0],[1,7,2]];
+    drawMatrix(ctx, m, 160, 95, 55, 55, '#a78bfa', '');
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText('轴0 (行) →', 400, 120);
+    ctx.fillText('轴1 (列) ↓', 110, 165);
+    ctx.fillText('2个轴，3×3=9个元素', 325, 290);
+  } else if (level === 3) {
+    // Draw 3 slices of a 3D tensor
+    for (let s = 0; s < 3; s++) {
+      const ox = 60 + s * 200;
+      const oy = 100;
+      ctx.fillStyle = ['#ef4444','#22c55e','#3b82f6'][s];
+      ctx.globalAlpha = 0.15;
+      for (let i=0; i<4; i++) for (let j=0; j<4; j++) {
+        ctx.fillRect(ox + j*35 - s*8, oy + i*35 + s*8, 30, 30);
+      }
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = ['#ef4444','#22c55e','#3b82f6'][s];
+      ctx.lineWidth = 2;
+      ctx.strokeRect(ox - s*8, oy + s*8, 140, 140);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '12px sans-serif';
+      ctx.fillText(['R通道','G通道','B通道'][s], ox+70 - s*8, oy+165 + s*8);
+    }
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('3个轴：高 × 宽 × 颜色通道 = 4×4×3', 325, 320);
+  }
+}
+tensorLevel(2);
+
+// ==================== 5. HADAMARD ====================
+function hadamardDemo(op) {
+  stopAnim();
+  const c = document.getElementById('hadamardCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  const A = [[2,4],[3,1],[5,2]];
+  const B = [[1,3],[2,5],[4,1]];
+
+  drawMatrix(ctx, A, 20, 30, 55, 55, '#38bdf8', 'A (3×2)', null);
+
+  const opSym = op === 'hadamard' ? '⊙' : op === 'add' ? '+' : '+';
+  ctx.fillStyle = '#f472b6';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(op === 'scalar' ? '+ 2' : opSym, 160, 100);
+
+  if (op === 'scalar') {
+    drawMatrix(ctx, A, 220, 30, 55, 55, '#f472b6', '标量 2', null);
+  } else {
+    drawMatrix(ctx, B, 220, 30, 55, 55, '#f472b6', 'B (3×2)', null);
+  }
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 24px sans-serif';
+  ctx.fillText('=', 365, 100);
+
+  let res;
+  if (op === 'add') res = A.map((r,i) => r.map((v,j) => v+B[i][j]));
+  else if (op === 'hadamard') res = A.map((r,i) => r.map((v,j) => v*B[i][j]));
+  else res = A.map(r => r.map(v => v+2));
+
+  drawMatrix(ctx, res, 400, 30, 55, 55, '#34d399', '结果 (3×2)', null);
+
+  if (op === 'hadamard') {
+    document.getElementById('hadamardResult').innerHTML =
+      '✅ <strong>Hadamard 积 A ⊙ B</strong>：对应位置逐个相乘，形状不变。⚠️ 和矩阵乘法完全不一样！';
+  } else if (op === 'add') {
+    document.getElementById('hadamardResult').innerHTML =
+      '✅ <strong>逐元素加法</strong>：对应位置相加，形状不变。必须同形状才能运算！';
+  } else {
+    document.getElementById('hadamardResult').innerHTML =
+      '✅ <strong>标量+矩阵</strong>：每个元素都加 2（广播机制），形状不变。';
+  }
+}
+
+// ==================== 6. TRANSPOSE ====================
+function transposeDemo() {
+  stopAnim();
+  const c = document.getElementById('transposeCanvas');
+  const ctx = c.getContext('2d');
+  const A = [[2,1,4],[3,5,0]];
+  const AT = [[2,3],[1,5],[4,0]];
+
+  let frame = 0;
+  function anim() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    const t = Math.min(frame / 50, 1);
+
+    drawMatrix(ctx, A, 30, 30, 55, 55, '#38bdf8', 'A (2×3)', null);
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('→ Aᵀ →', 230, 100);
+
+    if (t > 0.15) {
+      const alpha = Math.min((t-0.15)/0.5, 1);
+      drawMatrix(ctx, AT, 360 - (1-alpha)*40, 30 + (1-alpha)*15, 55, 55, '#a78bfa', 'Aᵀ (3×2)', null, alpha);
+    }
+
+    if (t > 0.5) {
+      ctx.fillStyle = '#fb923c';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText('a₁,₂=1 → aᵀ₂,₁=1', 200, 220);
+      ctx.fillText('第1行第2列 → 第2行第1列', 200, 240);
+    }
+
+    frame++;
+    if (frame < 70) animId = requestAnimationFrame(anim);
+  }
+  anim();
+}
+
+// ==================== 7. DOT PRODUCT ====================
+function dotDemo() {
+  stopAnim();
+  const c = document.getElementById('dotCanvas');
+  const ctx = c.getContext('2d');
+  const x = [3, 1, 4];
+  const y = [2, 5, 1];
+  const dotResult = x.reduce((s, v, i) => s + v * y[i], 0);
+
+  let frame = 0;
+  function anim() {
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    // Draw x
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('向量 x', 60, 20);
+    for (let i=0; i<3; i++) drawCell(ctx, 15, 38 + i*60, 50, 50, x[i], '#38bdf8');
+
+    ctx.fillText('向量 y', 170, 20);
+    for (let i=0; i<3; i++) drawCell(ctx, 125, 38 + i*60, 50, 50, y[i], '#f472b6');
+
+    // Multiplication step
+    ctx.fillText('逐元素相乘', 290, 20);
+    const products = x.map((v,i) => v * y[i]);
+    for (let i=0; i<3; i++) {
+      const pAlpha = frame > 15 + i*15 ? 1 : 0;
+      if (pAlpha > 0) {
+        drawCell(ctx, 245, 38 + i*60, 50, 50, products[i], '#a78bfa', pAlpha);
+        if (frame > 30 + i*15) {
+          ctx.fillStyle = '#94a3b8';
+          ctx.font = '11px sans-serif';
+          ctx.fillText(x[i]+'×'+y[i]+'='+products[i], 270, 63 + i*60);
+        }
+      }
+    }
+
+    // Plus signs
+    if (frame > 45) {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = 'bold 24px sans-serif';
+      ctx.fillText('+', 315, 88);
+      ctx.fillText('+', 315, 148);
+    }
+
+    // Sum
+    if (frame > 50) {
+      ctx.fillText('=', 370, 113);
+      ctx.fillText('求和 Σ', 430, 20);
+      const rAlpha = Math.min((frame-50)/20, 1);
+      drawCell(ctx, 390, 63, 65, 65, dotResult, '#34d399', rAlpha);
+    }
+
+    // Formula
+    if (frame > 65) {
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '14px monospace';
+      ctx.fillText('xᵀy = 3×2 + 1×5 + 4×1 = 6+5+4 = 15', 350, 200);
+      ctx.fillText('点积结果是一个标量!', 350, 225);
+    }
+
+    frame++;
+    if (frame < 85) animId = requestAnimationFrame(anim);
+  }
+  anim();
+  document.getElementById('dotResult').innerHTML =
+    `✅ <strong>点积 xᵀy</strong> = 3×2 + 1×5 + 4×1 = 6+5+4 = <span class="highlight4">${dotResult}</span>（结果是一个标量！）`;
+}
+
+// ==================== 8. MATRIX-VECTOR ====================
+function matvecDemo() {
+  stopAnim();
+  const c = document.getElementById('matvecCanvas');
+  const ctx = c.getContext('2d');
+  const A = [[2,1,4],[3,5,2]];
+  const x = [1, 2, 3];
+  const res = A.map(row => row.reduce((s,v,i) => s + v*x[i], 0));
+
+  let frame = 0;
+  function anim() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    drawMatrix(ctx, A, 20, 30, 50, 50, '#38bdf8', 'A (2×3)', null);
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('×', 215, 110);
+
+    // Vector x
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('x', 255, 25);
+    for (let i=0; i<3; i++) drawCell(ctx, 235, 38 + i*50, 45, 45, x[i], '#f472b6');
+
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('=', 310, 110);
+
+    // Result
+    ctx.fillText('结果 (长度2)', 370, 25);
+    for (let i=0; i<2; i++) {
+      const rAlpha = frame > 20 + i*20 ? 1 : 0;
+      if (rAlpha > 0) drawCell(ctx, 350, 38 + i*50, 55, 55, res[i], '#34d399', rAlpha);
+    }
+
+    // Show calculation
+    if (frame > 55) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '12px monospace';
+      ctx.textAlign = 'left';
+      ctx.fillText('第1行·x = 2×1 + 1×2 + 4×3 = '+res[0], 440, 60);
+      ctx.fillText('第2行·x = 3×1 + 5×2 + 2×3 = '+res[1], 440, 110);
+      ctx.fillText('前提：A列数(3) = x维度(3) ✓', 440, 160);
+    }
+
+    frame++;
+    if (frame < 80) animId = requestAnimationFrame(anim);
+  }
+  anim();
+  document.getElementById('matvecResult').innerHTML =
+    `✅ 结果 = [${res[0]}, ${res[1]}]ᵀ。每一行与 x 做点积，2×3 · 3×1 → 2×1`;
+}
+
+// ==================== 9. MATRIX MULTIPLICATION ====================
+function matmulDemo() {
+  stopAnim();
+  const c = document.getElementById('matmulCanvas');
+  const ctx = c.getContext('2d');
+  const A = [[2,1,4],[3,5,2]];  // 2×3
+  const B = [[1,2],[3,1],[0,4]];  // 3×2
+  // C[0][0] = 2*1+1*3+4*0 = 5
+  // C[0][1] = 2*2+1*1+4*4 = 19
+  // C[1][0] = 3*1+5*3+2*0 = 18
+  // C[1][1] = 3*2+5*1+2*4 = 19
+  const C = [[5,19],[18,19]];
+
+  let frame = 0;
+  let currentI = -1, currentJ = -1;
+
+  function anim() {
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    const step = Math.floor(frame / 25);
+    if (step >= 0) { currentI = 0; currentJ = 0; }
+    if (step >= 1) { currentI = 0; currentJ = 1; }
+    if (step >= 2) { currentI = 1; currentJ = 0; }
+    if (step >= 3) { currentI = 1; currentJ = 1; }
+
+    // Highlight current row and column
+    const hlA = currentI >= 0 ? [[currentI,0],[currentI,1],[currentI,2]] : null;
+    const hlB = currentJ >= 0 ? [[0,currentJ],[1,currentJ],[2,currentJ]] : null;
+    const hlC = currentI >= 0 && currentJ >= 0 ? [[currentI, currentJ]] : null;
+
+    drawMatrix(ctx, A, 15, 40, 50, 50, '#38bdf8', 'A (2×3)', hlA);
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('×', 195, 115);
+    drawMatrix(ctx, B, 225, 40, 50, 50, '#f472b6', 'B (3×2)', hlB);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.fillText('=', 415, 115);
+    drawMatrix(ctx, C, 445, 40, 50, 50, '#34d399', 'C (2×2)', hlC);
+
+    // Show calculation detail
+    if (step >= 0 && step <= 3) {
+      const i = Math.min(step, 1);
+      const j = Math.min(Math.max(step-1, 0), 1);
+      if (currentI >= 0 && currentJ >= 0) {
+        const row = A[currentI];
+        const col = [B[0][currentJ], B[1][currentJ], B[2][currentJ]];
+        const calcParts = row.map((v,k) => `${v}×${col[k]}`).join(' + ');
+        const val = C[currentI][currentJ];
+        ctx.fillStyle = '#fb923c';
+        ctx.font = '13px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`c[${currentI},${currentJ}] = 第${currentI+1}行 · 第${currentJ+1}列`, 30, 240);
+        ctx.fillText(`= ${calcParts} = ${val}`, 30, 265);
+        ctx.fillText(`前提: A列数(3) = B行数(3) ✓`, 30, 290);
+      }
+    }
+
+    frame++;
+    if (frame < 120) animId = requestAnimationFrame(anim);
+  }
+  anim();
+  document.getElementById('matmulResult').innerHTML =
+    '✅ <strong>矩阵乘法</strong>：cᵢⱼ = A第i行 与 B第j列 的<strong>点积</strong>。2×3 · 3×2 → 2×2';
+}
+
+// ==================== 10. REDUCTION ====================
+function reduceDemo(type) {
+  stopAnim();
+  const c = document.getElementById('reduceCanvas');
+  const ctx = c.getContext('2d');
+  const M = [[2,1,4],[3,5,2],[1,0,3]];
+
+  let frame = 0;
+  function anim() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    drawMatrix(ctx, M, 20, 30, 50, 50, '#38bdf8', '矩阵 (3×3)', null);
+
+    ctx.fillStyle = '#f472b6';
+    ctx.font = 'bold 18px sans-serif';
+    ctx.textAlign = 'center';
+
+    if (type === 'all') {
+      const sum = M.flat().reduce((a,b)=>a+b, 0);
+      ctx.fillText('sum() →', 240, 80);
+      if (frame > 15) {
+        drawCell(ctx, 340, 55, 65, 65, sum, '#34d399', Math.min((frame-15)/20, 1));
+        ctx.fillText('所有元素求和 = '+sum, 430, 80);
+      }
+    } else if (type === 'axis0') {
+      const res = [M[0][0]+M[1][0]+M[2][0], M[0][1]+M[1][1]+M[2][1], M[0][2]+M[1][2]+M[2][2]];
+      ctx.fillText('sum(axis=0) →', 230, 60);
+      if (frame > 15) {
+        for (let j=0; j<3; j++) drawCell(ctx, 350+j*55, 35, 50, 50, res[j], '#34d399', Math.min((frame-15)/20,1));
+        ctx.fillText('沿行方向压缩，每列求和', 230, 150);
+      }
+    } else if (type === 'axis1') {
+      const res = M.map(row => row.reduce((a,b)=>a+b,0));
+      ctx.fillText('sum(axis=1) →', 230, 60);
+      if (frame > 15) {
+        for (let i=0; i<3; i++) drawCell(ctx, 350, 30+i*55, 50, 50, res[i], '#34d399', Math.min((frame-15)/20,1));
+        ctx.fillText('沿列方向压缩，每行求和', 230, 210);
+      }
+    } else if (type === 'mean') {
+      const mean = (M.flat().reduce((a,b)=>a+b,0) / 9).toFixed(2);
+      ctx.fillText('mean() →', 240, 80);
+      if (frame > 15) {
+        drawCell(ctx, 340, 55, 65, 65, mean, '#34d399', Math.min((frame-15)/20, 1));
+        ctx.fillText('平均值 = 总和÷9 = '+mean, 430, 80);
+      }
+    }
+
+    frame++;
+    if (frame < 50) animId = requestAnimationFrame(anim);
+  }
+  anim();
+
+  const labels = {
+    all: 'sum() — 所有元素求和，降维为标量',
+    axis0: 'sum(axis=0) — 沿轴0求和，形状 (3,3)→(3,)，消掉第0维',
+    axis1: 'sum(axis=1) — 沿轴1求和，形状 (3,3)→(3,)，消掉第1维',
+    mean: 'mean() — 总和÷元素个数，也是标量',
+  };
+  document.getElementById('reduceResult').innerHTML = '✅ ' + labels[type];
+}
+
+// ==================== 11. NORMS ====================
+function updateNorm() {
+  stopAnim();
+  const c = document.getElementById('normCanvas');
+  const ctx = c.getContext('2d');
+  const v0 = parseInt(document.getElementById('nv0').value);
+  const v1 = parseInt(document.getElementById('nv1').value);
+  document.getElementById('nv0v').textContent = v0;
+  document.getElementById('nv1v').textContent = v1;
+
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // Vector display
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = '14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('向量 x', 60, 20);
+  drawCell(ctx, 20, 40, 55, 55, v0, '#38bdf8');
+  drawCell(ctx, 20, 105, 55, 55, v1, '#38bdf8');
+  ctx.fillText(`[${v0}, ${v1}]ᵀ`, 47, 195);
+
+  // L2 calculation
+  const l2 = Math.sqrt(v0*v0 + v1*v1);
+  const l1 = Math.abs(v0) + Math.abs(v1);
+
+  ctx.fillText('L₂ = √(x₁² + x₂²)', 220, 50);
+  ctx.fillText(`= √(${v0}² + ${v1}²)`, 220, 75);
+  ctx.fillText(`= √(${v0*v0} + ${v1*v1})`, 220, 100);
+  ctx.fillText(`= √${v0*v0 + v1*v1}`, 220, 125);
+  ctx.fillText(`≈ ${l2.toFixed(2)}`, 220, 150);
+
+  // Geometric visualization
+  const ox = 420, oy = 120;
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ox-100, oy); ctx.lineTo(ox+100, oy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ox, oy-100); ctx.lineTo(ox, oy+100); ctx.stroke();
+
+  const scale = Math.min(80 / Math.max(Math.abs(v0), Math.abs(v1), 1), 20);
+  const sx = v0 * scale, sy = -v1 * scale;
+
+  // Arrow
+  ctx.strokeStyle = '#38bdf8';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+sx, oy+sy); ctx.stroke();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath(); ctx.arc(ox+sx, oy+sy, 5, 0, Math.PI*2); ctx.fill();
+
+  // L2 distance line
+  ctx.strokeStyle = '#34d399';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5,5]);
+  ctx.beginPath(); ctx.moveTo(ox, oy); ctx.lineTo(ox+sx, oy+sy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#34d399';
+  ctx.font = '13px sans-serif';
+  ctx.fillText(`L₂距离 = ${l2.toFixed(2)}`, ox+sx/2, oy+sy/2 - 12);
+
+  document.getElementById('normResult').innerHTML =
+    `L₂ = <span class="highlight4">${l2.toFixed(2)}</span>（欧几里得距离，勾股定理！） | L₁ = <span class="highlight2">${l1}</span>（曼哈顿距离，绝对值之和）`;
+}
+updateNorm();
+
+function normDemo(type) {
+  stopAnim();
+  const v0 = parseInt(document.getElementById('nv0').value);
+  const v1 = parseInt(document.getElementById('nv1').value);
+  const c = document.getElementById('normCanvas');
+  const ctx = c.getContext('2d');
+
+  if (type === 'l2') {
+    let frame = 0;
+    function anim() {
+      ctx.clearRect(0, 0, c.width, c.height);
+      const t = Math.min(frame/40, 1);
+      updateNorm();
+
+      // Flash L2 result
+      const l2 = Math.sqrt(v0*v0 + v1*v1);
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.4 + 0.6 * Math.sin(frame * 0.2);
+      ctx.fillText(`‖x‖₂ = ${l2.toFixed(2)}`, 300, 200);
+      ctx.globalAlpha = 1;
+
+      frame++;
+      if (frame < 60) animId = requestAnimationFrame(anim);
+      else updateNorm();
+    }
+    anim();
+    document.getElementById('normResult').innerHTML =
+      `✅ <strong>L₂ 范数</strong> = ${Math.sqrt(v0*v0+v1*v1).toFixed(2)} = 向量"长度"，深度学习中最常用的范数！`;
+  } else {
+    const l1 = Math.abs(v0) + Math.abs(v1);
+    document.getElementById('normResult').innerHTML =
+      `✅ <strong>L₁ 范数</strong> = ${l1} = 各元素绝对值之和，对异常值不敏感（鲁棒）。`;
+  }
+}
+
+// ==================== 12. PLAYGROUND ====================
+const playA = [[3,1,2],[4,0,5]];
+const playB = [[2,4,1],[1,3,2]];
+
+function playDemo(op) {
+  stopAnim();
+  const c = document.getElementById('playCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  if (op === 'add') {
+    const res = playA.map((r,i) => r.map((v,j) => v+playB[i][j]));
+    drawMatrix(ctx, playA, 20, 30, 55, 55, '#38bdf8', 'A', null);
+    ctx.fillStyle = '#f472b6'; ctx.font='bold 28px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('+', 215, 115);
+    drawMatrix(ctx, playB, 260, 30, 55, 55, '#f472b6', 'B', null);
+    ctx.fillText('=', 455, 115);
+    drawMatrix(ctx, res, 490, 30, 55, 55, '#34d399', 'A+B', null);
+    document.getElementById('playResult').innerHTML = '矩阵加法：对应位置相加，需要同形状';
+  } else if (op === 'hadamard') {
+    const res = playA.map((r,i) => r.map((v,j) => v*playB[i][j]));
+    drawMatrix(ctx, playA, 20, 30, 55, 55, '#38bdf8', 'A', null);
+    ctx.fillStyle = '#f472b6'; ctx.font='bold 28px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('⊙', 215, 115);
+    drawMatrix(ctx, playB, 260, 30, 55, 55, '#f472b6', 'B', null);
+    ctx.fillText('=', 455, 115);
+    drawMatrix(ctx, res, 490, 30, 55, 55, '#a78bfa', 'A⊙B', null);
+    document.getElementById('playResult').innerHTML = 'Hadamard积：逐元素相乘，不是矩阵乘法！';
+  } else if (op === 'matmul') {
+    const B2 = [[2,1],[0,3],[4,2]]; // 3×2
+    const res = [[playA[0][0]*B2[0][0]+playA[0][1]*B2[1][0]+playA[0][2]*B2[2][0], playA[0][0]*B2[0][1]+playA[0][1]*B2[1][1]+playA[0][2]*B2[2][1]],
+                 [playA[1][0]*B2[0][0]+playA[1][1]*B2[1][0]+playA[1][2]*B2[2][0], playA[1][0]*B2[0][1]+playA[1][1]*B2[1][1]+playA[1][2]*B2[2][1]]];
+    drawMatrix(ctx, playA, 20, 40, 50, 50, '#38bdf8', 'A (2×3)', null);
+    ctx.fillStyle = '#f472b6'; ctx.font='bold 28px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('×', 200, 115);
+    drawMatrix(ctx, B2, 235, 40, 50, 50, '#f472b6', 'B (3×2)', null);
+    ctx.fillText('=', 420, 115);
+    drawMatrix(ctx, res, 450, 40, 50, 50, '#34d399', 'A×B (2×2)', null);
+    document.getElementById('playResult').innerHTML = '矩阵乘法：第i行·第j列的点积。A列数=B行数才行！';
+  } else if (op === 'transpose') {
+    const AT = [[3,4],[1,0],[2,5]];
+    drawMatrix(ctx, playA, 20, 30, 55, 55, '#38bdf8', 'A (2×3)', null);
+    ctx.fillStyle = '#f472b6'; ctx.font='bold 28px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('→ Aᵀ →', 215, 115);
+    drawMatrix(ctx, AT, 370, 30, 55, 55, '#a78bfa', 'Aᵀ (3×2)', null);
+    document.getElementById('playResult').innerHTML = '转置：行↔列互换，形状 (2×3)→(3×2)';
+  }
+}
+
+function playRandom() {
+  stopAnim();
+  const c = document.getElementById('playCanvas');
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  const rows = 2 + Math.floor(Math.random()*3);
+  const cols = 2 + Math.floor(Math.random()*3);
+  const rA = Array.from({length:rows}, () => Array.from({length:cols}, () => Math.floor(Math.random()*8)+1));
+  const rB = Array.from({length:rows}, () => Array.from({length:cols}, () => Math.floor(Math.random()*8)+1));
+  const rAdd = rA.map((r,i) => r.map((v,j) => v+rB[i][j]));
+
+  drawMatrix(ctx, rA, 10, 30, 50, 50, '#38bdf8', `随机A (${rows}×${cols})`, null);
+  ctx.fillStyle = '#f472b6'; ctx.font='bold 28px sans-serif'; ctx.textAlign='center';
+  ctx.fillText('+', 55 + cols*50 + 5, 30 + rows*25);
+  drawMatrix(ctx, rB, 50 + cols*50 + 30, 30, 50, 50, '#f472b6', `随机B`, null);
+  ctx.fillText('=', 50 + cols*50*2 + 65, 30 + rows*25);
+  drawMatrix(ctx, rAdd, 50 + cols*50*2 + 90, 30, 50, 50, '#34d399', `A+B`, null);
+  document.getElementById('playResult').innerHTML = `随机生成 ${rows}×${cols} 矩阵做加法，试试其他运算！`;
+}
+
+// ==================== NAV HIGHLIGHT ====================
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('nav a');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if(window.scrollY >= s.offsetTop - 100) current = s.id; });
+  navLinks.forEach(a => { a.classList.toggle('active', a.getAttribute('href') === '#'+current); });
+});
+
+// Initialize first render
+scalarDemo('add');
+</script>
+
+</body>
+</html>

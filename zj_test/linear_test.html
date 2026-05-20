@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线性回归从零实现 - 教学报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section .desc { color: var(--muted); margin-bottom: 20px; font-size: 15px; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 16px;
+  }
+
+  /* Code */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    overflow-x: auto;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 16px;
+  }
+  code { font-family: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace; }
+  .hl-kw { color: var(--accent2); }
+  .hl-fn { color: var(--accent); }
+  .hl-str { color: var(--green); }
+  .hl-num { color: var(--orange); }
+  .hl-cm { color: var(--muted); font-style: italic; }
+  .hl-op { color: #89ddff; }
+  .hl-var { color: #c792ea; }
+
+  /* Flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 24px 0;
+  }
+  .flow .step {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .flow .step .icon { font-size: 24px; margin-bottom: 6px; }
+  .flow .step .label { font-size: 13px; color: var(--fg); font-weight: 600; }
+  .flow .step .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .flow .arrow {
+    font-size: 20px;
+    color: var(--muted);
+    padding: 0 6px;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  td code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 7px; border-radius: 4px; font-size: 13px; }
+
+  /* Math */
+  .math {
+    text-align: center;
+    font-size: 18px;
+    padding: 20px;
+    color: var(--fg);
+    font-style: italic;
+    margin: 16px 0;
+    background: var(--code-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  /* Result block */
+  .result {
+    background: rgba(78,207,139,0.08);
+    border: 1px solid rgba(78,207,139,0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--green);
+  }
+
+  /* Highlight box */
+  .highlight {
+    background: rgba(108,140,255,0.06);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 16px 20px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .highlight strong { color: var(--accent); }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="tag">PYTORCH</div>
+    <h1>线性回归从零实现</h1>
+    <p>只用张量与自动微分，手写一整套训练流水线</p>
+  </div>
+
+  <!-- 1. Overview -->
+  <div class="section">
+    <h2><span class="num">1</span>整体流程</h2>
+    <div class="desc">整个程序围绕 6 个核心步骤构成，从数据生成到参数评估形成闭环。</div>
+    <div class="flow">
+      <div class="step"><div class="icon">📊</div><div class="label">生成数据</div><div class="sub">synthetic_data</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="icon">📦</div><div class="label">分批读取</div><div class="sub">data_iter</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="icon">🧮</div><div class="label">前向计算</div><div class="sub">linreg</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="icon">📏</div><div class="label">计算损失</div><div class="sub">squared_loss</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="icon">⬇️</div><div class="label">反向传播</div><div class="sub">.backward()</div></div>
+      <div class="arrow">→</div>
+      <div class="step"><div class="icon">🔄</div><div class="label">更新参数</div><div class="sub">sgd</div></div>
+    </div>
+  </div>
+
+  <!-- 2. Math -->
+  <div class="section">
+    <h2><span class="num">2</span>数学原理</h2>
+    <div class="desc">线性回归的目标是找到一组参数 w、b，使预测值尽可能接近真实值。</div>
+    <div class="card">
+      <div class="math">y&#770; = Xw + b</div>
+      <table>
+        <tr><th>符号</th><th>含义</th><th>程序中的变量</th></tr>
+        <tr><td>X</td><td>输入特征矩阵 (1000×2)</td><td><code>features</code></td></tr>
+        <tr><td>w</td><td>权重向量 (2×1)</td><td><code>w</code></td></tr>
+        <tr><td>b</td><td>偏置标量</td><td><code>b</code></td></tr>
+        <tr><td>y&#770;</td><td>模型预测值</td><td><code>linreg(X, w, b)</code></td></tr>
+        <tr><td>y</td><td>真实标签</td><td><code>labels</code></td></tr>
+      </table>
+      <div class="math">L = (y&#770; − y)² / 2</div>
+      <div class="math">w ← w − η · ∂L/∂w &nbsp;&nbsp;&nbsp; b ← b − η · ∂L/∂b</div>
+      <div class="highlight">
+        <strong>核心思想：</strong>损失函数衡量预测与真实的差距；梯度指出参数应调整的方向；学习率 η 控制每步调整的幅度。反复迭代，损失逐步下降。
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. synthetic_data -->
+  <div class="section">
+    <h2><span class="num">3</span>生成合成数据</h2>
+    <div class="desc">构造一个已知参数的线性数据集，加入少量高斯噪声模拟真实场景。</div>
+    <div class="card">
+      <pre><code><span class="hl-kw">def</span> <span class="hl-fn">synthetic_data</span>(w, b, num_examples):
+    X = torch.<span class="hl-fn">normal</span>(<span class="hl-num">0</span>, <span class="hl-num">1</span>, (num_examples, <span class="hl-fn">len</span>(w)))
+    y = torch.<span class="hl-fn">matmul</span>(X, w) + b
+    y += torch.<span class="hl-fn">normal</span>(<span class="hl-num">0</span>, <span class="hl-num">0.01</span>, y.shape)
+    <span class="hl-kw">return</span> X, y.<span class="hl-fn">reshape</span>((<span class="hl-num">-1</span>, <span class="hl-num">1</span>))</code></pre>
+      <table>
+        <tr><th>行</th><th>作用</th></tr>
+        <tr><td><code>normal(0, 1, ...)</code></td><td>从标准正态分布 N(0,1) 采样特征矩阵 X</td></tr>
+        <tr><td><code>matmul(X, w) + b</code></td><td>计算理想线性关系 y = Xw + b</td></tr>
+        <tr><td><code>normal(0, 0.01, ...)</code></td><td>加入标准差 0.01 的噪声 ε，模拟观测误差</td></tr>
+        <tr><td><code>reshape((-1, 1))</code></td><td>将 y 变为列向量，便于后续批量计算</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- 4. data_iter -->
+  <div class="section">
+    <h2><span class="num">4</span>小批量数据迭代器</h2>
+    <div class="desc">将数据集打乱后按固定大小分批产出，每个 batch 包含一组特征和标签。</div>
+    <div class="card">
+      <pre><code><span class="hl-kw">def</span> <span class="hl-fn">data_iter</span>(batch_size, features, labels):
+    num_examples = <span class="hl-fn">len</span>(features)
+    indices = <span class="hl-fn">list</span>(<span class="hl-fn">range</span>(num_examples))
+    random.<span class="hl-fn">shuffle</span>(indices)
+    <span class="hl-kw">for</span> i <span class="hl-kw">in</span> <span class="hl-fn">range</span>(<span class="hl-num">0</span>, num_examples, batch_size):
+        batch_indices = torch.<span class="hl-fn">tensor</span>(
+            indices[i: <span class="hl-fn">min</span>(i + batch_size, num_examples)])
+        <span class="hl-kw">yield</span> features[batch_indices], labels[batch_indices]</code></pre>
+      <div class="highlight">
+        <strong>为什么打乱？</strong>如果样本有序，模型可能学到数据的顺序而非特征规律。<code>yield</code> 让函数成为生成器，每次只产出一个小批量，节省内存。
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Model + Loss + Optimizer -->
+  <div class="section">
+    <h2><span class="num">5</span>模型 · 损失 · 优化器</h2>
+    <div class="desc">三个函数分别对应深度学习的三个核心组件。</div>
+    <div class="card">
+      <pre><code><span class="hl-cm"># 模型：线性变换</span>
+<span class="hl-kw">def</span> <span class="hl-fn">linreg</span>(X, w, b):
+    <span class="hl-kw">return</span> torch.<span class="hl-fn">matmul</span>(X, w) + b
+
+<span class="hl-cm"># 损失：均方误差</span>
+<span class="hl-kw">def</span> <span class="hl-fn">squared_loss</span>(y_hat, y):
+    <span class="hl-kw">return</span> (y_hat - y.<span class="hl-fn">reshape</span>(y_hat.shape)) ** <span class="hl-num">2</span> / <span class="hl-num">2</span>
+
+<span class="hl-cm"># 优化器：小批量随机梯度下降</span>
+<span class="hl-kw">def</span> <span class="hl-fn">sgd</span>(params, lr, batch_size):
+    <span class="hl-kw">with</span> torch.<span class="hl-fn">no_grad</span>():
+        <span class="hl-kw">for</span> param <span class="hl-kw">in</span> params:
+            param -= lr * param.grad / batch_size
+            param.<span class="hl-fn">grad_zero_</span>()</code></pre>
+      <table>
+        <tr><th>组件</th><th>函数</th><th>关键点</th></tr>
+        <tr><td>模型</td><td><code>linreg</code></td><td>矩阵乘法 + 广播偏置，输出预测值 y&#770;</td></tr>
+        <tr><td>损失</td><td><code>squared_loss</code></td><td>除以 2 是为了求导后系数为 1，方便计算</td></tr>
+        <tr><td>优化</td><td><code>sgd</code></td><td>在 <code>no_grad</code> 下更新参数，避免污染计算图；除以 batch_size 取均值梯度</td></tr>
+      </table>
+      <div class="highlight">
+        <strong>为什么需要 <code>no_grad</code>？</strong>参数更新不是模型计算的一部分，用 <code>with torch.no_grad()</code> 告诉 PyTorch 不要追踪这步操作的梯度。<code>grad.zero_()</code> 清零梯度，防止累加。
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Training Loop -->
+  <div class="section">
+    <h2><span class="num">6</span>训练循环</h2>
+    <div class="desc">将以上组件组合成完整的训练流程，反复迭代直到模型收敛。</div>
+    <div class="card">
+      <pre><code>true_w = torch.<span class="hl-fn">tensor</span>([<span class="hl-num">2</span>, <span class="hl-num">-3.4</span>])
+true_b = <span class="hl-num">4.2</span>
+features, labels = <span class="hl-fn">synthetic_data</span>(true_w, true_b, <span class="hl-num">1000</span>)
+
+w = torch.<span class="hl-fn">normal</span>(<span class="hl-num">0</span>, <span class="hl-num">0.01</span>, size=(<span class="hl-num">2</span>,<span class="hl-num">1</span>), requires_grad=<span class="hl-kw">True</span>)
+b = torch.<span class="hl-fn">zeros</span>(<span class="hl-num">1</span>, requires_grad=<span class="hl-kw">True</span>)
+
+batch_size, lr, num_epochs = <span class="hl-num">10</span>, <span class="hl-num">0.03</span>, <span class="hl-num">3</span>
+
+<span class="hl-kw">for</span> epoch <span class="hl-kw">in</span> <span class="hl-fn">range</span>(num_epochs):
+    <span class="hl-kw">for</span> X, y <span class="hl-kw">in</span> <span class="hl-fn">data_iter</span>(batch_size, features, labels):
+        l = <span class="hl-fn">squared_loss</span>(<span class="hl-fn">linreg</span>(X, w, b), y)
+        l.<span class="hl-fn">sum</span>().<span class="hl-fn">backward</span>()
+        <span class="hl-fn">sgd</span>([w, b], lr, batch_size)
+    <span class="hl-kw">with</span> torch.<span class="hl-fn">no_grad</span>():
+        train_l = <span class="hl-fn">squared_loss</span>(<span class="hl-fn">linreg</span>(features, w, b), labels)
+        <span class="hl-fn">print</span>(<span class="hl-str">f"epoch {epoch + 1}, loss {train_l.<span class="hl-fn">mean</span>():f}"</span>)</code></pre>
+      <div style="margin-top:16px;">
+        <table>
+          <tr><th>步骤</th><th>代码</th><th>含义</th></tr>
+          <tr><td>1. 初始化</td><td><code>w = normal(0, 0.01, ...)</code></td><td>权重用小随机数初始化，偏置设为 0</td></tr>
+          <tr><td>2. 前向传播</td><td><code>linreg(X, w, b)</code></td><td>用当前参数计算预测值</td></tr>
+          <tr><td>3. 算损失</td><td><code>squared_loss(y_hat, y)</code></td><td>衡量预测与真实的差距</td></tr>
+          <tr><td>4. 反向传播</td><td><code>l.sum().backward()</code></td><td>自动计算所有参数的梯度</td></tr>
+          <tr><td>5. 更新参数</td><td><code>sgd([w, b], lr, batch_size)</code></td><td>沿梯度反方向调整参数</td></tr>
+          <tr><td>6. 评估</td><td><code>train_l.mean()</code></td><td>每个 epoch 结束在全量数据上评估</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Results -->
+  <div class="section">
+    <h2><span class="num">7</span>运行结果</h2>
+    <div class="desc">训练 3 轮后，模型已高度逼近真实参数。</div>
+    <div class="card">
+      <div class="result">
+epoch 1, loss 0.039142<br>
+epoch 2, loss 0.000144<br>
+epoch 3, loss 0.000051<br>
+<br>
+w 的估计误差: tensor([ 0.0003, -0.0002])<br>
+b 的估计误差: tensor([0.0009])
+      </div>
+      <div class="highlight" style="margin-top:16px;">
+        <strong>解读：</strong>真实权重 w=[2, -3.4]，模型学到的权重误差仅为千分之几；偏置 b=4.2 的误差也在 0.001 以内。说明仅用 3 轮迭代，SGD 就已收敛到非常接近真实值。
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Hyperparams -->
+  <div class="section">
+    <h2><span class="num">8</span>超参数影响</h2>
+    <div class="desc">三个超参数控制着训练的速度和效果，需要反复试验找到合适的值。</div>
+    <div class="card">
+      <table>
+        <tr><th>超参数</th><th>当前值</th><th>过小会怎样</th><th>过大会怎样</th></tr>
+        <tr><td><code>lr</code> 学习率</td><td>0.03</td><td>收敛极慢，loss 几乎不动</td><td>震荡甚至发散，loss 不降反升</td></tr>
+        <tr><td><code>batch_size</code> 批量大小</td><td>10</td><td>梯度噪声大，训练不稳定</td><td>显存占用高，梯度过于平滑</td></tr>
+        <tr><td><code>num_epochs</code> 迭代轮数</td><td>3</td><td>欠拟合，参数还未收敛</td><td>过拟合风险，浪费计算</td></tr>
+      </table>
+      <div class="highlight">
+        <strong>实验建议：</strong>试试将 <code>lr</code> 改为 0.00001，观察 loss 几乎不变（如原始 notebook 所示）；再改为 1.0，观察 loss 爆炸。动手调参是最好的理解方式。
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. Summary -->
+  <div class="section">
+    <h2><span class="num">9</span>知识图谱</h2>
+    <div class="desc">本程序涉及的核心概念及其关系。</div>
+    <div class="card" style="text-align:center; padding:32px;">
+      <svg width="580" height="320" viewBox="0 0 580 320" style="max-width:100%;">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6c8cff"/></marker>
+        </defs>
+        <rect x="220" y="10" width="140" height="44" rx="8" fill="#1a1d27" stroke="#6c8cff" stroke-width="1.5"/>
+        <text x="290" y="37" text-anchor="middle" fill="#6c8cff" font-size="14" font-weight="600">张量 Tensor</text>
+
+        <rect x="60" y="110" width="140" height="44" rx="8" fill="#1a1d27" stroke="#ff6b9d" stroke-width="1.5"/>
+        <text x="130" y="137" text-anchor="middle" fill="#ff6b9d" font-size="14" font-weight="600">自动微分 Autograd</text>
+
+        <rect x="380" y="110" width="140" height="44" rx="8" fill="#1a1d27" stroke="#4ecf8b" stroke-width="1.5"/>
+        <text x="450" y="137" text-anchor="middle" fill="#4ecf8b" font-size="14" font-weight="600">模型 Model</text>
+
+        <rect x="60" y="220" width="140" height="44" rx="8" fill="#1a1d27" stroke="#f5a623" stroke-width="1.5"/>
+        <text x="130" y="247" text-anchor="middle" fill="#f5a623" font-size="14" font-weight="600">损失函数 Loss</text>
+
+        <rect x="380" y="220" width="140" height="44" rx="8" fill="#1a1d27" stroke="#89ddff" stroke-width="1.5"/>
+        <text x="450" y="247" text-anchor="middle" fill="#89ddff" font-size="14" font-weight="600">优化器 SGD</text>
+
+        <line x1="258" y1="54" x2="160" y2="110" stroke="#6c8cff" stroke-width="1.2" marker-end="url(#ah)"/>
+        <line x1="322" y1="54" x2="420" y2="110" stroke="#6c8cff" stroke-width="1.2" marker-end="url(#ah)"/>
+        <line x1="130" y1="154" x2="130" y2="220" stroke="#ff6b9d" stroke-width="1.2" marker-end="url(#ah)"/>
+        <line x1="450" y1="154" x2="450" y2="220" stroke="#4ecf8b" stroke-width="1.2" marker-end="url(#ah)"/>
+        <line x1="200" y1="242" x2="380" y2="242" stroke="#f5a623" stroke-width="1.2" stroke-dasharray="6,4" marker-end="url(#ah)"/>
+
+        <text x="290" y="260" text-anchor="middle" fill="#8b8fa3" font-size="11">梯度回传</text>
+      </svg>
+    </div>
+  </div>
+
+  <div class="footer">
+    基于《动手学深度学习》(d2l.ai) 线性回归从零实现章节 &middot; PyTorch &middot; 2026
+  </div>
+
+</div>
+</body>
+</html>

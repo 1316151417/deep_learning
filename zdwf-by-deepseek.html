@@ -1163,18 +1163,18 @@ function drawCtrlFlow(showResult=false, showGrad=false, scanData=null) {
   let b = b0;
   let loopCount = 0;
   while (Math.abs(b) < 1000) { b = b * 2; loopCount++; }
-  let c = b > 0 ? b : 100 * b;
-  const ks = [cfA * 2, c]; // slope = c/a
+  let cv = b > 0 ? b : 100 * b;
+  const ks = [cfA * 2, cv]; // slope = cv/a
 
   ctx.fillText(`输入 a = ${cfA.toFixed(1)}`, 20, 35);
   ctx.fillText(`b₀ = a × 2 = ${b0.toFixed(1)}`, 20, 60);
   ctx.fillText(`while b.norm() < 1000:  b = b × 2`, 20, 85);
   ctx.fillText(`  → 循环 ${loopCount} 次, b = ${b.toFixed(1)}`, 30, 110);
-  ctx.fillText(`if b > 0: c = b = ${c.toFixed(1)}`, 20, 135);
-  ctx.fillText(`输出 c = ${c.toFixed(1)}`, 20, 165);
+  ctx.fillText(`if b > 0: c = b = ${cv.toFixed(1)}`, 20, 135);
+  ctx.fillText(`输出 c = ${cv.toFixed(1)}`, 20, 165);
 
-  // f(a) = k*a where k = c/a
-  const k = c / cfA;
+  // f(a) = k*a where k = cv/a
+  const k = cv / cfA;
   ctx.fillStyle = '#38bdf8';
   ctx.font = 'bold 16px monospace';
   ctx.fillText(`f(a) = k·a = ${k.toFixed(2)}·a`, 20, 200);

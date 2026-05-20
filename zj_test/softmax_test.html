@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmax 回归从零实现 - 教学报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section > p, .section > ul, .section > ol {
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  /* Code block */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    color: var(--fg);
+  }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  .param { color: #ff7b72; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  /* Note callout */
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(108,140,255,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+  .warn {
+    border-left: 3px solid var(--orange);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(245,166,35,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .warn strong { color: var(--orange); }
+  .tip {
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,207,139,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .tip strong { color: var(--green); }
+
+  /* Flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--card);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Formula */
+  .formula {
+    text-align: center;
+    padding: 24px;
+    margin: 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+  .formula .big { font-size: 22px; }
+
+  /* Dim highlight */
+  .dim { color: var(--orange); font-weight: 600; }
+
+  /* Summary */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-grid .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .summary-grid .item .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  /* Inline code */
+  p code, li code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Index nav */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin: 24px 0 48px;
+  }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .shape-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .shape-box {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .shape-box .dims { color: var(--orange); }
+  .shape-box .name { color: var(--muted); font-size: 11px; }
+  .shape-op {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- ============================================ -->
+<!-- Header -->
+<!-- ============================================ -->
+
+<div class="header">
+  <div class="tag">PyTorch 从零实现</div>
+  <h1>Softmax 回归（多分类）</h1>
+  <p>用纯 PyTorch 手写一个手写数字分类器（0-9），不依赖任何高级 API</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">整体思路</a> <span class="desc">— 我们要做什么</span></li>
+    <li><a href="#s1">加载数据</a> <span class="desc">— 8×8 手写数字图片</span></li>
+    <li><a href="#s2">初始化参数</a> <span class="desc">— 权重 W 和偏置 b</span></li>
+    <li><a href="#s3">Softmax 函数</a> <span class="desc">— 把分数变成概率</span></li>
+    <li><a href="#s4">交叉熵损失</a> <span class="desc">— 衡量预测有多糟</span></li>
+    <li><a href="#s5">准确率</a> <span class="desc">— 模型答对了多少</span></li>
+    <li><a href="#s6">Mini-batch</a> <span class="desc">— 分批训练的技巧</span></li>
+    <li><a href="#s7">训练循环</a> <span class="desc">— 前向 → 反向 → 更新</span></li>
+    <li><a href="#s8">预测示例</a> <span class="desc">— 用训练好的模型做预测</span></li>
+    <li><a href="#s9">总结</a> <span class="desc">— 关键知识点回顾</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 整体思路 -->
+<!-- ============================================ -->
+
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 整体思路：我们在做什么？</h2>
+
+  <p>想象你收到一张 8×8 像素的小图片，上面手写了一个数字（0 到 9）。你要写一个程序，自动判断这个数字是几。</p>
+
+  <div class="note">
+    <strong>一句话概括：</strong> 我们要把一张 64 个像素值的图片，变成 10 个概率（分别代表 0-9 每个数字的可能性），然后选概率最大的作为预测结果。
+  </div>
+
+  <p>整个流程长这样：</p>
+
+  <div class="flow">
+    <div class="flow-item">输入图片</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">线性变换</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">Softmax</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">10 个概率</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">选最大的</div>
+  </div>
+
+  <div class="card">
+    <p><strong>和线性回归的区别？</strong></p>
+    <table>
+      <tr><th></th><th>线性回归</th><th>Softmax 回归</th></tr>
+      <tr><td><strong>任务</strong></td><td>预测一个连续数值</td><td>预测属于哪个类别</td></tr>
+      <tr><td><strong>输出</strong></td><td>1 个数</td><td>10 个概率</td></tr>
+      <tr><td><strong>损失</strong></td><td>均方误差 MSE</td><td>交叉熵 Cross Entropy</td></tr>
+      <tr><td><strong>例子</strong></td><td>根据面积预测房价</td><td>根据像素判断数字是几</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 加载数据 -->
+<!-- ============================================ -->
+
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 加载数据：8×8 手写数字图片</h2>
+
+<pre><code><span class="kw">import</span> torch
+<span class="kw">from</span> sklearn.datasets <span class="kw">import</span> load_digits
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+
+data <span class="op">=</span> load_digits()
+X <span class="op">=</span> data.data        <span class="cm"># 形状: (1797, 64)，每张图 8×8=64 个像素</span>
+y <span class="op">=</span> data.target       <span class="cm"># 标签: 0~9 的整数</span>
+
+<span class="cm"># 像素归一化到 0~1</span>
+X <span class="op">=</span> X <span class="op">/</span> <span class="num">16.0</span>
+
+<span class="cm"># 转 tensor</span>
+X <span class="op">=</span> torch.tensor(X, dtype<span class="op">=</span>torch.float32)
+y <span class="op">=</span> torch.tensor(y, dtype<span class="op">=</span>torch.long)
+
+<span class="cm"># 80% 训练，20% 测试</span>
+X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(
+    X, y, test_size<span class="op">=</span><span class="num">0.2</span>, random_state<span class="op">=</span><span class="num">42</span>
+)</code></pre>
+
+  <p>逐行解释：</p>
+  <ul>
+    <li><code>load_digits()</code> 加载 sklearn 自带的手写数字数据集，共 1797 张图片</li>
+    <li>每张图片是 8×8 像素，被"拍扁"成一维数组，所以有 64 个值</li>
+    <li>像素值范围是 0~16，除以 16.0 归一化到 0~1 之间</li>
+    <li><code>train_test_split</code> 按 8:2 比例随机拆分成训练集和测试集</li>
+  </ul>
+
+  <div class="note">
+    <strong>为什么要归一化？</strong> 如果像素值是 0~16 而权重很小（0.01 量级），那相乘的结果会非常小，梯度也会很小，模型学得慢。归一化到 0~1 后，数值范围更合理。
+  </div>
+
+  <div class="card">
+    <p><strong>数据长什么样？</strong></p>
+    <table>
+      <tr><th>项目</th><th>值</th></tr>
+      <tr><td>总样本数</td><td>1797 张</td></tr>
+      <tr><td>每张维度</td><td>64 个像素值（8×8 图）</td></tr>
+      <tr><td>标签范围</td><td>0, 1, 2, ..., 9（共 10 类）</td></tr>
+      <tr><td>训练集</td><td>约 1437 张（80%）</td></tr>
+      <tr><td>测试集</td><td>约 360 张（20%）</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 初始化参数 -->
+<!-- ============================================ -->
+
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 初始化参数：权重 W 和偏置 b</h2>
+
+<pre><code>input_dim <span class="op">=</span> <span class="num">64</span>       <span class="cm"># 输入：64 个像素值</span>
+num_classes <span class="op">=</span> <span class="num">10</span>    <span class="cm"># 输出：10 个类别（数字 0-9）</span>
+
+W <span class="op">=</span> (
+    torch.randn(input_dim, num_classes) <span class="op">*</span> <span class="num">0.01</span>
+).detach().requires_grad_(<span class="num">True</span>)      <span class="cm"># 形状: (64, 10)</span>
+
+b <span class="op">=</span> torch.zeros(num_classes
+).detach().requires_grad_(<span class="num">True</span>)        <span class="cm"># 形状: (10,)</span>
+
+lr <span class="op">=</span> <span class="num">0.1</span>            <span class="cm"># 学习率</span>
+epochs <span class="op">=</span> <span class="num">100</span>        <span class="cm"># 训练轮数</span>
+batch_size <span class="op">=</span> <span class="num">64</span>     <span class="cm"># 每批样本数</span></code></pre>
+
+  <p>关键概念：</p>
+  <ul>
+    <li><strong>W（权重矩阵）</strong>：形状 <span class="dim">(64, 10)</span>，把 64 维输入映射到 10 维输出。你可以理解为：每一列对应一个数字类别，存储了"这个像素对判断是这个数字有多重要"</li>
+    <li><strong>b（偏置向量）</strong>：形状 <span class="dim">(10,)</span>，每个类别一个基准分</li>
+    <li><code>requires_grad_(True)</code> 告诉 PyTorch："请追踪 W 和 b 的梯度，我要对它们做梯度下降"</li>
+  </ul>
+
+  <div class="warn">
+    <strong>为什么要 <code>* 0.01</code>？</strong> 如果初始权重太大，经过 softmax 后概率会非常极端（一个接近 1，其余接近 0），导致梯度消失、模型难以训练。小权重让初始概率接近均匀分布（每个类 ≈ 0.1），给学习留出空间。
+  </div>
+
+  <div class="card">
+    <p><strong>维度变化图解</strong></p>
+    <div class="shape-diagram">
+      <div class="shape-box">
+        <div class="dims">X: (batch, 64)</div>
+        <div class="name">输入像素</div>
+      </div>
+      <div class="shape-op">@</div>
+      <div class="shape-box">
+        <div class="dims">W: (64, 10)</div>
+        <div class="name">权重矩阵</div>
+      </div>
+      <div class="shape-op">+</div>
+      <div class="shape-box">
+        <div class="dims">b: (10,)</div>
+        <div class="name">偏置向量</div>
+      </div>
+      <div class="shape-op">=</div>
+      <div class="shape-box">
+        <div class="dims">logits: (batch, 10)</div>
+        <div class="name">每个类的"得分"</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. Softmax -->
+<!-- ============================================ -->
+
+<div class="section" id="s3">
+  <h2><span class="num">3</span> Softmax 函数：把分数变成概率</h2>
+
+<pre><code><span class="kw">def</span> <span class="fn">softmax</span>(logits):
+    <span class="cm"># 数值稳定性：减去最大值</span>
+    logits <span class="op">=</span> logits <span class="op">-</span> logits.max(
+        dim<span class="op">=</span><span class="num">1</span>, keepdim<span class="op">=</span><span class="num">True</span>
+    ).values
+
+    exp <span class="op">=</span> torch.exp(logits)     <span class="cm"># 对每个值取 e^x</span>
+
+    probs <span class="op">=</span> exp <span class="op">/</span> exp.sum(       <span class="cm"># 再除以总和</span>
+        dim<span class="op">=</span><span class="num">1</span>, keepdim<span class="op">=</span><span class="num">True</span>
+    )
+
+    <span class="kw">return</span> probs</code></pre>
+
+  <p>Softmax 做了一件很直觉的事情：把任意数字变成概率。</p>
+
+  <div class="formula">
+    <span class="big">softmax(z<sub>i</sub>) = e<sup>z<sub>i</sub></sup> / &Sigma; e<sup>z<sub>j</sub></sup></span>
+  </div>
+
+  <div class="card">
+    <p><strong>具体例子</strong></p>
+    <table>
+      <tr><th>步骤</th><th>数值</th></tr>
+      <tr><td>原始 logits</td><td>[2.0, 1.0, 0.1]</td></tr>
+      <tr><td>减去最大值后</td><td>[0.0, -1.0, -1.9]</td></tr>
+      <tr><td>取 exp</td><td>[1.0, 0.368, 0.150]</td></tr>
+      <tr><td>总和</td><td>1.518</td></tr>
+      <tr><td>概率（除以总和）</td><td>[0.659, 0.242, 0.099]</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">可以看到：最大的 2.0 变成了最大的概率 0.659，三个概率加起来刚好等于 1.0。</p>
+  </div>
+
+  <div class="warn">
+    <strong>为什么要减去最大值？</strong> 这叫<strong>数值稳定性技巧</strong>。如果 logits 很大（比如 1000），e<sup>1000</sup> 会溢出变成无穷大。减去最大值后，最大的值变成 0，e<sup>0</sup> = 1，不会溢出。数学上结果完全一样（分子分母同时乘以 e<sup>-max</sup>，抵消了）。
+  </div>
+
+  <div class="tip">
+    <strong>Softmax 三个核心性质：</strong>
+    <ol style="margin-top:8px;padding-left:20px">
+      <li>每个输出都在 (0, 1) 之间 &mdash; 因为 e<sup>x</sup> > 0</li>
+      <li>所有输出之和 = 1 &mdash; 天然的概率分布</li>
+      <li>输入越大，输出概率越高 &mdash; 保持了大小顺序</li>
+    </ol>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. Cross Entropy -->
+<!-- ============================================ -->
+
+<div class="section" id="s4">
+  <h2><span class="num">4</span> 交叉熵损失：衡量预测有多糟</h2>
+
+<pre><code><span class="kw">def</span> <span class="fn">cross_entropy</span>(probs, labels):
+    batch_size <span class="op">=</span> probs.shape[<span class="num">0</span>]
+
+    <span class="cm"># 取出"真实类别"对应的概率</span>
+    correct_probs <span class="op">=</span> probs[
+        torch.arange(batch_size),
+        labels
+    ]
+
+    <span class="cm"># -log(概率)，加小量防止 log(0)</span>
+    loss <span class="op">=</span> <span class="op">-</span>torch.log(correct_probs <span class="op">+</span> <span class="num">1e-12</span>)
+
+    <span class="kw">return</span> loss.mean()   <span class="cm"># 对整个 batch 取平均</span></code></pre>
+
+  <div class="formula">
+    <span class="big">Loss = -&frac{1}{N} &Sigma; log(P<sub>真实类别</sub>)</span>
+  </div>
+
+  <p>直觉理解：</p>
+  <ul>
+    <li>如果模型很确信且答对了（真实类概率接近 1）&rarr; <code>-log(0.99)</code> &asymp; 0.01 &rarr; 损失很小</li>
+    <li>如果模型很确信但答错了（真实类概率接近 0）&rarr; <code>-log(0.01)</code> &asymp; 4.6 &rarr; 损失很大</li>
+    <li>训练的目标就是<strong>让这个损失越来越小</strong></li>
+  </ul>
+
+  <div class="card">
+    <p><strong>损失随概率变化的曲线</strong></p>
+    <table>
+      <tr><th>真实类别的概率 P</th><th>-log(P)</th><th>含义</th></tr>
+      <tr><td>0.99</td><td>0.01</td><td>几乎完全正确 &check;</td></tr>
+      <tr><td>0.70</td><td>0.36</td><td>还不错</td></tr>
+      <tr><td>0.10</td><td>2.30</td><td>10 个类随机猜的水平</td></tr>
+      <tr><td>0.01</td><td>4.61</td><td>基本猜错 &cross;</td></tr>
+      <tr><td>0.001</td><td>6.91</td><td>错得很离谱 &cross;&cross;</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong><code>probs[torch.arange(batch_size), labels]</code> 是什么意思？</strong><br>
+    这是 PyTorch 的<strong>高级索引</strong>。假设 batch_size=3，labels=[2, 0, 7]，那它会取出 probs[0, 2]、probs[1, 0]、probs[2, 7] &mdash; 也就是每个样本<strong>真实类别</strong>对应的概率。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. Accuracy -->
+<!-- ============================================ -->
+
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 准确率：模型答对了多少</h2>
+
+<pre><code><span class="kw">def</span> <span class="fn">accuracy</span>(probs, labels):
+    preds <span class="op">=</span> probs.argmax(dim<span class="op">=</span><span class="num">1</span>)   <span class="cm"># 选概率最大的那个类别</span>
+    <span class="kw">return</span> (preds <span class="op">==</span> labels).float().mean()</code></pre>
+
+  <p>只有三步：</p>
+  <ol>
+    <li><code>argmax</code>：找出每行概率最大的下标 &mdash; 即模型的预测类别</li>
+    <li><code>preds == labels</code>：逐个比较，对的标记 True，错的标记 False</li>
+    <li><code>.float().mean()</code>：True=1, False=0，取平均就是准确率</li>
+  </ol>
+
+  <div class="tip">
+    <strong>例子：</strong> 如果 100 个样本中答对了 85 个，准确率 = 85/100 = 0.85。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. Mini-batch -->
+<!-- ============================================ -->
+
+<div class="section" id="s6">
+  <h2><span class="num">6</span> Mini-batch：分批训练的技巧</h2>
+
+<pre><code><span class="kw">def</span> <span class="fn">batch_iterator</span>(X, y, batch_size):
+    indices <span class="op">=</span> torch.randperm(len(X))   <span class="cm"># 随机打乱下标</span>
+
+    <span class="kw">for</span> start <span class="kw">in</span> range(<span class="num">0</span>, len(X), batch_size):
+        end <span class="op">=</span> start <span class="op">+</span> batch_size
+        batch_idx <span class="op">=</span> indices[start:end]
+        <span class="kw">yield</span> X[batch_idx], y[batch_idx]</code></pre>
+
+  <p>为什么不一次性用所有数据训练？</p>
+
+  <div class="card">
+    <table>
+      <tr><th>方式</th><th>每步用的数据</th><th>优点</th><th>缺点</th></tr>
+      <tr><td><strong>全量梯度下降</strong></td><td>全部 1437 张</td><td>方向准确</td><td>太慢、太吃内存</td></tr>
+      <tr><td><strong>随机梯度下降</strong></td><td>1 张</td><td>快</td><td>方向太抖</td></tr>
+      <tr><td><strong style="color:var(--green)">Mini-batch</strong></td><td>64 张</td><td>折中：快 + 稳定</td><td>&mdash;</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong><code>torch.randperm</code></strong> 生成一个随机排列，比如 [3, 0, 5, 2, ...]。这样每轮 epoch 的数据顺序都不一样，模型不会因为固定顺序而"记住"数据。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 7. 训练循环 -->
+<!-- ============================================ -->
+
+<div class="section" id="s7">
+  <h2><span class="num">7</span> 训练循环：前向 &rarr; 反向 &rarr; 更新</h2>
+
+<pre><code><span class="kw">for</span> epoch <span class="kw">in</span> range(epochs):
+
+    total_loss <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">for</span> X_batch, y_batch <span class="kw">in</span> batch_iterator(
+        X_train, y_train, batch_size
+    ):
+        <span class="cm"># ====== 前向传播 ======</span>
+        logits <span class="op">=</span> X_batch <span class="op">@</span> W <span class="op">+</span> b        <span class="cm"># 线性变换</span>
+        probs  <span class="op">=</span> softmax(logits)         <span class="cm"># 变概率</span>
+        loss   <span class="op">=</span> cross_entropy(
+            probs, y_batch
+        )                                <span class="cm"># 算损失</span>
+
+        total_loss <span class="op">+=</span> loss.item()
+
+        <span class="cm"># ====== 反向传播 ======</span>
+        loss.backward()                  <span class="cm"># 自动求梯度</span>
+
+        <span class="cm"># ====== SGD 更新 ======</span>
+        <span class="kw">with</span> torch.no_grad():
+            W <span class="op">-=</span> lr <span class="op">*</span> W.grad            <span class="cm"># 往梯度反方向走一步</span>
+            b <span class="op">-=</span> lr <span class="op">*</span> b.grad
+
+            W.grad.zero_()               <span class="cm"># 清零！否则会累加</span>
+            b.grad.zero_()
+
+    <span class="cm"># ====== 每个 epoch 测试一次 ======</span>
+    <span class="kw">with</span> torch.no_grad():
+        test_logits <span class="op">=</span> X_test <span class="op">@</span> W <span class="op">+</span> b
+        test_probs  <span class="op">=</span> softmax(test_logits)
+        test_acc    <span class="op">=</span> accuracy(test_probs, y_test)
+
+    <span class="fn">print</span>(
+        f<span class="str">"epoch={epoch+1:03d} "</span>
+        f<span class="str">"loss={total_loss:.4f} "</span>
+        f<span class="str">"test_acc={test_acc:.4f}"</span>
+    )</code></pre>
+
+  <p>每个 epoch 做了什么？</p>
+
+  <div class="flow">
+    <div class="flow-item">打乱数据</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">逐 batch 前向</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">反向求梯度</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">SGD 更新参数</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">测试集评估</div>
+  </div>
+
+  <div class="card">
+    <p><strong>训练过程详解</strong></p>
+    <table>
+      <tr><th>阶段</th><th>做什么</th><th>为什么</th></tr>
+      <tr>
+        <td><strong>前向传播</strong></td>
+        <td>X@W+b &rarr; softmax &rarr; loss</td>
+        <td>用当前参数算一遍，看预测有多准</td>
+      </tr>
+      <tr>
+        <td><strong>反向传播</strong></td>
+        <td><code>loss.backward()</code></td>
+        <td>PyTorch 自动算出 W 和 b 的梯度（该往哪调）</td>
+      </tr>
+      <tr>
+        <td><strong>SGD 更新</strong></td>
+        <td><code>W -= lr * W.grad</code></td>
+        <td>往梯度的反方向走一小步（lr 控制步长）</td>
+      </tr>
+      <tr>
+        <td><strong>梯度清零</strong></td>
+        <td><code>W.grad.zero_()</code></td>
+        <td>PyTorch 梯度默认累加，不清零会越加越大</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    <strong>为什么更新要在 <code>torch.no_grad()</code> 里？</strong> 如果不加，PyTorch 会追踪 <code>W -= lr * W.grad</code> 这一步的计算图，导致下一轮 <code>backward()</code> 时出错。我们只想更新数值，不需要对"更新"本身求梯度。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 8. 预测示例 -->
+<!-- ============================================ -->
+
+<div class="section" id="s8">
+  <h2><span class="num">8</span> 预测示例：用训练好的模型做预测</h2>
+
+<pre><code><span class="kw">with</span> torch.no_grad():
+    sample <span class="op">=</span> X_test[<span class="num">:5</span>]              <span class="cm"># 取前 5 张测试图片</span>
+
+    logits <span class="op">=</span> sample <span class="op">@</span> W <span class="op">+</span> b      <span class="cm"># 算分数</span>
+    probs  <span class="op">=</span> softmax(logits)     <span class="cm"># 变概率</span>
+    preds  <span class="op">=</span> probs.argmax(dim<span class="op">=</span><span class="num">1</span>)  <span class="cm"># 选最大的</span>
+
+<span class="fn">print</span>(<span class="str">"预测:"</span>, preds.tolist())
+<span class="fn">print</span>(<span class="str">"真实:"</span>, y_test[<span class="num">:5</span>].tolist())</code></pre>
+
+  <p>预测就是走一遍前向传播，不需要梯度，所以包在 <code>torch.no_grad()</code> 里节省内存。</p>
+
+  <div class="tip">
+    <strong>预测流程和训练中的前向传播完全一样：</strong>X @ W + b &rarr; softmax &rarr; argmax。只不过训练时还要算 loss 和反向传播，预测时只需要最终结果。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 9. 总结 -->
+<!-- ============================================ -->
+
+<div class="section" id="s9">
+  <h2><span class="num">9</span> 总结：关键知识点回顾</h2>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">模型</div>
+      <div class="value" style="color:var(--accent)">线性 + Softmax</div>
+    </div>
+    <div class="item">
+      <div class="label">损失函数</div>
+      <div class="value" style="color:var(--accent2)">交叉熵</div>
+    </div>
+    <div class="item">
+      <div class="label">优化器</div>
+      <div class="value" style="color:var(--green)">SGD</div>
+    </div>
+    <div class="item">
+      <div class="label">数据</div>
+      <div class="value" style="color:var(--orange)">8×8 数字图</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>完整的数学流程</strong></p>
+    <div class="formula" style="text-align:left;font-size:15px;line-height:2.2">
+      <strong>1.</strong> 线性变换：<code>logits = X @ W + b</code><br>
+      <strong>2.</strong> 概率转换：<code>probs = softmax(logits)</code><br>
+      <strong>3.</strong> 计算损失：<code>loss = -mean(log(probs[真实类别]))</code><br>
+      <strong>4.</strong> 反向传播：<code>loss.backward()</code> &rarr; 得到 &nabla;W, &nabla;b<br>
+      <strong>5.</strong> 更新参数：<code>W -= lr * &nabla;W, &nbsp; b -= lr * &nabla;b</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>这个模型能做什么、不能做什么？</strong></p>
+    <table>
+      <tr><th></th><th>说明</th></tr>
+      <tr><td><strong style="color:var(--green)">能做</strong></td><td>对手写数字做 10 分类，准确率通常能到 95%+</td></tr>
+      <tr><td><strong style="color:var(--orange)">局限</strong></td><td>它是<strong>线性模型</strong> &mdash; 只能找到线性的决策边界</td></tr>
+      <tr><td><strong style="color:var(--accent)">进阶</strong></td><td>加隐藏层 + 激活函数 = 多层感知机（MLP），就能学非线性关系</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步学什么？</strong> 尝试在输入和输出之间加一个（或多个）隐藏层，配合 ReLU 激活函数，你就从 Softmax 回归进化到了<strong>多层感知机（MLP）</strong> &mdash; 这就是真正的"深度学习"了！
+  </div>
+</div>
+
+<div class="footer">
+  基于 softmax_test.py 生成 &middot; Softmax 回归从零实现
+</div>
+
+</div>
+</body>
+</html>

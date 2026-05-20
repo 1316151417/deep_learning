@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>线性回归 — 深度学习最小闭环 | 动手学深度学习精讲</title>
+<style>
+  /* ===== Reset & Base ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f8fa;
+    color: #1e293b;
+    line-height: 1.8;
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1a4a6e 100%);
+    color: #fff;
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(56,189,248,.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(99,102,241,.10) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    position: relative;
+    z-index: 1;
+  }
+  .hero h1 .highlight { color: #38bdf8; }
+  .hero .subtitle {
+    margin-top: .8rem;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: #94a3b8;
+    position: relative;
+    z-index: 1;
+  }
+  .hero .badge-row {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .6rem;
+    position: relative;
+    z-index: 1;
+  }
+  .badge {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    padding: .3rem 1rem;
+    font-size: .82rem;
+    color: #cbd5e1;
+  }
+
+  /* ===== Layout ===== */
+  .container { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ===== TOC ===== */
+  .toc {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 1.8rem 2rem;
+    margin: -2rem auto 2rem;
+    max-width: 880px;
+    position: relative;
+    z-index: 2;
+  }
+  .toc h2 {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: .8rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: .4rem .8rem;
+  }
+  .toc-grid a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: .9rem;
+    padding: .25rem 0;
+    transition: color .15s;
+  }
+  .toc-grid a:hover { color: #1d4ed8; text-decoration: underline; }
+
+  /* ===== Section ===== */
+  section { margin-bottom: 3rem; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 2rem 2.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 3px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 8px;
+    background: #3b82f6;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 1.2rem 0 .5rem;
+    color: #0f172a;
+  }
+  .card p { margin-bottom: .8rem; color: #334155; }
+  .card p:last-child { margin-bottom: 0; }
+
+  /* ===== Highlight Box ===== */
+  .highlight-box {
+    background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+    border-left: 4px solid #3b82f6;
+    border-radius: 0 8px 8px 0;
+    padding: 1.2rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .highlight-box h4 {
+    font-size: .95rem;
+    color: #1e40af;
+    margin-bottom: .3rem;
+  }
+  .highlight-box p { color: #1e3a5f; margin-bottom: 0; }
+
+  .highlight-box.warn {
+    background: linear-gradient(135deg, #fffbeb, #fef9e7);
+    border-left-color: #f59e0b;
+  }
+  .highlight-box.warn h4 { color: #b45309; }
+  .highlight-box.warn p { color: #78350f; }
+
+  .highlight-box.green {
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    border-left-color: #10b981;
+  }
+  .highlight-box.green h4 { color: #065f46; }
+  .highlight-box.green p { color: #064e3b; }
+
+  /* ===== Formula ===== */
+  .formula {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: .8rem 0;
+    text-align: center;
+    font-size: 1.1rem;
+    overflow-x: auto;
+    font-family: "Times New Roman", "STIX", "Latin Modern Math", serif;
+  }
+
+  /* ===== Table ===== */
+  .table-wrap {
+    overflow-x: auto;
+    margin: .8rem 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .92rem;
+  }
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+    text-align: left;
+    padding: .6rem .8rem;
+    border-bottom: 2px solid #cbd5e1;
+  }
+  td {
+    padding: .55rem .8rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* ===== Comparison Table ===== */
+  .compare-table th:first-child,
+  .compare-table td:first-child { background: #f8fafc; font-weight: 600; }
+
+  /* ===== Code ===== */
+  code {
+    background: #eef2f6;
+    padding: .15em .45em;
+    border-radius: 4px;
+    font-size: .88em;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem 1.3rem;
+    margin: .8rem 0;
+    overflow-x: auto;
+    font-size: .85rem;
+    line-height: 1.6;
+  }
+  pre .kw  { color: #c084fc; }  /* keyword */
+  pre .fn  { color: #60a5fa; }  /* function */
+  pre .str { color: #34d399; }  /* string */
+  pre .cm  { color: #64748b; }  /* comment */
+  pre .op  { color: #f472b6; }  /* operator */
+  pre .num { color: #fbbf24; }  /* number */
+
+  /* ===== Arrow (for flow) ===== */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem .6rem;
+    padding: 1.2rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin: .8rem 0;
+  }
+  .flow-item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: .35rem .9rem;
+    font-size: .88rem;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: #94a3b8; font-size: 1.1rem; }
+
+  /* ===== Layer ===== */
+  .layer-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    margin: 1rem 0;
+  }
+  .layer-box {
+    background: #fff;
+    border: 2px solid #3b82f6;
+    border-radius: 8px;
+    padding: .6rem 1.5rem;
+    font-weight: 600;
+    color: #1e40af;
+    min-width: 160px;
+    text-align: center;
+  }
+  .layer-box.input { border-color: #10b981; color: #065f46; background: #ecfdf5; }
+  .layer-box.output { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
+  .layer-box.hidden { border-color: #8b5cf6; color: #5b21b6; background: #f5f3ff; }
+  .layer-conn { color: #94a3b8; font-size: .8rem; }
+
+  /* ===== Mermaid ===== */
+  .mermaid-wrap {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1rem;
+    margin: .8rem 0;
+    text-align: center;
+  }
+
+  /* ===== Tag ===== */
+  .tag {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 4px;
+    font-size: .78rem;
+    font-weight: 600;
+  }
+  .tag-core { background: #dbeafe; color: #1e40af; }
+  .tag-mid  { background: #e0e7ff; color: #3730a3; }
+  .tag-deep { background: #e9d5ff; color: #5b21b6; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+
+  /* ===== Interactive Viz Canvas ===== */
+  .viz-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .viz-container h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: .5rem;
+  }
+  .viz-container canvas {
+    max-width: 100%;
+    border-radius: 6px;
+    background: #fafbfc;
+  }
+  .viz-container .controls {
+    margin-top: .8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .8rem;
+    justify-content: center;
+    align-items: center;
+  }
+  .viz-container .controls label {
+    font-size: .88rem;
+    color: #475569;
+  }
+  .viz-container .controls input[type="range"] {
+    width: 140px;
+  }
+  .viz-container .controls .val {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 2.2rem;
+    display: inline-block;
+  }
+
+  /* ===== Footer ===== */
+  footer {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    color: #94a3b8;
+    font-size: .85rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4rem;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .card { padding: 1.2rem 1rem; }
+    .hero { padding: 3rem 1rem 2.5rem; }
+    .toc { margin: -1.5rem .75rem 1.5rem; padding: 1.2rem; }
+    .toc-grid { grid-template-columns: 1fr 1fr; }
+    .flow { gap: .2rem .4rem; }
+    .flow-item { font-size: .78rem; padding: .2rem .6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <h1>
+    <span class="highlight">线性回归</span>
+    <br>深度学习最小闭环
+  </h1>
+  <p class="subtitle">《动手学深度学习》3.1 精讲 · 从线性回归理解整个 AI 训练范式</p>
+  <div class="badge-row">
+    <span class="badge">🏗 模型定义</span>
+    <span class="badge">📉 损失函数</span>
+    <span class="badge">⬇️ 梯度下降</span>
+    <span class="badge">🧠 参数学习</span>
+    <span class="badge">🔁 训练闭环</span>
+  </div>
+</header>
+
+<!-- ============ TOC ============ -->
+<nav class="toc container">
+  <h2>📖 目录</h2>
+  <div class="toc-grid">
+    <a href="#sec1">一、这篇文章真正想教你的</a>
+    <a href="#sec2">二、主线结构</a>
+    <a href="#sec3">三、线性模型</a>
+    <a href="#sec4">四、损失函数</a>
+    <a href="#sec5">五、为什么用平方损失？</a>
+    <a href="#sec6">六、梯度下降：真正的灵魂</a>
+    <a href="#sec7">七、什么叫"学习"？</a>
+    <a href="#sec8">八、线性回归就是神经网络</a>
+    <a href="#sec9">九、从线性回归到 GPT</a>
+    <a href="#sec10">十、隐藏重点：矢量化</a>
+    <a href="#sec11">十一、为什么如此重要</a>
+    <a href="#sec12">十二、你真正应该学到的</a>
+    <a href="#sec13">十三、与现实 AI 的关系</a>
+    <a href="#sec14">十四、工程视角：训练流水线</a>
+    <a href="#sec15">十五、一句话总结</a>
+  </div>
+</nav>
+
+<main class="container">
+
+  <!-- ============================================================ -->
+  <!-- SEC 1 -->
+  <!-- ============================================================ -->
+  <section id="sec1">
+    <div class="card">
+      <h2><span class="num">1</span> 这篇文章真正想教你的</h2>
+      <p>很多人第一次看线性回归，会以为："哦，就是 <code>y = wx + b</code>"——这是<strong>最表层</strong>的理解。</p>
+      <p>这篇文章实际上在建立深度学习最核心的<strong>训练范式</strong>。后面你学 MLP、CNN、Transformer、LLM、Agent，底层几乎都逃不出它这一套。</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>层次</th><th>真正内容</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>表层</td><td>用直线拟合数据</td></tr>
+            <tr><td>中层</td><td>如何通过损失函数优化参数</td></tr>
+            <tr><td>深层</td><td>神经网络训练的统一范式</td></tr>
+            <tr><td>本质层</td><td>用梯度下降逼近一个复杂函数</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box">
+        <h4>💡 核心洞见</h4>
+        <p>线性回归不是重点。重点是——<strong>"机器是如何学习参数的"</strong>。这是整个 AI 的核心。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 2 -->
+  <!-- ============================================================ -->
+  <section id="sec2">
+    <div class="card">
+      <h2><span class="num">2</span> 主线结构：一个完整 ML 系统的生命周期</h2>
+      <p>这篇文章是按照一个完整机器学习系统的生命周期来组织的：</p>
+
+      <div class="flow">
+        <span class="flow-item">① 定义模型</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">② 定义损失</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">③ 定义优化目标</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">④ 梯度下降更新</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">⑤ 损失越来越小</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">⑥ 得到泛化函数</span>
+      </div>
+
+      <p>后面所有深度学习——GPT、Diffusion、推荐系统、多模态——本质都是这个流程。只是模型更复杂、参数更多、数据更大而已。</p>
+
+      <div class="highlight-box green">
+        <h4>🔁 一个框架，贯串一切</h4>
+        <p>你学会这个闭环，就等于掌握了整个深度学习世界的主干。后面所有架构都是在这个骨架上添加复杂度。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 3 -->
+  <!-- ============================================================ -->
+  <section id="sec3">
+    <div class="card">
+      <h2><span class="num">3</span> 线性模型：特征加权求和</h2>
+      <h3>模型定义</h3>
+      <div class="formula">
+        ŷ = w₁x₁ + w₂x₂ + … + wₙxₙ + b
+      </div>
+      <p>等价于向量的内积加偏置：</p>
+      <div class="formula">
+        ŷ = <b>w</b><sup>T</sup><b>x</b> + b
+      </div>
+
+      <h3>权重的含义：特征重要程度</h3>
+      <p>以房价预测为例：</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>特征</th><th>权重含义</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>面积</td><td>越大越贵 (<em>w</em> &gt; 0)</td></tr>
+            <tr><td>地段评分</td><td>越好越贵 (<em>w</em> &gt; 0)</td></tr>
+            <tr><td>房龄</td><td>越老越便宜 (<em>w</em> &lt; 0)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>模型本质上是在学习<strong>"世界的规律"</strong>——每个特征对最终输出有多大影响。</p>
+
+      <div class="highlight-box">
+        <h4>🪜 本质</h4>
+        <p>输入 × 权重。权重就是模型对世界的"理解"。学习的过程，就是让权重从随机值逐渐变成能反映真实规律的值。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Interactive Demo: Linear Fit -->
+  <!-- ============================================================ -->
+  <div class="viz-container" id="demo-fit">
+    <h3>🧪 交互演示：线性回归拟合</h3>
+    <p style="color:#64748b;font-size:.88rem;margin-bottom:.8rem;">拖动滑块调整权重 <em>w</em> 和偏置 <em>b</em>，观察拟合线与损失的变化</p>
+    <canvas id="fitCanvas" width="700" height="400"></canvas>
+    <div class="controls" id="fitControls"></div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SEC 4 -->
+  <!-- ============================================================ -->
+  <section id="sec4">
+    <div class="card">
+      <h2><span class="num">4</span> 损失函数：机器如何知道"错了"？</h2>
+
+      <p>模型一开始权重随机、输出乱猜。例如：</p>
+      <ul style="margin: .5rem 0 .5rem 1.8rem; color:#334155;">
+        <li>真实房价：500 万</li>
+        <li>预测房价：120 万</li>
+      </ul>
+
+      <p><strong>机器怎么知道错了？</strong></p>
+      <p>靠——<strong>损失函数</strong>。</p>
+
+      <div class="formula">
+        ℓ(ŷ, y) = ½(ŷ − y)²
+      </div>
+
+      <div class="highlight-box">
+        <h4>🎯 核心思想</h4>
+        <p>预测越离谱，损失越大。模型的目标就是让这个损失值越来越小。</p>
+      </div>
+
+      <p>整个训练过程可以概括为一句话：</p>
+      <div class="flow" style="font-weight:600;">
+        <span class="flow-item">预测</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">算损失</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">调参数</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">损失变小</span>
+        <span class="flow-arrow">↻</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 5 -->
+  <!-- ============================================================ -->
+  <section id="sec5">
+    <div class="card">
+      <h2><span class="num">5</span> 为什么用平方损失，而不是绝对值？</h2>
+
+      <h3>① 大错误惩罚更重</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>误差</th><th>绝对值</th><th style="color:#3b82f6;">平方</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1</td><td>1</td><td style="color:#3b82f6;">1</td></tr>
+            <tr><td>2</td><td>2</td><td style="color:#3b82f6;">4</td></tr>
+            <tr><td>10</td><td>10</td><td style="color:#3b82f6;font-weight:700;">100</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>平方让大误差被"放大"——模型会<strong>优先修正巨大错误</strong>。</p>
+
+      <h3>② 数学上更容易求导</h3>
+      <div class="formula">
+        d/dx · x² = 2x
+      </div>
+      <p>平方损失处处连续、平滑，导数计算极其简单——这对于梯度下降至关重要。</p>
+
+      <div class="highlight-box warn">
+        <h4>⚠️ 为什么不用绝对值？</h4>
+        <p>绝对值的导数在 0 处不可导（"尖点"），且无论误差大小，梯度恒为 ±1，不会对巨大错误给予更大的修正力度。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 6 -->
+  <!-- ============================================================ -->
+  <section id="sec6">
+    <div class="card">
+      <h2><span class="num">6</span> 梯度下降：整篇文章真正的灵魂</h2>
+
+      <p>这是整个深度学习世界最核心的东西。</p>
+
+      <h3>本质一句话</h3>
+      <div class="highlight-box green">
+        <h4>⬇️ 梯度下降</h4>
+        <p>沿着"损失减小最快"的方向调整参数。</p>
+      </div>
+
+      <h3>直觉理解：下山</h3>
+      <p>你站在山顶，目标是最低点。但你：看不到全局，只能看脚下坡度。</p>
+      <p><strong>哪里更陡，往哪里走</strong>——这就是梯度下降。</p>
+
+      <div class="formula">
+        w ← w − η · ∂ℓ/∂w
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>符号</th><th>含义</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><em>w</em></td><td>参数（权重）</td></tr>
+            <tr><td><em>η</em> (学习率)</td><td>每次迈多大的步子</td></tr>
+            <tr><td>∂ℓ/∂<em>w</em></td><td>梯度——损失函数在当前参数处的"坡度"</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box warn">
+        <h4>⚠️ 学习率是核心超参数</h4>
+        <p>太大 → 震荡发散；太小 → 收敛极慢。调学习率是炼丹的第一步。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- Interactive Demo: Gradient Descent -->
+  <!-- ============================================================ -->
+  <div class="viz-container" id="demo-gd">
+    <h3>🧪 交互演示：梯度下降过程</h3>
+    <p style="color:#64748b;font-size:.88rem;margin-bottom:.8rem;">点击"训练一步"观察参数如何沿负梯度方向更新</p>
+    <canvas id="gdCanvas" width="700" height="400"></canvas>
+    <div class="controls" id="gdControls"></div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- SEC 7 -->
+  <!-- ============================================================ -->
+  <section id="sec7">
+    <div class="card">
+      <h2><span class="num">7</span> 为什么叫"学习"？</h2>
+
+      <p>这一点非常关键：</p>
+
+      <div class="table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr><th style="width:25%;"></th><th>传统编程</th><th>机器学习</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>模式</td>
+              <td>人写规则</td>
+              <td>人定义目标</td>
+            </tr>
+            <tr>
+              <td>执行</td>
+              <td>机器执行</td>
+              <td>机器自己找规则</td>
+            </tr>
+            <tr>
+              <td>房价示例</td>
+              <td><code>if area&gt;100: price+=100w</code></td>
+              <td>不给规则，只给数据，自己学</td>
+            </tr>
+            <tr>
+              <td>核心</td>
+              <td>逻辑编码</td>
+              <td><strong>参数学习</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box">
+        <h4>🧠 学习的本质</h4>
+        <p>不是人告诉机器规则，而是机器从数据中<strong>自动发现规律</strong>。这就是"参数学习"——找到一组参数，让预测尽可能准。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 8 -->
+  <!-- ============================================================ -->
+  <section id="sec8">
+    <div class="card">
+      <h2><span class="num">8</span> 线性回归就是神经网络</h2>
+
+      <p>文章最后一句非常重要：<strong>"线性回归可以视为单层神经网络。"</strong></p>
+      <p>很多人会忽略这句话——但这是整个深度学习的入口。</p>
+
+      <div class="layer-stack">
+        <div class="layer-box input">输入层 （x₁, x₂, …, xₙ）</div>
+        <div class="layer-conn">↓ 权重 × 输入 + 偏置</div>
+        <div class="layer-box output">输出层 （ŷ）</div>
+      </div>
+
+      <p>线性回归其实已经是神经网络了——只是中间没有隐藏层。</p>
+
+      <div class="highlight-box green">
+        <h4>🔗 统一视角</h4>
+        <p>线性回归 = 单层神经网络（无激活函数）<br>MLP = 线性回归 + 隐藏层 + 非线性激活函数<br>深度学习 = 叠加更多层</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 9 -->
+  <!-- ============================================================ -->
+  <section id="sec9">
+    <div class="card">
+      <h2><span class="num">9</span> 从线性回归到 GPT，发生了什么？</h2>
+
+      <p>本质只发生了三件事：</p>
+
+      <h3>① 层数变多了</h3>
+      <div class="layer-stack">
+        <div class="layer-box input">输入层</div>
+        <div class="layer-conn">↓</div>
+        <div class="layer-box hidden">隐藏层 1</div>
+        <div class="layer-conn">↓</div>
+        <div class="layer-box hidden">隐藏层 2</div>
+        <div class="layer-conn">↓</div>
+        <div class="layer-box hidden">…</div>
+        <div class="layer-conn">↓</div>
+        <div class="layer-box output">输出层</div>
+      </div>
+
+      <h3>② 非线性变多了</h3>
+      <p>线性回归只能画直线，但现实世界——图像、语言、视频——全是非线性。</p>
+      <p>于是引入：ReLU、Sigmoid、Attention 等非线性变换。</p>
+
+      <h3>③ 参数规模爆炸</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>模型</th><th>参数数量</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>线性回归</td><td>几个 ~ 几十个</td></tr>
+            <tr><td>MLP</td><td>几千 ~ 几百万</td></tr>
+            <tr><td>GPT-3</td><td>1750 亿</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>但训练本质完全没变：</p>
+      <div class="flow" style="font-weight:600;">
+        <span class="flow-item">预测</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">计算损失</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">反向传播</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">更新参数</span>
+        <span class="flow-arrow">↻</span>
+      </div>
+
+      <div class="highlight-box">
+        <h4>🚀 核心洞察</h4>
+        <p>GPT 本质上就是"极其复杂的函数拟合器"。线性回归拟合直线，GPT 拟合语言世界——但核心训练逻辑完全一样。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 10 -->
+  <!-- ============================================================ -->
+  <section id="sec10">
+    <div class="card">
+      <h2><span class="num">10</span> 隐藏重点：矢量化</h2>
+
+      <p>文章专门讲到——不要用 <code>for</code> 循环，而要使用矩阵运算：</p>
+
+      <pre><code><span class="cm"># ❌ 慢：Python for 循环</span>
+<span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(n):
+    y_hat[i] = w[i] * x[i]
+y_hat += b
+
+<span class="cm"># ✅ 快：矢量运算</span>
+y_hat = X @ w + b
+</code></pre>
+
+      <p>这是现代 AI 能跑起来的关键原因——因为 GPU 天生适合矩阵计算。</p>
+
+      <div class="highlight-box">
+        <h4>⚡ Transformer 本质</h4>
+        <p>就是<strong>超大规模矩阵乘法</strong>。矢量化让深度学习从"可能"变成了"可行"。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 11 -->
+  <!-- ============================================================ -->
+  <section id="sec11">
+    <div class="card">
+      <h2><span class="num">11</span> 为什么线性回归如此重要？</h2>
+
+      <p>因为它是深度学习<strong>最小可运行闭环</strong>：</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>组件</th><th>线性回归</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>模型</td><td><span class="tag tag-core">✅</span></td></tr>
+            <tr><td>参数</td><td><span class="tag tag-core">✅</span> w, b</td></tr>
+            <tr><td>损失函数</td><td><span class="tag tag-mid">✅</span> 平方损失</td></tr>
+            <tr><td>梯度</td><td><span class="tag tag-mid">✅</span> 可解析计算</td></tr>
+            <tr><td>反向传播</td><td><span class="tag tag-deep">✅</span> 单层特例</td></tr>
+            <tr><td>优化器</td><td><span class="tag tag-green">✅</span> 梯度下降</td></tr>
+            <tr><td>数据</td><td><span class="tag tag-core">✅</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box green">
+        <h4>🎓 你真正理解线性回归后</h4>
+        <p>后面所有神经网络——MLP、CNN、RNN、Transformer——都只是"复杂化"。核心骨架完全相同。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 12 -->
+  <!-- ============================================================ -->
+  <section id="sec12">
+    <div class="card">
+      <h2><span class="num">12</span> 你真正应该从这篇文章学到什么</h2>
+
+      <p>不是公式。而是以下 <strong>四个核心认知</strong>：</p>
+
+      <div class="highlight-box">
+        <h4>📐 1. AI 本质是函数拟合</h4>
+        <p>输入 <em>x</em>，输出 <em>y</em>。模型在学习 <em>f</em>(<em>x</em>) = <em>y</em>。</p>
+      </div>
+
+      <div class="highlight-box" style="border-left-color:#8b5cf6;background:linear-gradient(135deg,#f5f3ff,#eef2ff);">
+        <h4 style="color:#5b21b6;">🔎 2. 神经网络本质是参数搜索</h4>
+        <p>训练不是"记忆"，而是找到一组参数让误差最小。</p>
+      </div>
+
+      <div class="highlight-box" style="border-left-color:#f59e0b;background:linear-gradient(135deg,#fffbeb,#fef9e7);">
+        <h4 style="color:#b45309;">🎯 3. 损失函数决定学习方向</h4>
+        <p>损失函数不是附属品，而是 AI 的<strong>目标函数</strong>。你定义什么损失，AI 就会朝什么方向进化。</p>
+      </div>
+
+      <div class="highlight-box" style="border-left-color:#10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+        <h4 style="color:#065f46;">⚙️ 4. 梯度下降是现代 AI 的发动机</h4>
+        <p>没有梯度下降，GPT、AlphaGo、Stable Diffusion 都不存在。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 13 -->
+  <!-- ============================================================ -->
+  <section id="sec13">
+    <div class="card">
+      <h2><span class="num">13</span> 线性回归与现实 AI 的关系</h2>
+
+      <p>很多人学到这里会疑惑：这么简单的东西，为什么能发展出 GPT？</p>
+
+      <p>答案是：GPT 本质上就是<strong>"极其复杂的函数拟合器"</strong>。</p>
+
+      <div class="table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr><th style="width:25%;">维度</th><th>线性回归</th><th>GPT</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>参数</td><td>几个</td><td>万亿</td></tr>
+            <tr><td>层数</td><td>1 层</td><td>上百层</td></tr>
+            <tr><td>拟合目标</td><td>直线</td><td>语言世界</td></tr>
+            <tr><td>硬件</td><td>CPU 都能跑</td><td>GPU 集群</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="highlight-box">
+        <h4>🔗 核心训练逻辑完全一样</h4>
+        <p>预测 → 算损失 → 反向传播 → 更新参数。无论模型多大，这个闭环从未改变。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 14 -->
+  <!-- ============================================================ -->
+  <section id="sec14">
+    <div class="card">
+      <h2><span class="num">14</span> 工程视角：建立"训练流水线"思维</h2>
+
+      <p>如果你是后端/工程背景，最应该理解的是<strong>"训练流水线"</strong>，而不是公式推导。</p>
+
+      <div class="flow" style="font-weight:600;font-size:.92rem;">
+        <span class="flow-item">数据</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">模型</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">前向传播</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">loss</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item">backward</span>
+        <span class="flow-arrow">→</span>
+        <span class="flow-item" style="background:#dbeafe;font-weight:700;">optimizer.step()</span>
+      </div>
+
+      <p>这是整个 AI 工程世界的主干。以后 RAG、Agent、微调、RLHF、多模态——本质都在这个骨架上扩展。</p>
+
+      <pre><code><span class="cm"># PyTorch 伪代码 —— 训练流水线</span>
+<span class="kw">for</span> epoch <span class="kw">in</span> <span class="fn">range</span>(num_epochs):
+    <span class="kw">for</span> X, y <span class="kw">in</span> dataloader:       <span class="cm"># ① 数据</span>
+        y_hat = model(X)              <span class="cm"># ② 前向传播</span>
+        loss = loss_fn(y_hat, y)      <span class="cm"># ③ 计算损失</span>
+        optimizer.zero_grad()
+        loss.backward()               <span class="cm"># ④ 反向传播</span>
+        optimizer.step()              <span class="cm"># ⑤ 更新参数</span>
+</code></pre>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- SEC 15 -->
+  <!-- ============================================================ -->
+  <section id="sec15">
+    <div class="card" style="background:linear-gradient(135deg,#0f172a,#1e293b);color:#e2e8f0;">
+      <h2 style="border-bottom-color:#334155;color:#f1f5f9;">
+        <span class="num" style="background:#f59e0b;color:#0f172a;">15</span>
+        一句话总结整篇文章
+      </h2>
+      <p style="font-size:1.15rem;line-height:1.9;color:#cbd5e1;">
+        这篇文章本质上是在回答：<br><br>
+        <strong style="color:#fbbf24;font-size:1.25rem;">
+          "机器如何通过误差反馈，自动调整参数，从而学会世界规律？"
+        </strong>
+      </p>
+      <p style="margin-top:1rem;color:#94a3b8;">
+        而线性回归——只是这个思想<strong style="color:#38bdf8;">最简单的载体</strong>。
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>基于《动手学深度学习》3.1 线性回归 · 精讲教学</p>
+  <p style="color:#94a3b8;">深入理解线性回归 = 掌握整个深度学习的训练范式</p>
+</footer>
+
+<!-- ============================================================ -->
+<!-- JavaScript: Interactive Demos -->
+<!-- ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // ==========================================
+  // Demo 1: Linear Fit
+  // ==========================================
+  (function() {
+    const canvas = document.getElementById('fitCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 30, bottom: 40, left: 50, right: 30 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // generate synthetic data: y = 1.2x + 0.8 + noise
+    const data_x = [];
+    const data_y = [];
+    const true_w = 1.2, true_b = 0.8;
+    for (let i = 0; i < 30; i++) {
+      const x = 0.05 + (i / 29) * 0.9;
+      const noise = (Math.random() - 0.5) * 0.3;
+      data_x.push(x);
+      data_y.push(true_w * x + true_b + noise);
+    }
+
+    // normalize data to [0,1] for plotting
+    const xMin = 0, xMax = 1;
+    const yMin = 0, yMax = 2.5;
+
+    function toPlotX(v) { return pad.left + (v - xMin) / (xMax - xMin) * plotW; }
+    function toPlotY(v) { return pad.top + plotH - (v - yMin) / (yMax - yMin) * plotH; }
+
+    // UI state
+    let w = 0.5, b = 0.5;
+
+    function drawFit() {
+      ctx.clearRect(0, 0, W, H);
+
+      // grid lines
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) {
+        const x = pad.left + (i / 5) * plotW;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+        const y = pad.top + (i / 5) * plotH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+      }
+
+      // axes
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+      // axis labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('特征 x', pad.left + plotW / 2, H - 10);
+      ctx.save(); ctx.translate(12, pad.top + plotH / 2); ctx.rotate(-Math.PI/2); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('标签 y', 0, 0); ctx.restore();
+
+      // data points
+      ctx.fillStyle = '#3b82f6';
+      for (let i = 0; i < data_x.length; i++) {
+        const px = toPlotX(data_x[i]);
+        const py = toPlotY(data_y[i]);
+        ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // regression line
+      const lineX1 = 0, lineX2 = 1;
+      const lineY1 = w * lineX1 + b;
+      const lineY2 = w * lineX2 + b;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(toPlotX(lineX1), toPlotY(lineY1));
+      ctx.lineTo(toPlotX(lineX2), toPlotY(lineY2));
+      ctx.stroke();
+
+      // loss annotations
+      let totalLoss = 0;
+      ctx.strokeStyle = 'rgba(239,68,68,0.25)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3,3]);
+      for (let i = 0; i < data_x.length; i++) {
+        const px = toPlotX(data_x[i]);
+        const pred = w * data_x[i] + b;
+        const py = toPlotY(data_y[i]);
+        const predY = toPlotY(pred);
+        const err = pred - data_y[i];
+        totalLoss += 0.5 * err * err;
+        ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, predY); ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // info text
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '14px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`w = ${w.toFixed(3)}    b = ${b.toFixed(3)}    loss = ${totalLoss.toFixed(4)}`, pad.left + 10, 8);
+    }
+
+    // rebuild controls
+    const ctrlDiv = document.getElementById('fitControls');
+    if (ctrlDiv) {
+      ctrlDiv.innerHTML = `
+        <label>w（斜率） <input type="range" id="sliderW" min="-0.5" max="3" step="0.01" value="${w}">
+        <span class="val" id="valW">${w.toFixed(2)}</span></label>
+        <label>b（截距） <input type="range" id="sliderB" min="-0.8" max="2.5" step="0.01" value="${b}">
+        <span class="val" id="valB">${b.toFixed(2)}</span></label>
+        <button id="resetFitBtn" style="padding:.3rem 1rem;border:1px solid #cbd5e1;border-radius:6px;background:#fff;cursor:pointer;font-size:.85rem;">重置最优</button>
+      `;
+
+      const sliderW = document.getElementById('sliderW');
+      const sliderB = document.getElementById('sliderB');
+      const valW = document.getElementById('valW');
+      const valB = document.getElementById('valB');
+
+      function updateFromSliders() {
+        w = parseFloat(sliderW.value);
+        b = parseFloat(sliderB.value);
+        valW.textContent = w.toFixed(2);
+        valB.textContent = b.toFixed(2);
+        drawFit();
+      }
+
+      sliderW.addEventListener('input', updateFromSliders);
+      sliderB.addEventListener('input', updateFromSliders);
+
+      document.getElementById('resetFitBtn').addEventListener('click', function() {
+        w = 1.2; b = 0.8;
+        sliderW.value = w;
+        sliderB.value = b;
+        valW.textContent = w.toFixed(2);
+        valB.textContent = b.toFixed(2);
+        drawFit();
+      });
+
+      drawFit();
+    }
+  })();
+
+  // ==========================================
+  // Demo 2: Gradient Descent
+  // ==========================================
+  (function() {
+    const canvas = document.getElementById('gdCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 30, bottom: 40, left: 50, right: 30, mid: 20 };
+    const plotW = (W - pad.left - pad.right - pad.mid) / 2;
+    const plotH = H - pad.top - pad.bottom;
+
+    // loss landscape: L(w) = 0.5 * (w - 1.2)^2 + 0.05
+    const wOpt = 1.2;
+    function lossFn(w) { return 0.5 * (w - wOpt) * (w - wOpt) + 0.05; }
+    function gradFn(w) { return (w - wOpt); }
+
+    const wMin = -0.5, wMax = 3;
+    const lMin = 0, lMax = 1.5;
+
+    function toPlotX(v, offX) { return offX + (v - wMin) / (wMax - wMin) * plotW; }
+    function toPlotY(v) { return pad.top + plotH - (v - lMin) / (lMax - lMin) * plotH; }
+
+    // training data for right plot
+    const data_x = [];
+    const data_y = [];
+    for (let i = 0; i < 20; i++) {
+      const x = 0.05 + (i / 19) * 0.9;
+      data_x.push(x);
+      data_y.push(1.2 * x + 0.8 + (Math.random() - 0.5) * 0.25);
+    }
+
+    // state
+    let currentW = 2.5;
+    let currentB = 0.5;
+    let history = [currentW];
+    const lr = 0.3;
+
+    function drawGD() {
+      ctx.clearRect(0, 0, W, H);
+
+      // ---- Left: Loss Curve ----
+      const offX = pad.left;
+      // draw loss curve
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      const steps = 100;
+      for (let i = 0; i <= steps; i++) {
+        const wv = wMin + (i / steps) * (wMax - wMin);
+        const lv = lossFn(wv);
+        const px = toPlotX(wv, offX);
+        const py = toPlotY(lv);
+        i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+
+      // axes
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(offX, pad.top); ctx.lineTo(offX, pad.top + plotH);
+      ctx.lineTo(offX + plotW, pad.top + plotH);
+      ctx.stroke();
+
+      // labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('参数 w', offX + plotW / 2, H - 10);
+      ctx.save();
+      ctx.translate(offX - 32, pad.top + plotH / 2);
+      ctx.rotate(-Math.PI/2);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('损失 L(w)', 0, 0);
+      ctx.restore();
+
+      // optimal vertical line
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4,4]);
+      const optPx = toPlotX(wOpt, offX);
+      ctx.beginPath(); ctx.moveTo(optPx, pad.top); ctx.lineTo(optPx, pad.top + plotH); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#10b981';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('w*', optPx, pad.top + plotH + 2);
+
+      // draw history dots and path
+      for (let i = 0; i < history.length; i++) {
+        const wv = history[i];
+        const lv = lossFn(wv);
+        const px = toPlotX(wv, offX);
+        const py = toPlotY(lv);
+        const isLast = (i === history.length - 1);
+
+        // line connecting
+        if (i > 0) {
+          const pw = history[i-1];
+          const pl = lossFn(pw);
+          const ppx = toPlotX(pw, offX);
+          const ppy = toPlotY(pl);
+          ctx.strokeStyle = isLast ? '#ef4444' : '#94a3b8';
+          ctx.lineWidth = isLast ? 2 : 1;
+          ctx.beginPath(); ctx.moveTo(ppx, ppy); ctx.lineTo(px, py); ctx.stroke();
+        }
+
+        // dot
+        ctx.fillStyle = isLast ? '#ef4444' : '#64748b';
+        ctx.beginPath(); ctx.arc(px, py, isLast ? 6 : 3, 0, Math.PI*2); ctx.fill();
+
+        // label
+        if (isLast) {
+          ctx.fillStyle = '#ef4444';
+          ctx.font = '12px sans-serif';
+          ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+          ctx.fillText(`w = ${wv.toFixed(3)}`, px + 8, py - 2);
+        }
+      }
+
+      // ---- Right: Data & Fit ----
+      const offX2 = offX + plotW + pad.mid;
+      const xMin2 = 0, xMax2 = 1, yMin2 = 0, yMax2 = 2.5;
+
+      function toPlotX2(v) { return offX2 + (v - xMin2) / (xMax2 - xMin2) * plotW; }
+      function toPlotY2(v) { return pad.top + plotH - (v - yMin2) / (yMax2 - yMin2) * plotH; }
+
+      // grid
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) {
+        const x = offX2 + (i / 5) * plotW;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+        const y = pad.top + (i / 5) * plotH;
+        ctx.beginPath(); ctx.moveTo(offX2, y); ctx.lineTo(offX2 + plotW, y); ctx.stroke();
+      }
+
+      // axes
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(offX2, pad.top); ctx.lineTo(offX2, pad.top + plotH); ctx.lineTo(offX2 + plotW, pad.top + plotH); ctx.stroke();
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('x', offX2 + plotW / 2, H - 10);
+
+      // data points
+      ctx.fillStyle = '#3b82f6';
+      for (let i = 0; i < data_x.length; i++) {
+        const px = toPlotX2(data_x[i]);
+        const py = toPlotY2(data_y[i]);
+        ctx.beginPath(); ctx.arc(px, py, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      // fit line
+      const lineY1 = currentW * 0 + currentB;
+      const lineY2 = currentW * 1 + currentB;
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(toPlotX2(0), toPlotY2(lineY1));
+      ctx.lineTo(toPlotX2(1), toPlotY2(lineY2));
+      ctx.stroke();
+
+      // info
+      let totalLoss = 0;
+      for (let i = 0; i < data_x.length; i++) {
+        const err = (currentW * data_x[i] + currentB) - data_y[i];
+        totalLoss += 0.5 * err * err;
+      }
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+      ctx.fillText(`w = ${currentW.toFixed(3)}    b = ${currentB.toFixed(3)}    loss = ${totalLoss.toFixed(4)}`, offX2 + 5, 6);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('当前拟合线 vs 数据点', offX2 + plotW / 2, pad.top + plotH + 4);
+    }
+
+    const ctrlDiv = document.getElementById('gdControls');
+    if (ctrlDiv) {
+      ctrlDiv.innerHTML = `
+        <button id="stepBtn" style="padding:.4rem 1.2rem;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.9rem;font-weight:600;">⬇ 训练一步</button>
+        <button id="resetGDBtn" style="padding:.4rem 1.2rem;background:#fff;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;font-size:.9rem;">↺ 重置</button>
+        <span style="font-size:.85rem;color:#64748b;">步数: <strong id="stepCount">0</strong></span>
+      `;
+
+      let stepCount = 0;
+      const stepBtn = document.getElementById('stepBtn');
+      const resetBtn = document.getElementById('resetGDBtn');
+      const stepCountEl = document.getElementById('stepCount');
+
+      stepBtn.addEventListener('click', function() {
+        const g = gradFn(currentW);
+        // also update b: b -> b - lr * grad of b which is avg residual
+        let bGrad = 0;
+        for (let i = 0; i < data_x.length; i++) {
+          const err = (currentW * data_x[i] + currentB) - data_y[i];
+          bGrad += err;
+        }
+        bGrad /= data_x.length;
+
+        currentW = currentW - lr * g;
+        currentB = currentB - lr * bGrad;
+        history.push(currentW);
+        stepCount++;
+        stepCountEl.textContent = stepCount;
+        drawGD();
+      });
+
+      resetBtn.addEventListener('click', function() {
+        currentW = 2.5;
+        currentB = 0.5;
+        history = [currentW];
+        stepCount = 0;
+        stepCountEl.textContent = '0';
+        drawGD();
+      });
+
+      drawGD();
+    }
+  })();
+
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,1648 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Softmax 回归 — 打开神经网络分类世界 | 动手学深度学习精讲</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; font-size: 16px; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f7f8fa;
+    color: #1e293b;
+    line-height: 1.8;
+  }
+
+  /* ===== Hero ===== */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #3b1f4e 50%, #5b2d6b 100%);
+    color: #fff;
+    padding: 5rem 2rem 4rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(192,132,252,.12) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(99,102,241,.10) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -.02em;
+    position: relative;
+    z-index: 1;
+  }
+  .hero h1 .highlight { color: #c084fc; }
+  .hero .subtitle {
+    margin-top: .8rem;
+    font-size: clamp(1rem, 2vw, 1.25rem);
+    color: #a78bfa;
+    position: relative;
+    z-index: 1;
+  }
+  .hero .badge-row {
+    margin-top: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: .6rem;
+    position: relative;
+    z-index: 1;
+  }
+  .badge {
+    background: rgba(255,255,255,.08);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 999px;
+    padding: .3rem 1rem;
+    font-size: .82rem;
+    color: #cbd5e1;
+  }
+
+  /* ===== Layout ===== */
+  .container { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ===== TOC ===== */
+  .toc {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 1.8rem 2rem;
+    margin: -2rem auto 2rem;
+    max-width: 880px;
+    position: relative;
+    z-index: 2;
+  }
+  .toc h2 {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: .8rem;
+    font-weight: 600;
+    letter-spacing: .05em;
+  }
+  .toc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
+    gap: .4rem .8rem;
+  }
+  .toc-grid a {
+    color: #7c3aed;
+    text-decoration: none;
+    font-size: .9rem;
+    padding: .25rem 0;
+    transition: color .15s;
+  }
+  .toc-grid a:hover { color: #5b21b6; text-decoration: underline; }
+
+  /* ===== Section ===== */
+  section { margin-bottom: 3rem; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 2rem 2.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: .5rem;
+    border-bottom: 3px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 8px;
+    background: #7c3aed;
+    color: #fff;
+    font-size: .85rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 1.2rem 0 .5rem;
+    color: #0f172a;
+  }
+  .card p { margin-bottom: .8rem; color: #334155; }
+  .card p:last-child { margin-bottom: 0; }
+
+  /* ===== Highlight Box ===== */
+  .highlight-box {
+    background: linear-gradient(135deg, #f5f3ff, #eef2ff);
+    border-left: 4px solid #7c3aed;
+    border-radius: 0 8px 8px 0;
+    padding: 1.2rem 1.5rem;
+    margin: 1rem 0;
+  }
+  .highlight-box h4 {
+    font-size: .95rem;
+    color: #5b21b6;
+    margin-bottom: .3rem;
+  }
+  .highlight-box p { color: #1e3a5f; margin-bottom: 0; }
+
+  .highlight-box.warn {
+    background: linear-gradient(135deg, #fffbeb, #fef9e7);
+    border-left-color: #f59e0b;
+  }
+  .highlight-box.warn h4 { color: #b45309; }
+  .highlight-box.warn p { color: #78350f; }
+
+  .highlight-box.green {
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    border-left-color: #10b981;
+  }
+  .highlight-box.green h4 { color: #065f46; }
+  .highlight-box.green p { color: #064e3b; }
+
+  .highlight-box.red {
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    border-left-color: #ef4444;
+  }
+  .highlight-box.red h4 { color: #b91c1c; }
+  .highlight-box.red p { color: #7f1d1d; }
+
+  .highlight-box.blue {
+    background: linear-gradient(135deg, #eff6ff, #f0f9ff);
+    border-left-color: #3b82f6;
+  }
+  .highlight-box.blue h4 { color: #1e40af; }
+  .highlight-box.blue p { color: #1e3a5f; }
+
+  /* ===== Formula ===== */
+  .formula {
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 1rem 1.5rem;
+    margin: .8rem 0;
+    text-align: center;
+    font-size: 1.1rem;
+    overflow-x: auto;
+    font-family: "Times New Roman", "STIX", "Latin Modern Math", serif;
+  }
+  .formula.purple {
+    background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+    border: 1px solid #ddd6fe;
+  }
+
+  /* ===== Table ===== */
+  .table-wrap {
+    overflow-x: auto;
+    margin: .8rem 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .92rem;
+  }
+  th {
+    background: #f1f5f9;
+    font-weight: 600;
+    text-align: left;
+    padding: .6rem .8rem;
+    border-bottom: 2px solid #cbd5e1;
+  }
+  td {
+    padding: .55rem .8rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  tr:last-child td { border-bottom: none; }
+
+  /* ===== Code ===== */
+  code {
+    background: #eef2f6;
+    padding: .15em .45em;
+    border-radius: 4px;
+    font-size: .88em;
+    font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem 1.3rem;
+    margin: .8rem 0;
+    overflow-x: auto;
+    font-size: .85rem;
+    line-height: 1.6;
+  }
+  pre .kw  { color: #c084fc; }
+  pre .fn  { color: #60a5fa; }
+  pre .str { color: #34d399; }
+  pre .cm  { color: #64748b; }
+  pre .op  { color: #f472b6; }
+  pre .num { color: #fbbf24; }
+
+  /* ===== Flow ===== */
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem .6rem;
+    padding: 1.2rem;
+    background: #f8fafc;
+    border-radius: 10px;
+    margin: .8rem 0;
+  }
+  .flow-item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: .35rem .9rem;
+    font-size: .88rem;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: #94a3b8; font-size: 1.1rem; }
+
+  /* ===== Layer ===== */
+  .layer-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .3rem;
+    margin: 1rem 0;
+  }
+  .layer-box {
+    background: #fff;
+    border: 2px solid #7c3aed;
+    border-radius: 8px;
+    padding: .6rem 1.5rem;
+    font-weight: 600;
+    color: #5b21b6;
+    min-width: 180px;
+    text-align: center;
+  }
+  .layer-box.input { border-color: #10b981; color: #065f46; background: #ecfdf5; }
+  .layer-box.output { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
+  .layer-box.hidden { border-color: #8b5cf6; color: #5b21b6; background: #f5f3ff; }
+  .layer-conn { color: #94a3b8; font-size: .8rem; }
+
+  /* ===== Tag ===== */
+  .tag {
+    display: inline-block;
+    padding: .15rem .6rem;
+    border-radius: 4px;
+    font-size: .78rem;
+    font-weight: 600;
+  }
+  .tag-core { background: #dbeafe; color: #1e40af; }
+  .tag-mid  { background: #e0e7ff; color: #3730a3; }
+  .tag-deep { background: #e9d5ff; color: #5b21b6; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-red { background: #fee2e2; color: #991b1b; }
+  .tag-orange { background: #fef3c7; color: #92400e; }
+
+  /* ===== Viz Container ===== */
+  .viz-container {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .viz-container h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin-bottom: .5rem;
+  }
+  .viz-container canvas {
+    max-width: 100%;
+    border-radius: 6px;
+    background: #fafbfc;
+  }
+  .viz-container .controls {
+    margin-top: .8rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .8rem;
+    justify-content: center;
+    align-items: center;
+  }
+  .viz-container .controls label {
+    font-size: .88rem;
+    color: #475569;
+  }
+  .viz-container .controls input[type="range"] {
+    width: 140px;
+  }
+  .viz-container .controls .val {
+    font-weight: 600;
+    color: #1e293b;
+    min-width: 2.2rem;
+    display: inline-block;
+  }
+
+  /* ===== Probability Bar ===== */
+  .prob-bars {
+    margin: .8rem 0;
+  }
+  .prob-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    margin-bottom: .35rem;
+  }
+  .prob-label {
+    width: 3rem;
+    font-size: .85rem;
+    font-weight: 600;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .prob-track {
+    flex: 1;
+    height: 1.5rem;
+    background: #f1f5f9;
+    border-radius: 999px;
+    overflow: hidden;
+    position: relative;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width .25s ease;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: .5rem;
+    font-size: .75rem;
+    font-weight: 700;
+    color: #fff;
+    min-width: 2.2rem;
+  }
+  .prob-val {
+    font-size: .85rem;
+    font-weight: 600;
+    min-width: 3.5rem;
+    flex-shrink: 0;
+  }
+
+  /* ===== Footer ===== */
+  footer {
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+    color: #94a3b8;
+    font-size: .85rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 4rem;
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .card { padding: 1.2rem 1rem; }
+    .hero { padding: 3rem 1rem 2.5rem; }
+    .toc { margin: -1.5rem .75rem 1.5rem; padding: 1.2rem; }
+    .toc-grid { grid-template-columns: 1fr 1fr; }
+    .flow { gap: .2rem .4rem; }
+    .flow-item { font-size: .78rem; padding: .2rem .6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<header class="hero">
+  <h1>
+    <span class="highlight">Softmax 回归</span>
+    <br>打开神经网络分类世界
+  </h1>
+  <p class="subtitle">《动手学深度学习》精讲 · 从 Softmax 理解分类、概率与 GPT 的本质</p>
+  <div class="badge-row">
+    <span class="badge">🎯 概率输出</span>
+    <span class="badge">⚡ Softmax</span>
+    <span class="badge">📉 交叉熵</span>
+    <span class="badge">🧠 最大似然</span>
+    <span class="badge">🤖 GPT 基石</span>
+  </div>
+</header>
+
+<!-- ============ TOC ============ -->
+<nav class="toc container">
+  <h2>📖 目录</h2>
+  <div class="toc-grid">
+    <a href="#sec0">文章定位：比线性回归重要一个量级</a>
+    <a href="#sec1">一、想解决什么问题？</a>
+    <a href="#sec2">二、为什么线性回归不适合分类？</a>
+    <a href="#sec3">三、Softmax 的本质</a>
+    <a href="#sec4">四、为什么一定要指数函数？</a>
+    <a href="#sec5">五、Softmax 的隐藏本质</a>
+    <a href="#sec6">六、交叉熵才是灵魂</a>
+    <a href="#sec7">七、为什么不用 MSE？</a>
+    <a href="#sec8">八、交叉熵的真正意义</a>
+    <a href="#sec9">九、为什么要用 log？</a>
+    <a href="#sec10">十、进入概率世界</a>
+    <a href="#sec11">十一、最大似然估计</a>
+    <a href="#sec12">十二、GPT 与 Softmax</a>
+    <a href="#sec13">十三、语言世界的核心</a>
+    <a href="#sec14">十四、Softmax 不关心绝对值</a>
+    <a href="#sec15">十五、为什么这点重要？</a>
+    <a href="#sec16">十六、Logits 是什么？</a>
+    <a href="#sec17">十七、Temperature 本质</a>
+    <a href="#sec18">十八、建立的分类范式</a>
+    <a href="#sec19">十九、你真正该学到的</a>
+    <a href="#sec20">二十、一句话总结</a>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- SEC 0: 文章定位 -->
+<!-- ============================================================ -->
+<section id="sec0">
+  <div class="card" style="background:linear-gradient(135deg,#f5f3ff,#ede9fe);border:2px solid #ddd6fe;">
+    <h2 style="border-bottom-color:#c4b5fd;color:#5b21b6;">
+      <span class="num" style="background:#7c3aed;">✦</span>
+      文章定位：比线性回归重要一个量级
+    </h2>
+    <p>线性回归解决的是<strong>预测一个连续值</strong>（房价、温度、销量）。</p>
+    <p>而 Softmax 回归解决的是：<strong>"这个东西属于哪一类？"</strong></p>
+    <ul style="margin:.5rem 0 .5rem 1.8rem;color:#334155;">
+      <li>这是猫还是狗？</li>
+      <li>这是不是垃圾邮件？</li>
+      <li>这个词后面最可能接哪个词？</li>
+    </ul>
+    <div class="highlight-box" style="border-left-color:#7c3aed;background:rgba(124,58,237,.06);">
+      <h4 style="color:#5b21b6;">🤖 GPT 本质上就是超大型 Softmax 分类器</h4>
+      <p>这篇文章——其实是在给 Transformer 和 LLM 铺路。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- Interactive Demo: Softmax Probability -->
+<!-- ============================================================ -->
+<div class="viz-container" id="demo-softmax">
+  <h3>🧪 交互演示：Softmax 概率分布</h3>
+  <p style="color:#64748b;font-size:.88rem;margin-bottom:.8rem;">拖动滑块调整三个类别的 logits，观察 Softmax 如何将它们变成概率</p>
+  <canvas id="softmaxCanvas" width="700" height="320"></canvas>
+  <div class="controls" id="softmaxControls"></div>
+  <div id="probBarsContainer" style="margin-top:.8rem;"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SEC 1 -->
+<!-- ============================================================ -->
+<section id="sec1">
+  <div class="card">
+    <h2><span class="num">1</span> 这篇文章真正想解决什么问题？</h2>
+
+    <p><strong>核心问题："如何让机器输出概率分布？"</strong></p>
+
+    <p>例如，看到一张猫的图片，机器输出：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>类别</th><th>概率</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>🐱 猫</td><td style="color:#7c3aed;font-weight:700;">90%</td></tr>
+          <tr><td>🐶 狗</td><td>7%</td></tr>
+          <tr><td>🐦 鸟</td><td>3%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>机器不只是说"这是猫"，而是给出<strong>每个类别的概率</strong>。</p>
+
+    <div class="highlight-box blue">
+      <h4>💡 概率 = 不确定性的表达</h4>
+      <p>这是现代 AI 极其核心的思想——机器不仅给出答案，还告诉你它有多确信。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 2 -->
+<!-- ============================================================ -->
+<section id="sec2">
+  <div class="card">
+    <h2><span class="num">2</span> 为什么线性回归不适合分类？</h2>
+
+    <p>这是文章最关键的切入点。</p>
+
+    <p>线性回归的输出是<strong>任意实数</strong>：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>输出</th><th>合理吗？</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>-3.2</td><td style="color:#ef4444;">❌ 不合理</td></tr>
+          <tr><td>8.7</td><td style="color:#ef4444;">❌ 不合理</td></tr>
+          <tr><td>1000</td><td style="color:#ef4444;">❌ 不合理</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>但概率必须满足：</p>
+    <ul style="margin:.5rem 0 .5rem 1.8rem;color:#334155;">
+      <li><strong>0 ≤ p ≤ 1</strong></li>
+      <li><strong>所有概率和 = 1</strong></li>
+    </ul>
+
+    <div class="highlight-box warn">
+      <h4>⚠️ 线性输出不能直接当概率</h4>
+      <p>文章真正在解决：如何把任意数字压缩成合法概率。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 3 -->
+<!-- ============================================================ -->
+<section id="sec3">
+  <div class="card">
+    <h2><span class="num">3</span> Softmax 的本质是什么？</h2>
+
+    <p>这是全文最核心的东西。</p>
+
+    <div class="formula purple">
+      ŷᵢ = e<sup>oᵢ</sup> / Σⱼ e<sup>oⱼ</sup>
+    </div>
+
+    <p>很多人第一次看到会疑惑：<strong>为什么突然出现 e？</strong></p>
+
+    <div class="highlight-box">
+      <h4>💡 Softmax 本质是"概率竞争机制"</h4>
+      <p>让每个类别通过指数函数放大差异，然后互相竞争——谁更强，谁就获得更高的概率。</p>
+    </div>
+
+    <h3>举例：三分类</h3>
+    <p>模型输出的原始值（logits）：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>类别</th><th>原始 logit</th><th>e<sup>logit</sup></th><th>Softmax 概率</th></tr>
+        </thead>
+        <tbody>
+          <tr><td style="font-weight:700;">猫 🐱</td><td>2</td><td>e² ≈ 7.39</td><td style="color:#7c3aed;font-weight:700;">7.39/11.1 ≈ 66%</td></tr>
+          <tr><td>狗 🐶</td><td>1</td><td>e¹ ≈ 2.71</td><td>2.71/11.1 ≈ 24%</td></tr>
+          <tr><td>鸟 🐦</td><td>0</td><td>e⁰ = 1</td><td>1/11.1 ≈ 9%</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="prob-bars" id="sec3ProbBars"></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 4 -->
+<!-- ============================================================ -->
+<section id="sec4">
+  <div class="card">
+    <h2><span class="num">4</span> 为什么一定要指数函数？</h2>
+
+    <p>这是非常深的点。</p>
+
+    <h3>① 保证非负</h3>
+    <p>因为 e<sup>x</sup> 永远 > 0，所以概率不会是负数。</p>
+
+    <h3>② 放大差异</h3>
+    <p>这是最关键的：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>原始值</th><th>exp 后</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>2.7</td></tr>
+          <tr><td>2</td><td>7.4</td></tr>
+          <tr><td>10</td><td style="font-weight:700;color:#7c3aed;">22026</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box warn">
+      <h4>⚡ "更自信的类别会被极度强化"</h4>
+      <p>这特别符合分类任务——因为分类本身就是<strong>赢家通吃</strong>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 5 -->
+<!-- ============================================================ -->
+<section id="sec5">
+  <div class="card">
+    <h2><span class="num">5</span> Softmax 真正的隐藏本质</h2>
+
+    <p>很多人学完，只记住公式。但真正本质是：</p>
+
+    <div class="highlight-box" style="border-left-color:#ef4444;background:linear-gradient(135deg,#fef2f2,#fee2e2);">
+      <h4 style="color:#b91c1c;">🎯 Softmax 是"可导的 argmax"</h4>
+    </div>
+
+    <h3>argmax 的问题</h3>
+    <p>传统分类中，谁最大选谁。但 argmax 不可导——无法反向传播。</p>
+
+    <h3>Softmax 的解决方案</h3>
+    <p>它是"平滑版最大值选择"：</p>
+    <ul style="margin:.5rem 0 .5rem 1.8rem;color:#334155;">
+      <li>✅ 能表达竞争</li>
+      <li>✅ 能表达概率</li>
+      <li>✅ <strong>可导</strong>，可训练</li>
+    </ul>
+
+    <div class="highlight-box green">
+      <h4>🏆 这就是它统治深度学习几十年的原因</h4>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 6 -->
+<!-- ============================================================ -->
+<section id="sec6">
+  <div class="card">
+    <h2><span class="num">6</span> 交叉熵，才是这篇文章真正的灵魂</h2>
+
+    <p>很多人以为 Softmax 是重点。其实<strong>交叉熵（Cross Entropy）</strong>才是真正核心。</p>
+
+    <div class="formula purple">
+      L = − Σᵢ yᵢ · log(ŷᵢ)
+    </div>
+
+    <div class="highlight-box" style="border-left-color:#dc2626;background:linear-gradient(135deg,#fef2f2,#fecaca);">
+      <h4 style="color:#b91c1c;">🔥 "如果你非常自信但错了，我就狠狠干你"</h4>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- Interactive Demo: Cross Entropy Loss -->
+<!-- ============================================================ -->
+<div class="viz-container" id="demo-ce">
+  <h3>🧪 交互演示：交叉熵 vs MSE 对比</h3>
+  <p style="color:#64748b;font-size:.88rem;margin-bottom:.8rem;">真实标签为"猫"。观察当模型高置信度预测错误时，交叉熵的惩罚力度</p>
+  <canvas id="ceCanvas" width="700" height="380"></canvas>
+  <div class="controls" id="ceControls"></div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SEC 7 -->
+<!-- ============================================================ -->
+<section id="sec7">
+  <div class="card">
+    <h2><span class="num">7</span> 为什么不用 MSE？</h2>
+
+    <p>很多人这里没真正理解。分类问题如果用 MSE，会有严重问题。</p>
+
+    <h3>举例</h3>
+    <p>真实：[猫=1, 狗=0]</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>预测</th><th>MSE</th><th style="color:#7c3aed;">交叉熵</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>猫=0.9, 狗=0.1</td>
+            <td>0.02 ✅</td>
+            <td style="color:#7c3aed;">0.05 ✅</td>
+          </tr>
+          <tr>
+            <td>猫=0.6, 狗=0.4</td>
+            <td style="color:#f59e0b;">0.32</td>
+            <td style="color:#7c3aed;font-weight:700;">0.92 🔺</td>
+          </tr>
+          <tr>
+            <td>猫=0.01, 狗=0.99</td>
+            <td style="color:#f59e0b;">0.98</td>
+            <td style="color:#dc2626;font-weight:700;">4.6 💥</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box red">
+      <h4>⚠️ MSE 惩罚不够狠</h4>
+      <p>分类最怕——<strong>高置信度预测错误</strong>。交叉熵对这种错误的惩罚是指数级的，而 MSE 只是线性增长。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 8 -->
+<!-- ============================================================ -->
+<section id="sec8">
+  <div class="card">
+    <h2><span class="num">8</span> 交叉熵的真正意义</h2>
+
+    <p>交叉熵的公式：</p>
+    <div class="formula purple">L = − log(ŷ<sub>true</sub>)</div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>真实类别的预测概率</th><th>交叉熵损失</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:#10b981;font-weight:700;">0.99</td>
+            <td>−log(0.99) ≈ 0.01</td>
+            <td>几乎没损失 ✅</td>
+          </tr>
+          <tr>
+            <td>0.50</td>
+            <td>−log(0.50) ≈ 0.69</td>
+            <td>有一定惩罚</td>
+          </tr>
+          <tr>
+            <td style="color:#dc2626;font-weight:700;">0.0001</td>
+            <td style="color:#dc2626;font-weight:700;">−log(0.0001) ≈ 9.2</td>
+            <td style="color:#dc2626;">💥 瞬间爆炸</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 9 -->
+<!-- ============================================================ -->
+<section id="sec9">
+  <div class="card">
+    <h2><span class="num">9</span> 为什么要用 log？</h2>
+
+    <p>这是非常深的地方。log 本质是在做<strong>信息量编码</strong>。</p>
+
+    <p>信息论里：<strong>越不可能的事件，信息量越大</strong>。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>事件</th><th>概率</th><th>信息量</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>太阳升起</td><td>极高</td><td>很低</td></tr>
+          <tr><td>明天世界毁灭</td><td>极低</td><td style="font-weight:700;color:#7c3aed;">极高</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box blue">
+      <h4>📡 交叉熵本质</h4>
+      <p>"真实答案出现时，你有多惊讶？"——越惊讶（概率越低），损失越大。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 10 -->
+<!-- ============================================================ -->
+<section id="sec10">
+  <div class="card">
+    <h2><span class="num">10</span> 这篇文章第一次正式进入"概率世界"</h2>
+
+    <p>线性回归只是函数拟合。而 Softmax 回归开始<strong>用概率解释世界</strong>。</p>
+
+    <p>这件事意义巨大——因为后面：</p>
+    <div class="flow">
+      <span class="flow-item">贝叶斯</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">LLM Token Prediction</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">RLHF</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item">Diffusion</span>
+    </div>
+    <p style="text-align:center;font-weight:600;color:#7c3aed;">全部基于概率。</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 11 -->
+<!-- ============================================================ -->
+<section id="sec11">
+  <div class="card">
+    <h2><span class="num">11</span> 最大似然估计（MLE）</h2>
+
+    <p>这是全文最容易被忽略，但最重要的内容之一。</p>
+
+    <div class="highlight-box">
+      <h4>🎯 文章其实在说："让真实标签出现的概率最大"</h4>
+    </div>
+
+    <h3>举例</h3>
+    <p>真实标签是"猫"：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>模型输出</th><th>真实类概率</th><th>评价</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>🐱 0.9, 🐶 0.1</td><td style="color:#10b981;font-weight:700;">0.9</td><td>✅ 很好</td></tr>
+          <tr><td>🐱 0.01, 🐶 0.99</td><td style="color:#dc2626;">0.01</td><td>❌ 很差</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box green">
+      <h4>📐 训练目标 = 最大化真实类别概率</h4>
+      <p>这就是 <strong>Maximum Likelihood Estimation（MLE）</strong>——极大似然估计。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 12 -->
+<!-- ============================================================ -->
+<section id="sec12">
+  <div class="card">
+    <h2><span class="num">12</span> GPT 和 Softmax 的关系</h2>
+
+    <p>这是最关键的现实联系。</p>
+
+    <div class="highlight-box" style="border-left-color:#ef4444;background:linear-gradient(135deg,#fef2f2,#fee2e2);">
+      <h4 style="color:#b91c1c;">🤖 GPT 每一步都在做：超大规模 Softmax 分类</h4>
+    </div>
+
+    <p>输入："今天天气很"</p>
+    <p>模型输出：</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>token</th><th>概率</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>好</td><td style="font-weight:700;color:#10b981;">40%</td></tr>
+          <tr><td>热</td><td>20%</td></tr>
+          <tr><td>差</td><td>10%</td></tr>
+          <tr><td>…</td><td>…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="highlight-box">
+      <h4>🧱 LLM 本质</h4>
+      <p><strong>Transformer + Softmax 分类头</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 13 -->
+<!-- ============================================================ -->
+<section id="sec13">
+  <div class="card">
+    <h2><span class="num">13</span> 为什么说 Softmax 是"语言世界的核心"？</h2>
+
+    <p>因为语言本质是——<strong>"下一个 token 分类问题"</strong>。</p>
+
+    <div class="layer-stack">
+      <div class="layer-box input">输入序列（token 嵌入）</div>
+      <div class="layer-conn">↓ Transformer 层层变换</div>
+      <div class="layer-box hidden">隐藏表示</div>
+      <div class="layer-conn">↓ 线性层 → 词表大小的 logits</div>
+      <div class="layer-box output" style="border-color:#7c3aed;background:#f5f3ff;">Softmax → 下一个 token 概率分布</div>
+    </div>
+
+    <p>词表有 5 万词——模型本质上在 5 万个类别里做分类。</p>
+
+    <div class="formula purple">
+      P(tokenᵢ) = e<sup>zᵢ</sup> / Σⱼ e<sup>zⱼ</sup>
+    </div>
+
+    <p style="text-align:center;font-weight:600;color:#7c3aed;">GPT 最后一层就是 Softmax</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 14 -->
+<!-- ============================================================ -->
+<section id="sec14">
+  <div class="card">
+    <h2><span class="num">14</span> Softmax 不关心绝对值，只关心相对大小</h2>
+
+    <div class="formula purple" style="font-size:1rem;">
+      [1, 2, 3] &nbsp;→&nbsp; Softmax &nbsp;→&nbsp; [0.09, 0.24, 0.67]<br>
+      [101, 102, 103] &nbsp;→&nbsp; Softmax &nbsp;→&nbsp; [0.09, 0.24, 0.67]
+    </div>
+
+    <p>结果完全一样。</p>
+
+    <div class="highlight-box warn">
+      <h4>🔄 因为公共偏移会抵消</h4>
+      <p>Softmax 只关心类别之间的<strong>差值</strong>，而不是它们的绝对大小。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 15 -->
+<!-- ============================================================ -->
+<section id="sec15">
+  <div class="card">
+    <h2><span class="num">15</span> 为什么"只关心相对大小"这点重要？</h2>
+
+    <p>因为神经网络真正重要的是<strong>"相对能量"</strong>，不是绝对值。</p>
+
+    <p>这个思想后来会演化成：</p>
+    <div class="flow">
+      <span class="flow-item" style="background:#f5f3ff;border-color:#c4b5fd;">Attention Score</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item" style="background:#f5f3ff;border-color:#c4b5fd;">Energy-based Model</span>
+      <span class="flow-arrow">·</span>
+      <span class="flow-item" style="background:#f5f3ff;border-color:#c4b5fd;">Logits</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 16 -->
+<!-- ============================================================ -->
+<section id="sec16">
+  <div class="card">
+    <h2><span class="num">16</span> Logits 是什么？</h2>
+
+    <p>文章虽然没有重点强调，但 Softmax 前面的值 <em>oᵢ</em> 就是 <strong>logits</strong>。</p>
+
+    <div class="highlight-box blue">
+      <h4>📐 Logits = 未归一化概率</h4>
+    </div>
+
+    <p>现代 AI 中 logits 无处不在：</p>
+    <ul style="margin:.5rem 0 .5rem 1.8rem;color:#334155;">
+      <li><strong>Logits masking</strong> — 在语言模型中屏蔽非法 token</li>
+      <li><strong>Logits bias</strong> — 人为调整某些类别的倾向</li>
+      <li><strong>Temperature scaling</strong> — 控制概率分布的平滑程度</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 17 -->
+<!-- ============================================================ -->
+<section id="sec17">
+  <div class="card">
+    <h2><span class="num">17</span> Temperature（温度）本质是什么？</h2>
+
+    <p>虽然文章没讲，但这是 Softmax 的直接延伸。</p>
+
+    <div class="formula purple">
+      Pᵢ = e<sup>zᵢ / T</sup> / Σⱼ e<sup>zⱼ / T</sup>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>T</th><th>效果</th><th>含义</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:700;color:#10b981;">T → 0</td>
+            <td>概率尖锐</td>
+            <td>更确定（几乎总是选最高概率类别）</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700;color:#3b82f6;">T = 1</td>
+            <td>标准 Softmax</td>
+            <td>正常概率分布</td>
+          </tr>
+          <tr>
+            <td style="font-weight:700;color:#f59e0b;">T → ∞</td>
+            <td>概率平滑</td>
+            <td>更随机（各类别概率趋近相等）</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Temperature Demo -->
+    <div class="viz-container" style="box-shadow:none;padding:.5rem 0 0;margin:0;">
+      <p style="font-size:.9rem;color:#64748b;margin-bottom:.4rem;">拖动温度滑块观察分布变化</p>
+      <canvas id="tempCanvas" width="700" height="200"></canvas>
+      <div class="controls">
+        <label>T（温度） <input type="range" id="tempSlider" min="0.1" max="3" step="0.05" value="1">
+        <span class="val" id="tempVal">1.00</span></label>
+      </div>
+    </div>
+
+    <div class="highlight-box warn">
+      <h4>🎲 GPT 采样本质 = 调 Softmax 的形状</h4>
+      <p>低温度 → 更确定、更保守；高温度 → 更有创造性、更多样。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 18 -->
+<!-- ============================================================ -->
+<section id="sec18">
+  <div class="card">
+    <h2><span class="num">18</span> 这篇文章真正建立了什么？</h2>
+
+    <div class="highlight-box" style="border-left-color:#7c3aed;background:linear-gradient(135deg,#f5f3ff,#ede9fe);">
+      <h4 style="color:#5b21b6;">🧠 神经网络分类范式</h4>
+    </div>
+
+    <div class="flow" style="font-weight:500;font-size:.88rem;">
+      <span class="flow-item">输入</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">线性层</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">logits</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item" style="background:#f5f3ff;border-color:#7c3aed;font-weight:700;">Softmax</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">概率</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item" style="background:#fef2f2;border-color:#ef4444;font-weight:700;">Cross Entropy</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-item">Backward</span>
+    </div>
+
+    <p style="margin-top:.8rem;">后面几乎所有分类模型——CNN 分类器、BERT、GPT、ViT——都还是这一套。</p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 19 -->
+<!-- ============================================================ -->
+<section id="sec19">
+  <div class="card">
+    <h2><span class="num">19</span> 你真正应该从这篇文章学到什么</h2>
+
+    <div class="highlight-box blue">
+      <h4>📊 1. 分类本质是概率建模</h4>
+      <p>不是"选答案"，而是<strong>预测概率分布</strong>。</p>
+    </div>
+
+    <div class="highlight-box" style="border-left-color:#ef4444;background:linear-gradient(135deg,#fef2f2,#fee2e2);">
+      <h4 style="color:#b91c1c;">⚔️ 2. Softmax 本质是竞争机制</h4>
+      <p>不是普通激活函数，而是<strong>类别之间的竞争系统</strong>。</p>
+    </div>
+
+    <div class="highlight-box" style="border-left-color:#f59e0b;background:linear-gradient(135deg,#fffbeb,#fef9e7);">
+      <h4 style="color:#b45309;">📡 3. Cross Entropy 是信息论思想</h4>
+      <p>不是简单 loss，而是<strong>真实分布与预测分布之间的信息差</strong>。</p>
+    </div>
+
+    <div class="highlight-box" style="border-left-color:#10b981;background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+      <h4 style="color:#065f46;">🤖 4. GPT 本质是 token 分类器</h4>
+      <p>LLM 能生成语言，是因为它一直在<strong>预测下一个 token 的概率</strong>。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SEC 20 -->
+<!-- ============================================================ -->
+<section id="sec20">
+  <div class="card" style="background:linear-gradient(135deg,#0f172a,#2d1b3e);color:#e2e8f0;">
+    <h2 style="border-bottom-color:#334155;color:#f1f5f9;">
+      <span class="num" style="background:#c084fc;color:#0f172a;">20</span>
+      一句话总结整篇文章
+    </h2>
+    <p style="font-size:1.15rem;line-height:1.9;color:#cbd5e1;">
+      这篇文章真正回答的是：
+    </p>
+    <p style="font-size:1.25rem;font-weight:700;color:#c084fc;margin:1rem 0;">
+      "如何让神经网络输出一个可训练、可优化、符合概率意义的分类结果？"
+    </p>
+    <div class="flow" style="background:rgba(255,255,255,.06);margin-top:1.2rem;">
+      <span class="flow-item" style="background:rgba(192,132,252,.2);border-color:#c084fc;color:#e2e8f0;">Softmax → 变成概率</span>
+      <span class="flow-arrow" style="color:#64748b;">+</span>
+      <span class="flow-item" style="background:rgba(239,68,68,.2);border-color:#ef4444;color:#e2e8f0;">Cross Entropy → 衡量错误</span>
+      <span class="flow-arrow" style="color:#64748b;">+</span>
+      <span class="flow-item" style="background:rgba(16,185,129,.2);border-color:#10b981;color:#e2e8f0;">Gradient Descent → 自动学习</span>
+    </div>
+    <p style="margin-top:1rem;color:#94a3b8;text-align:center;">
+      这三者组合 = <strong style="color:#38bdf8;">现代分类神经网络的基础</strong>
+    </p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p>基于《动手学深度学习》Softmax 回归精讲</p>
+  <p style="color:#94a3b8;">理解 Softmax + 交叉熵 = 掌握神经网络分类与 LLM 的核心原理</p>
+</footer>
+
+<!-- ============================================================ -->
+<!-- JavaScript -->
+<!-- ============================================================ -->
+<script>
+(function() {
+  'use strict';
+
+  // ==========================================
+  // Demo 1: Softmax Visualization
+  // ==========================================
+  (function() {
+    const canvas = document.getElementById('softmaxCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    let logits = [2, 1, 0];
+    const labels = ['🐱 猫', '🐶 狗', '🐦 鸟'];
+    const colors = ['#7c3aed', '#3b82f6', '#10b981'];
+
+    function softmax(arr) {
+      const exps = arr.map(v => Math.exp(v));
+      const sum = exps.reduce((a, b) => a + b, 0);
+      return exps.map(v => v / sum);
+    }
+
+    function drawSoftmax() {
+      ctx.clearRect(0, 0, W, H);
+      const probs = softmax(logits);
+
+      // title area
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('Logits 与 Softmax 概率', W / 2, 8);
+
+      // ---- Logits bars (left half) ----
+      const barH = 24;
+      const barGap = 8;
+      const startY = 40;
+      const leftX = 80;
+      const barMaxW = 200;
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('Logits（原始值）：', leftX, startY - 18);
+
+      for (let i = 0; i < 3; i++) {
+        const y = startY + i * (barH + barGap);
+        // label
+        ctx.fillStyle = '#334155';
+        ctx.font = '14px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labels[i], leftX - 8, y + barH / 2);
+
+        // bar bg
+        const barW = Math.max(20, (logits[i] / 3) * barMaxW);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.roundRect(leftX, y, barMaxW, barH, 4);
+        ctx.fill();
+
+        // fill
+        ctx.fillStyle = colors[i] + '55';
+        ctx.beginPath();
+        ctx.roundRect(leftX, y, barW, barH, 4);
+        ctx.fill();
+
+        // value
+        ctx.fillStyle = '#1e293b';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(logits[i].toFixed(1), leftX + barW + 6, y + barH / 2);
+      }
+
+      // ---- Arrow ----
+      const midX = leftX + barMaxW + 70;
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('→', midX, startY + (3 * (barH + barGap)) / 2);
+
+      // ---- Probability bars (right half) ----
+      const rightX = midX + 30;
+      const probBarMaxW = 220;
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('概率（Softmax 输出）：', rightX, startY - 18);
+
+      for (let i = 0; i < 3; i++) {
+        const y = startY + i * (barH + barGap);
+        const p = probs[i];
+        const barW = Math.max(20, p * probBarMaxW);
+
+        // bar bg
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.roundRect(rightX, y, probBarMaxW, barH, 4);
+        ctx.fill();
+
+        // fill
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.roundRect(rightX, y, barW, barH, 4);
+        ctx.fill();
+
+        // percent
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        if (barW > 40) ctx.fillText((p * 100).toFixed(1) + '%', rightX + barW - 6, y + barH / 2);
+
+        // value on right
+        ctx.fillStyle = '#1e293b';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((p * 100).toFixed(1) + '%', rightX + probBarMaxW + 6, y + barH / 2);
+      }
+
+      // ---- softmax formula ----
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      const formulaY = startY + 3 * (barH + barGap) + 10;
+      const expStr = logits.map(v => 'e^' + v.toFixed(0)).join(' + ');
+      const sumExp = logits.reduce((s, v) => s + Math.exp(v), 0);
+      ctx.fillText('Softmax:  pᵢ = e^oᵢ / Σⱼ e^oⱼ    |    Σⱼ e^oⱼ = ' + expStr + ' = ' + sumExp.toFixed(2), W / 2, formulaY);
+    }
+
+    // Polyfill roundRect if needed
+    if (!CanvasRenderingContext2D.prototype.roundRect) {
+      CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+        if (r > w / 2) r = w / 2;
+        if (r > h / 2) r = h / 2;
+        this.moveTo(x + r, y);
+        this.lineTo(x + w - r, y);
+        this.quadraticCurveTo(x + w, y, x + w, y + r);
+        this.lineTo(x + w, y + h - r);
+        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        this.lineTo(x + r, y + h);
+        this.quadraticCurveTo(x, y + h, x, y + h - r);
+        this.lineTo(x, y + r);
+        this.quadraticCurveTo(x, y, x + r, y);
+        return this;
+      };
+    }
+
+    // Controls
+    const ctrlDiv = document.getElementById('softmaxControls');
+    if (ctrlDiv) {
+      ctrlDiv.innerHTML = `
+        <label>猫 logit <input type="range" id="sliderS0" min="-2" max="5" step="0.1" value="${logits[0]}">
+        <span class="val" id="valS0">${logits[0].toFixed(1)}</span></label>
+        <label>狗 logit <input type="range" id="sliderS1" min="-2" max="5" step="0.1" value="${logits[1]}">
+        <span class="val" id="valS1">${logits[1].toFixed(1)}</span></label>
+        <label>鸟 logit <input type="range" id="sliderS2" min="-2" max="5" step="0.1" value="${logits[2]}">
+        <span class="val" id="valS2">${logits[2].toFixed(1)}</span></label>
+      `;
+
+      const sliders = [
+        document.getElementById('sliderS0'),
+        document.getElementById('sliderS1'),
+        document.getElementById('sliderS2')
+      ];
+      const vals = [
+        document.getElementById('valS0'),
+        document.getElementById('valS1'),
+        document.getElementById('valS2')
+      ];
+
+      function update() {
+        for (let i = 0; i < 3; i++) {
+          logits[i] = parseFloat(sliders[i].value);
+          vals[i].textContent = logits[i].toFixed(1);
+        }
+        drawSoftmax();
+
+        // also update sec 3 prob bars
+        const probs = softmax(logits);
+        updateSec3Bars(probs);
+      }
+
+      sliders.forEach(s => s.addEventListener('input', update));
+    }
+
+    // Sec 3 prob bars
+    function updateSec3Bars(probs) {
+      const container = document.getElementById('sec3ProbBars');
+      if (!container) return;
+      const colors = ['#7c3aed', '#3b82f6', '#10b981'];
+      const labels = ['🐱 猫', '🐶 狗', '🐦 鸟'];
+      container.innerHTML = '<div style="font-size:.85rem;font-weight:600;color:#475569;margin-bottom:.4rem;">Softmax 概率：</div>';
+      for (let i = 0; i < 3; i++) {
+        const pct = (probs[i] * 100).toFixed(1);
+        const row = document.createElement('div');
+        row.className = 'prob-row';
+        row.innerHTML = `
+          <span class="prob-label" style="color:${colors[i]};">${labels[i]}</span>
+          <div class="prob-track">
+            <div class="prob-fill" style="width:${Math.max(probs[i] * 100, 3)}%;background:${colors[i]};">${pct}%</div>
+          </div>
+        `;
+        container.appendChild(row);
+      }
+    }
+
+    // initial draw + sec3 bars
+    drawSoftmax();
+    updateSec3Bars(softmax(logits));
+  })();
+
+  // ==========================================
+  // Demo 2: Cross Entropy vs MSE
+  // ==========================================
+  (function() {
+    const canvas = document.getElementById('ceCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const pad = { top: 40, bottom: 40, left: 60, right: 40 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // true label: cat = 1, dog = 0
+    // x-axis: predicted probability for cat (from 0.01 to 0.99)
+    function ce(p) { return -Math.log(Math.max(p, 1e-10)); }
+    function mse(p) { return (p - 1) * (p - 1) + (0 - (1 - p)) * (0 - (1 - p)); }
+
+    const yMax = 5;
+    function toY(v) { return pad.top + plotH - (v / yMax) * plotH; }
+
+    function drawCE() {
+      ctx.clearRect(0, 0, W, H);
+
+      // title
+      ctx.fillStyle = '#1e293b';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText('真实标签：猫 (1)  狗 (0)  |  横轴：模型预测"猫"的概率', W / 2, 6);
+
+      // grid
+      ctx.strokeStyle = '#f1f5f9';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 5; i++) {
+        const x = pad.left + (i / 5) * plotW;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+        const y = pad.top + (i / 5) * plotH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + plotW, y); ctx.stroke();
+      }
+
+      // axes
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(pad.left, pad.top); ctx.lineTo(pad.left, pad.top + plotH); ctx.lineTo(pad.left + plotW, pad.top + plotH); ctx.stroke();
+
+      // axis labels
+      ctx.fillStyle = '#64748b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('P(猫)', pad.left + plotW / 2, H - 16);
+      ctx.save();
+      ctx.translate(14, pad.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('Loss', 0, 0);
+      ctx.restore();
+
+      // x-axis ticks
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      for (let i = 0; i <= 5; i++) {
+        const val = (i / 5).toFixed(1);
+        const x = pad.left + (i / 5) * plotW;
+        ctx.fillText(val, x, pad.top + plotH + 2);
+      }
+
+      // scale: y from 0 to 5
+      // toY defined in outer scope
+
+      // draw CE curve (red)
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i <= 200; i++) {
+        const p = 0.005 + (i / 200) * 0.99;
+        const loss = ce(p);
+        const x = pad.left + (p / 1.0) * plotW;
+        const y = toY(Math.min(loss, yMax));
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // draw MSE curve (blue)
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      for (let i = 0; i <= 200; i++) {
+        const p = 0.005 + (i / 200) * 0.99;
+        const loss = mse(p);
+        const x = pad.left + (p / 1.0) * plotW;
+        const y = toY(Math.min(loss, yMax));
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // legend
+      const legX = pad.left + 20;
+      const legY = pad.top + 15;
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(legX, legY + 4, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText('交叉熵 (CE)', legX + 12, legY + 4);
+
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.arc(legX, legY + 24, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.setLineDash([6, 4]);
+      ctx.strokeStyle = '#3b82f6';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(legX - 12, legY + 28); ctx.lineTo(legX + 12, legY + 28); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillText('均方误差 (MSE)', legX + 12, legY + 24);
+
+      // highlight regions
+      ctx.fillStyle = 'rgba(239,68,68,0.06)';
+      ctx.fillRect(pad.left, pad.top, plotW * 0.15, plotH);
+
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText('高置信度错误 ←', pad.left + plotW * 0.075, pad.top + plotH);
+    }
+
+    // Controls with prediction slider
+    const ctrlDiv = document.getElementById('ceControls');
+    if (ctrlDiv) {
+      ctrlDiv.innerHTML = `
+        <label>P(猫) <input type="range" id="ceSlider" min="0.01" max="0.99" step="0.01" value="0.5">
+        <span class="val" id="ceVal">0.50</span></label>
+        <span style="font-size:.85rem;">CE = <strong id="ceLossVal" style="color:#dc2626;">0.69</strong></span>
+        <span style="font-size:.85rem;">MSE = <strong id="mseLossVal" style="color:#3b82f6;">0.50</strong></span>
+      `;
+
+      const slider = document.getElementById('ceSlider');
+      const valEl = document.getElementById('ceVal');
+      const ceLossEl = document.getElementById('ceLossVal');
+      const mseLossEl = document.getElementById('mseLossVal');
+
+      function update() {
+        const p = parseFloat(slider.value);
+        valEl.textContent = p.toFixed(2);
+        ceLossEl.textContent = ce(p).toFixed(4);
+        mseLossEl.textContent = mse(p).toFixed(4);
+        drawCE();
+
+        // draw vertical line at current p
+        const x = pad.left + (p / 1.0) * plotW;
+        ctx.strokeStyle = 'rgba(100,116,139,0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // add annotation
+        const ceY = toY(Math.min(ce(p), 5));
+        const mseY = toY(Math.min(mse(p), 5));
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath(); ctx.arc(x, ceY, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#3b82f6';
+        ctx.beginPath(); ctx.arc(x, mseY, 5, 0, Math.PI * 2); ctx.fill();
+      }
+
+      slider.addEventListener('input', update);
+    }
+
+    // Overload drawCE to be usable with overlay
+    const origDraw = drawCE;
+    drawCE = function() {
+      origDraw();
+      // draw initial vertical line at 0.5
+      const x = pad.left + (0.5 / 1.0) * plotW;
+      ctx.strokeStyle = 'rgba(100,116,139,0.4)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + plotH); ctx.stroke();
+      ctx.setLineDash([]);
+      const p50 = 0.5;
+      const cey = toY(Math.min(ce(p50), 5));
+      const msey = toY(Math.min(mse(p50), 5));
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath(); ctx.arc(x, cey, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#3b82f6';
+      ctx.beginPath(); ctx.arc(x, msey, 5, 0, Math.PI * 2); ctx.fill();
+    };
+
+    drawCE();
+  })();
+
+  // ==========================================
+  // Demo 3: Temperature Visualization
+  // ==========================================
+  (function() {
+    const canvas = document.getElementById('tempCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+    const labels = ['猫', '狗', '鸟', '鱼', '兔'];
+    const colors = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
+    const fixedLogits = [3, 1, 0, -1, -2];
+
+    function softmaxTemp(arr, T) {
+      const exps = arr.map(v => Math.exp(v / T));
+      const sum = exps.reduce((a, b) => a + b, 0);
+      return exps.map(v => v / sum);
+    }
+
+    function drawTemp(T) {
+      ctx.clearRect(0, 0, W, H);
+
+      const probs = softmaxTemp(fixedLogits, T);
+      const barH = 20;
+      const barGap = 6;
+      const startY = 12;
+      const barMaxW = W - 140;
+
+      // header
+      ctx.fillStyle = '#1e293b';
+      ctx.font = '13px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText('logits: [' + fixedLogits.join(', ') + ']', 10, 2);
+
+      for (let i = 0; i < 5; i++) {
+        const y = startY + i * (barH + barGap);
+        const p = probs[i];
+        const barW = Math.max(20, p * barMaxW);
+
+        // label
+        ctx.fillStyle = '#334155';
+        ctx.font = '13px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labels[i], 60, y + barH / 2);
+
+        // bar bg
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.roundRect(66, y, barMaxW, barH, 4);
+        ctx.fill();
+
+        // fill
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.roundRect(66, y, barW, barH, 4);
+        ctx.fill();
+
+        // percent
+        const pct = (p * 100).toFixed(1);
+        ctx.fillStyle = barW > 50 ? '#fff' : '#1e293b';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        if (barW > 35) ctx.fillText(pct + '%', 66 + barW - 5, y + barH / 2);
+        else {
+          ctx.fillStyle = '#1e293b';
+          ctx.textAlign = 'left';
+          ctx.fillText(pct + '%', 66 + barW + 4, y + barH / 2);
+        }
+      }
+    }
+
+    const slider = document.getElementById('tempSlider');
+    const valEl = document.getElementById('tempVal');
+    if (slider && valEl) {
+      function update() {
+        const T = parseFloat(slider.value);
+        valEl.textContent = T.toFixed(2);
+        drawTemp(T);
+      }
+      slider.addEventListener('input', update);
+      drawTemp(1);
+    }
+  })();
+
+})();
+</script>
+
+</body>
+</html>

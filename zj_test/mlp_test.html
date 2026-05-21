@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多层感知机（MLP）- 教学报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section > p, .section > ul, .section > ol {
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  /* Code block */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    color: var(--fg);
+  }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  .param { color: #ff7b72; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  /* Note callout */
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(108,140,255,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+  .warn {
+    border-left: 3px solid var(--orange);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(245,166,35,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .warn strong { color: var(--orange); }
+  .tip {
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,207,139,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .tip strong { color: var(--green); }
+
+  /* Flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--card);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Formula */
+  .formula {
+    text-align: center;
+    padding: 24px;
+    margin: 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+  .formula .big { font-size: 22px; }
+
+  /* Dim highlight */
+  .dim { color: var(--orange); font-weight: 600; }
+
+  /* Summary */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-grid .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .summary-grid .item .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  /* Inline code */
+  p code, li code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Index nav */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin: 24px 0 48px;
+  }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .shape-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .shape-box {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .shape-box .dims { color: var(--orange); }
+  .shape-box .name { color: var(--muted); font-size: 11px; }
+  .shape-op {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- ============================================ -->
+<!-- Header -->
+<!-- ============================================ -->
+
+<div class="header">
+  <div class="tag">PyTorch 简洁实现</div>
+  <h1>多层感知机（MLP）</h1>
+  <p>在 Softmax 回归的基础上加一个隐藏层，从线性模型进化到深度学习</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">整体思路</a> <span class="desc">— MLP 和 Softmax 回归的区别</span></li>
+    <li><a href="#s1">加载数据</a> <span class="desc">— 8×8 手写数字图片</span></li>
+    <li><a href="#s2">定义模型</a> <span class="desc">— nn.Sequential + 隐藏层 + ReLU</span></li>
+    <li><a href="#s3">损失函数 &amp; 优化器</a> <span class="desc">— nn.CrossEntropyLoss + optim.SGD</span></li>
+    <li><a href="#s4">训练循环</a> <span class="desc">— 前向 → 反向 → 更新</span></li>
+    <li><a href="#s5">预测示例</a> <span class="desc">— 用训练好的模型做预测</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— MLP vs Softmax 回归对比</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 整体思路 -->
+<!-- ============================================ -->
+
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 整体思路：从 Softmax 到 MLP</h2>
+
+  <p>Softmax 回归是一个<strong>线性模型</strong>：输入直接乘权重加偏置，再过 softmax。它只能学到线性的决策边界。</p>
+
+  <p>多层感知机（MLP）的改进很简单：<strong>在输入和输出之间加一个隐藏层，并用非线性激活函数</strong>。这样模型就能学到更复杂的模式。</p>
+
+  <div class="note">
+    <strong>一句话概括：</strong> MLP = 线性变换 + 非线性激活 + 线性变换。多了一层，就多了一份"理解力"。
+  </div>
+
+  <div class="card">
+    <p><strong>Softmax 回归 vs MLP</strong></p>
+    <table>
+      <tr><th></th><th>Softmax 回归</th><th>MLP</th></tr>
+      <tr><td><strong>结构</strong></td><td>输入 → 输出</td><td>输入 → 隐藏层 → 输出</td></tr>
+      <tr><td><strong>层数</strong></td><td>1 层（输出层）</td><td>2 层（隐藏层 + 输出层）</td></tr>
+      <tr><td><strong>激活函数</strong></td><td>Softmax（仅输出）</td><td>ReLU（隐藏层）+ Softmax（输出）</td></tr>
+      <tr><td><strong>能力</strong></td><td>只能学线性边界</td><td>能学非线性边界</td></tr>
+      <tr><td><strong>代码</strong></td><td>手动 W, b</td><td>nn.Sequential 封装</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>MLP 的数据流</strong></p>
+    <div class="flow">
+      <div class="flow-item">输入 (64维)</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">Linear(64, 256)</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">ReLU</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">Linear(256, 10)</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">输出 (10类)</div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <strong>为什么需要激活函数？</strong> 如果没有 ReLU，两层线性变换叠在一起还是线性变换：<code>W2 @ (W1 @ x + b1) + b2 = W' @ x + b'</code>。ReLU 打破了线性，让模型真正具有"深度"。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 加载数据 -->
+<!-- ============================================ -->
+
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 加载数据：和 Softmax 完全一样</h2>
+
+  <pre><code><span class="kw">import</span> torch
+<span class="kw">from</span> torch <span class="kw">import</span> nn
+<span class="kw">from</span> sklearn.datasets <span class="kw">import</span> load_digits
+<span class="kw">from</span> sklearn.model_selection <span class="kw">import</span> train_test_split
+
+data <span class="op">=</span> load_digits()
+X <span class="op">=</span> data.data        <span class="cm"># 形状: (1797, 64)</span>
+y <span class="op">=</span> data.target       <span class="cm"># 标签: 0~9</span>
+
+<span class="cm"># 像素归一化</span>
+X <span class="op">=</span> X <span class="op">/</span> <span class="num">16.0</span>
+
+<span class="cm"># 转 tensor</span>
+X <span class="op">=</span> torch.tensor(X, dtype<span class="op">=</span>torch.float32)
+y <span class="op">=</span> torch.tensor(y, dtype<span class="op">=</span>torch.long)
+
+<span class="cm"># 划分训练集 / 测试集</span>
+X_train, X_test, y_train, y_test <span class="op">=</span> train_test_split(
+    X, y, test_size<span class="op">=</span><span class="num">0.2</span>, random_state<span class="op">=</span><span class="num">42</span>
+)</code></pre>
+
+  <p>数据处理和 Softmax 回归完全相同：加载 1797 张 8×8 手写数字图片，归一化，按 8:2 划分训练集和测试集。</p>
+
+  <div class="tip">
+    <strong>数据没变，模型变强了。</strong> 同样的数据，MLP 通常能达到比 Softmax 回归更高的准确率，因为它能学到更复杂的特征。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 定义模型 -->
+<!-- ============================================ -->
+
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 定义模型：nn.Sequential 构建 MLP</h2>
+
+  <pre><code>net <span class="op">=</span> nn.Sequential(
+    nn.Linear(<span class="num">64</span>, <span class="num">256</span>),   <span class="cm"># 第一层：64 → 256</span>
+    nn.ReLU(),              <span class="cm"># 激活函数</span>
+    nn.Linear(<span class="num">256</span>, <span class="num">10</span>)    <span class="cm"># 第二层：256 → 10</span>
+)
+
+<span class="cm"># 权重初始化</span>
+<span class="kw">def</span> <span class="fn">init_weights</span>(m):
+    <span class="kw">if</span> type(m) <span class="op">==</span> nn.Linear:
+        nn.init.normal_(m.weight, std<span class="op">=</span><span class="num">0.01</span>)
+
+net.apply(init_weights)</code></pre>
+
+  <p>逐行解释：</p>
+  <ul>
+    <li><code>nn.Linear(64, 256)</code>：全连接层，把 64 维输入映射到 256 维。内部自动管理权重 W 和偏置 b</li>
+    <li><code>nn.ReLU()</code>：激活函数，把所有负数变成 0，正数不变。<code>ReLU(x) = max(0, x)</code></li>
+    <li><code>nn.Linear(256, 10)</code>：输出层，把 256 维映射到 10 个类别</li>
+    <li><code>nn.Sequential</code>：把多层"串"起来，数据按顺序流过每一层</li>
+  </ul>
+
+  <div class="card">
+    <p><strong>维度变化图解</strong></p>
+    <div class="shape-diagram">
+      <div class="shape-box">
+        <div class="dims">X: (batch, 64)</div>
+        <div class="name">输入像素</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">Linear: (64, 256)</div>
+        <div class="name">隐藏层</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--accent2)">
+        <div class="dims">ReLU</div>
+        <div class="name">负数→0</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">Linear: (256, 10)</div>
+        <div class="name">输出层</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box">
+        <div class="dims">logits: (batch, 10)</div>
+        <div class="name">每个类的得分</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>ReLU 函数长什么样？</strong></p>
+    <table>
+      <tr><th>输入 x</th><th>输出 ReLU(x)</th></tr>
+      <tr><td>-3.0</td><td>0.0</td></tr>
+      <tr><td>-1.0</td><td>0.0</td></tr>
+      <tr><td>0.0</td><td>0.0</td></tr>
+      <tr><td>0.5</td><td>0.5</td></tr>
+      <tr><td>3.0</td><td>3.0</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">简单粗暴：负数全部归零，正数原样输出。但正是这种"非线性"让 MLP 比线性模型强大得多。</p>
+  </div>
+
+  <div class="note">
+    <strong>nn.Sequential 的好处：</strong> 不用手写前向传播的每一层，PyTorch 自动按顺序执行。等价于 <code>net(x) = Linear2(ReLU(Linear1(x)))</code>。
+  </div>
+
+  <div class="warn">
+    <strong>为什么要初始化权重？</strong> 和 Softmax 回归一样，小权重让初始输出不会太极端。<code>nn.init.normal_(m.weight, std=0.01)</code> 用均值为 0、标准差 0.01 的正态分布初始化。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 损失函数 & 优化器 -->
+<!-- ============================================ -->
+
+<div class="section" id="s3">
+  <h2><span class="num">3</span> 损失函数 &amp; 优化器：PyTorch 帮你搞定</h2>
+
+  <pre><code>loss <span class="op">=</span> nn.CrossEntropyLoss()
+trainer <span class="op">=</span> torch.optim.SGD(net.parameters(), lr<span class="op">=</span><span class="num">0.1</span>)</code></pre>
+
+  <p>两行代码搞定损失函数和优化器：</p>
+
+  <div class="card">
+    <table>
+      <tr><th>组件</th><th>代码</th><th>作用</th></tr>
+      <tr>
+        <td><strong>损失函数</strong></td>
+        <td><code>nn.CrossEntropyLoss()</code></td>
+        <td>内部自动做 softmax + 交叉熵，一步到位</td>
+      </tr>
+      <tr>
+        <td><strong>优化器</strong></td>
+        <td><code>optim.SGD(net.parameters())</code></td>
+        <td>自动管理所有参数的梯度更新</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>和 Softmax 回归的对比：</strong>
+    <ul style="margin-top:8px;padding-left:20px">
+      <li>Softmax 版：手写 <code>softmax()</code> + 手写 <code>cross_entropy()</code> + 手动更新 W, b</li>
+      <li>MLP 版：<code>nn.CrossEntropyLoss()</code> + <code>optim.SGD()</code>，PyTorch 全包了</li>
+    </ul>
+    <p style="margin-top:8px">核心数学原理完全一样，只是用高级 API 简化了代码。</p>
+  </div>
+
+  <div class="tip">
+    <strong><code>net.parameters()</code> 是什么？</strong> 它返回模型中所有需要训练的参数（权重和偏置）。优化器拿到这些参数后，就知道在 <code>step()</code> 时更新谁。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 训练循环 -->
+<!-- ============================================ -->
+
+<div class="section" id="s4">
+  <h2><span class="num">4</span> 训练循环：前向 &rarr; 反向 &rarr; 更新</h2>
+
+  <pre><code><span class="kw">for</span> epoch <span class="kw">in</span> range(epochs):
+
+    total_loss <span class="op">=</span> <span class="num">0</span>
+
+    <span class="kw">for</span> X_batch, y_batch <span class="kw">in</span> batch_iterator(
+        X_train, y_train, batch_size
+    ):
+        <span class="cm"># ====== 前向传播 ======</span>
+        y_hat <span class="op">=</span> net(X_batch)       <span class="cm"># 直接调用模型</span>
+        l <span class="op">=</span> loss(y_hat, y_batch)    <span class="cm"># 算损失</span>
+
+        total_loss <span class="op">+=</span> l.item()
+
+        <span class="cm"># ====== 反向传播 ======</span>
+        trainer.zero_grad()         <span class="cm"># 梯度清零</span>
+        l.backward()                <span class="cm"># 自动求梯度</span>
+
+        <span class="cm"># ====== SGD 更新 ======</span>
+        trainer.step()              <span class="cm"># 一步更新所有参数</span>
+
+    <span class="cm"># ====== 每个 epoch 测试一次 ======</span>
+    <span class="kw">with</span> torch.no_grad():
+        test_preds <span class="op">=</span> net(X_test)
+        test_acc <span class="op">=</span> accuracy(test_preds, y_test)
+
+    <span class="fn">print</span>(
+        f<span class="str">"epoch={epoch+1:03d} "</span>
+        f<span class="str">"loss={total_loss:.4f} "</span>
+        f<span class="str">"test_acc={test_acc:.4f}"</span>
+    )</code></pre>
+
+  <p>和 Softmax 回归的训练循环结构完全一样，但代码更简洁：</p>
+
+  <div class="card">
+    <p><strong>训练过程对比</strong></p>
+    <table>
+      <tr><th>步骤</th><th>Softmax 回归（手写）</th><th>MLP（高级 API）</th></tr>
+      <tr>
+        <td><strong>前向</strong></td>
+        <td><code>logits = X @ W + b</code><br><code>probs = softmax(logits)</code></td>
+        <td><code>y_hat = net(X_batch)</code></td>
+      </tr>
+      <tr>
+        <td><strong>损失</strong></td>
+        <td><code>loss = cross_entropy(probs, y)</code></td>
+        <td><code>l = loss(y_hat, y_batch)</code></td>
+      </tr>
+      <tr>
+        <td><strong>清零</strong></td>
+        <td><code>W.grad.zero_()</code><br><code>b.grad.zero_()</code></td>
+        <td><code>trainer.zero_grad()</code></td>
+      </tr>
+      <tr>
+        <td><strong>反向</strong></td>
+        <td><code>loss.backward()</code></td>
+        <td><code>l.backward()</code></td>
+      </tr>
+      <tr>
+        <td><strong>更新</strong></td>
+        <td><code>W -= lr * W.grad</code><br><code>b -= lr * b.grad</code></td>
+        <td><code>trainer.step()</code></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="flow">
+    <div class="flow-item">打乱数据</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">net(X) 前向</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">算 loss</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">zero_grad</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">backward</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">step 更新</div>
+  </div>
+
+  <div class="note">
+    <strong>trainer.step() 背后做了什么？</strong> 它遍历所有注册的参数，对每个参数执行 <code>param -= lr * param.grad</code>。本质和手动 SGD 一样，只是帮你自动管理了所有参数。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 预测示例 -->
+<!-- ============================================ -->
+
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 预测示例：用训练好的模型做预测</h2>
+
+  <pre><code><span class="kw">with</span> torch.no_grad():
+    sample <span class="op">=</span> X_test[<span class="num">:5</span>]              <span class="cm"># 取前 5 张测试图片</span>
+    preds <span class="op">=</span> net(sample).argmax(dim<span class="op">=</span><span class="num">1</span>)  <span class="cm"># 前向 + 取最大</span>
+
+<span class="fn">print</span>(<span class="str">"预测:"</span>, preds.tolist())
+<span class="fn">print</span>(<span class="str">"真实:"</span>, y_test[<span class="num">:5</span>].tolist())</code></pre>
+
+  <p>一行代码搞定预测：<code>net(sample).argmax(dim=1)</code>。</p>
+  <ul>
+    <li><code>net(sample)</code>：前向传播，得到 10 个类别的 logits</li>
+    <li><code>.argmax(dim=1)</code>：选最大值的下标，就是预测的数字</li>
+  </ul>
+
+  <div class="tip">
+    <strong>nn.CrossEntropyLoss 内部已经包含了 softmax</strong>，所以模型输出的是 logits（原始分数），不是概率。但在预测时，argmax 对 logits 和概率的结果是一样的（概率排序和 logits 排序相同）。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：MLP 的核心知识点</h2>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">模型结构</div>
+      <div class="value" style="color:var(--accent)">64→256→10</div>
+    </div>
+    <div class="item">
+      <div class="label">激活函数</div>
+      <div class="value" style="color:var(--accent2)">ReLU</div>
+    </div>
+    <div class="item">
+      <div class="label">损失函数</div>
+      <div class="value" style="color:var(--green)">CrossEntropyLoss</div>
+    </div>
+    <div class="item">
+      <div class="label">优化器</div>
+      <div class="value" style="color:var(--orange)">SGD</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>MLP 的数学本质</strong></p>
+    <div class="formula" style="text-align:left;font-size:15px;line-height:2.2">
+      <strong>1.</strong> 第一层线性变换：<code>h = X @ W1 + b1</code> &nbsp; <span style="color:var(--muted)">形状: (batch, 64) → (batch, 256)</span><br>
+      <strong>2.</strong> ReLU 激活：<code>h = max(0, h)</code> &nbsp; <span style="color:var(--muted)">负数归零，引入非线性</span><br>
+      <strong>3.</strong> 第二层线性变换：<code>logits = h @ W2 + b2</code> &nbsp; <span style="color:var(--muted)">形状: (batch, 256) → (batch, 10)</span><br>
+      <strong>4.</strong> 损失：<code>loss = CrossEntropy(logits, labels)</code> &nbsp; <span style="color:var(--muted)">内部做 softmax + 交叉熵</span><br>
+      <strong>5.</strong> 反向传播 + SGD 更新所有参数
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>关键概念回顾</strong></p>
+    <table>
+      <tr><th>概念</th><th>说明</th></tr>
+      <tr>
+        <td><strong>隐藏层</strong></td>
+        <td>输入和输出之间的中间层，让模型能学到更抽象的特征</td>
+      </tr>
+      <tr>
+        <td><strong>ReLU</strong></td>
+        <td><code>max(0, x)</code>，最简单的非线性激活函数，打破线性叠加</td>
+      </tr>
+      <tr>
+        <td><strong>nn.Sequential</strong></td>
+        <td>把多层"串"起来，数据按顺序流过每一层</td>
+      </tr>
+      <tr>
+        <td><strong>nn.CrossEntropyLoss</strong></td>
+        <td>softmax + 交叉熵的合体版，比手写更稳定</td>
+      </tr>
+      <tr>
+        <td><strong>optim.SGD</strong></td>
+        <td>自动管理所有参数的梯度更新，不用手动 W -= lr * W.grad</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步学什么？</strong>
+    <ul style="margin-top:8px;padding-left:20px">
+      <li>加更多隐藏层 → 更深的网络</li>
+      <li>用 Dropout 防止过拟合</li>
+      <li>换 Adam 优化器，收敛更快</li>
+      <li>用卷积神经网络（CNN）处理图片，效果更好</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footer">
+  基于 mlp_test.py 生成 &middot; 多层感知机简洁实现
+</div>
+
+</div>
+</body>
+</html>

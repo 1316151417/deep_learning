@@ -20,37 +20,23 @@ h1 { margin-bottom: 8px; font-size: 24px; }
 .subtitle { color: #888; margin-bottom: 24px; font-size: 14px; }
 .main {
     display: flex;
-    gap: 40px;
+    gap: 30px;
     align-items: flex-start;
     flex-wrap: wrap;
     justify-content: center;
 }
-.grid-area {
+.canvas-area {
     display: flex;
     flex-direction: column;
     align-items: center;
 }
-.grid-container {
-    display: grid;
-    grid-template-columns: repeat(8, 44px);
-    grid-template-rows: repeat(8, 44px);
-    gap: 2px;
-    background: #333;
-    padding: 2px;
+#drawCanvas {
     border-radius: 8px;
     cursor: crosshair;
     touch-action: none;
-    user-select: none;
+    border: 2px solid #333;
 }
-.cell {
-    width: 44px;
-    height: 44px;
-    background: #000;
-    border-radius: 3px;
-    transition: background 0.05s;
-}
-.cell:hover { outline: 1px solid #555; }
-.grid-info {
+.canvas-info {
     margin-top: 8px;
     font-size: 12px;
     color: #666;
@@ -72,10 +58,36 @@ button {
 .btn-predict:hover { background: #c73a52; }
 .btn-clear { background: #333; color: #ccc; }
 .btn-clear:hover { background: #444; }
-.btn-erase { background: #333; color: #ccc; }
-.btn-erase:hover { background: #444; }
-.btn-erase.active { background: #e94560; color: #fff; }
-.result-area { min-width: 300px; }
+.preview-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.preview-title {
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #888;
+}
+.preview-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 34px);
+    grid-template-rows: repeat(8, 34px);
+    gap: 1px;
+    background: #333;
+    padding: 2px;
+    border-radius: 6px;
+}
+.preview-cell {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-family: monospace;
+    border-radius: 2px;
+}
+.result-area { min-width: 280px; }
 .result-title { font-size: 16px; margin-bottom: 12px; color: #aaa; }
 .prediction {
     font-size: 72px;
@@ -109,17 +121,21 @@ button {
 <body>
 
 <h1>手写数字识别</h1>
-<p class="subtitle">Softmax 回归 (8x8 像素直接绘制, sklearn digits 训练)</p>
+<p class="subtitle">Softmax 回归 (手写板绘制 → 8x8 灰阶降采样)</p>
 
 <div class="main">
-    <div class="grid-area">
-        <div class="grid-container" id="grid"></div>
-        <p class="grid-info">点击/拖动像素格绘制数字，右键或橡皮擦模式擦除</p>
+    <div class="canvas-area">
+        <canvas id="drawCanvas" width="280" height="280"></canvas>
+        <p class="canvas-info">在手写板上绘制数字，点击预测查看结果</p>
         <div class="buttons">
             <button class="btn-predict" onclick="predict()">预测</button>
-            <button class="btn-erase" id="btnErase" onclick="toggleErase()">橡皮擦</button>
-            <button class="btn-clear" onclick="clearGrid()">清除</button>
+            <button class="btn-clear" onclick="clearCanvas()">清除</button>
         </div>
+    </div>
+
+    <div class="preview-area">
+        <div class="preview-title">8x8 灰阶预览 (模型输入)</div>
+        <div class="preview-grid" id="previewGrid"></div>
     </div>
 
     <div class="result-area">
@@ -147,95 +163,173 @@ function softmax(logits) {
 }
 
 // =========================================
-// 8x8 像素网格
+// 手写板 Canvas
 // =========================================
-const grid = document.getElementById('grid');
-const cells = [];
-const pixels = new Array(64).fill(0); // 0=黑, 1=白
-let painting = false;
-let eraseMode = false;
+const canvas = document.getElementById('drawCanvas');
+const ctx = canvas.getContext('2d');
+const CANVAS_SIZE = 280;
+const BRUSH_SIZE = 24;
 
-// 创建 8x8 网格
-for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.dataset.idx = row * 8 + col;
-        cells.push(cell);
-        grid.appendChild(cell);
-    }
+ctx.fillStyle = '#000';
+ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+let drawing = false;
+let lastX = 0, lastY = 0;
+
+function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+    return [
+        (e.clientX - rect.left) * scaleX,
+        (e.clientY - rect.top) * scaleY
+    ];
 }
 
-function paintCell(cell) {
-    const idx = parseInt(cell.dataset.idx);
-    if (eraseMode) {
-        pixels[idx] = 0;
-        cell.style.background = '#000';
-    } else {
-        pixels[idx] = 1;
-        cell.style.background = '#fff';
-    }
+function drawDot(x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, BRUSH_SIZE / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+}
+
+function drawLine(x1, y1, x2, y2) {
+    ctx.lineWidth = BRUSH_SIZE;
+    ctx.strokeStyle = '#fff';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
 }
 
 // 鼠标事件
-grid.addEventListener('mousedown', e => {
-    if (e.button === 2) return; // 右键在 contextmenu 处理
-    e.preventDefault();
-    painting = true;
-    if (e.target.classList.contains('cell')) paintCell(e.target);
+canvas.addEventListener('mousedown', e => {
+    drawing = true;
+    [lastX, lastY] = getCanvasPos(e);
+    drawDot(lastX, lastY);
 });
-grid.addEventListener('mousemove', e => {
-    if (!painting) return;
-    if (e.target.classList.contains('cell')) paintCell(e.target);
+canvas.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    const [x, y] = getCanvasPos(e);
+    drawLine(lastX, lastY, x, y);
+    [lastX, lastY] = [x, y];
 });
-document.addEventListener('mouseup', () => painting = false);
-
-// 右键擦除
-grid.addEventListener('contextmenu', e => {
-    e.preventDefault();
-    if (e.target.classList.contains('cell')) {
-        const idx = parseInt(e.target.dataset.idx);
-        pixels[idx] = 0;
-        e.target.style.background = '#000';
-    }
-});
+document.addEventListener('mouseup', () => drawing = false);
 
 // 触摸事件
-grid.addEventListener('touchstart', e => {
+canvas.addEventListener('touchstart', e => {
     e.preventDefault();
-    painting = true;
+    drawing = true;
     const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (el && el.classList.contains('cell')) paintCell(el);
+    const rect = canvas.getBoundingClientRect();
+    lastX = (touch.clientX - rect.left) * CANVAS_SIZE / rect.width;
+    lastY = (touch.clientY - rect.top) * CANVAS_SIZE / rect.height;
+    drawDot(lastX, lastY);
 });
-grid.addEventListener('touchmove', e => {
+canvas.addEventListener('touchmove', e => {
     e.preventDefault();
-    if (!painting) return;
+    if (!drawing) return;
     const touch = e.touches[0];
-    const el = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (el && el.classList.contains('cell')) paintCell(el);
+    const rect = canvas.getBoundingClientRect();
+    const x = (touch.clientX - rect.left) * CANVAS_SIZE / rect.width;
+    const y = (touch.clientY - rect.top) * CANVAS_SIZE / rect.height;
+    drawLine(lastX, lastY, x, y);
+    [lastX, lastY] = [x, y];
 });
-grid.addEventListener('touchend', e => {
+canvas.addEventListener('touchend', e => {
     e.preventDefault();
-    painting = false;
+    drawing = false;
 });
 
-function toggleErase() {
-    eraseMode = !eraseMode;
-    document.getElementById('btnErase').classList.toggle('active', eraseMode);
+// =========================================
+// 降采样：手写板 → 8x8 灰阶
+// =========================================
+function downsampleTo8x8() {
+    const imgData = ctx.getImageData(0, 0, CANVAS_SIZE, CANVAS_SIZE).data;
+
+    // 计算质心（用于居中）
+    let sumX = 0, sumY = 0, total = 0;
+    for (let y = 0; y < CANVAS_SIZE; y++) {
+        for (let x = 0; x < CANVAS_SIZE; x++) {
+            const v = imgData[(y * CANVAS_SIZE + x) * 4];
+            if (v > 0) {
+                sumX += x * v;
+                sumY += y * v;
+                total += v;
+            }
+        }
+    }
+
+    if (total === 0) return new Array(64).fill(0);
+
+    // 质心 → 画布中心
+    const cx = sumX / total;
+    const cy = sumY / total;
+    const dx = CANVAS_SIZE / 2 - cx;
+    const dy = CANVAS_SIZE / 2 - cy;
+
+    // 居中 + 高斯模糊
+    const blurred = document.createElement('canvas');
+    blurred.width = CANVAS_SIZE;
+    blurred.height = CANVAS_SIZE;
+    const bCtx = blurred.getContext('2d');
+    bCtx.filter = 'blur(10px)';
+    bCtx.drawImage(canvas, dx, dy);
+
+    // 降采样到 8x8（浏览器双线性插值）
+    const small = document.createElement('canvas');
+    small.width = 8;
+    small.height = 8;
+    const sCtx = small.getContext('2d');
+    sCtx.imageSmoothingEnabled = true;
+    sCtx.imageSmoothingQuality = 'high';
+    sCtx.drawImage(blurred, 0, 0, 8, 8);
+
+    // 读取灰阶像素值
+    const smallData = sCtx.getImageData(0, 0, 8, 8);
+    const pixels = [];
+    for (let i = 0; i < 64; i++) {
+        pixels.push(smallData.data[i * 4] / 255);
+    }
+    return pixels;
 }
 
-function clearGrid() {
-    pixels.fill(0);
-    cells.forEach(c => c.style.background = '#000');
-    document.getElementById('prediction').textContent = '?';
-    document.getElementById('bars').innerHTML = '';
+// =========================================
+// 8x8 预览网格
+// =========================================
+const previewGrid = document.getElementById('previewGrid');
+const previewCells = [];
+
+for (let i = 0; i < 64; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'preview-cell';
+    cell.style.background = '#000';
+    previewCells.push(cell);
+    previewGrid.appendChild(cell);
+}
+
+function updatePreview(pixels) {
+    for (let i = 0; i < 64; i++) {
+        const v = Math.round(pixels[i] * 255);
+        previewCells[i].style.background = `rgb(${v},${v},${v})`;
+        if (pixels[i] > 0.05) {
+            previewCells[i].textContent = pixels[i].toFixed(1);
+            previewCells[i].style.color = pixels[i] > 0.5 ? '#000' : '#aaa';
+        } else {
+            previewCells[i].textContent = '';
+        }
+    }
 }
 
 // =========================================
 // 预测
 // =========================================
 function predict() {
+    const pixels = downsampleTo8x8();
+    updatePreview(pixels);
+
     // logits = x @ W + b
     const logits = [];
     for (let j = 0; j < 10; j++) {
@@ -270,6 +364,17 @@ function predict() {
         `;
         barsDiv.appendChild(row);
     }
+}
+
+function clearCanvas() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    document.getElementById('prediction').textContent = '?';
+    document.getElementById('bars').innerHTML = '';
+    previewCells.forEach(c => {
+        c.style.background = '#000';
+        c.textContent = '';
+    });
 }
 </script>
 </body>

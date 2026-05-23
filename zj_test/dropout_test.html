@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>丢弃法（Dropout）- 教学报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section > p, .section > ul, .section > ol {
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    color: var(--fg);
+  }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  .param { color: #ff7b72; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(108,140,255,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+  .warn {
+    border-left: 3px solid var(--orange);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(245,166,35,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .warn strong { color: var(--orange); }
+  .tip {
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,207,139,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .tip strong { color: var(--green); }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--card);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .formula {
+    text-align: center;
+    padding: 24px;
+    margin: 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+  .formula .big { font-size: 22px; }
+
+  .dim { color: var(--orange); font-weight: 600; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-grid .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .summary-grid .item .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  p code, li code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin: 24px 0 48px;
+  }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .shape-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .shape-box {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .shape-box .dims { color: var(--orange); }
+  .shape-box .name { color: var(--muted); font-size: 11px; }
+  .shape-op {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="tag">正则化</div>
+  <h1>丢弃法（Dropout）</h1>
+  <p>训练时随机"关掉"一部分神经元，打破共适应，防止过拟合</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 为什么要随机丢弃神经元</span></li>
+    <li><a href="#s1">从零实现</a> <span class="desc">— 手写 dropout_layer 函数</span></li>
+    <li><a href="#s2">训练 vs 测试</a> <span class="desc">— 两种模式下的关键差异</span></li>
+    <li><a href="#s3">从零实现：带 Dropout 的 MLP</a> <span class="desc">— 手动控制训练/测试模式</span></li>
+    <li><a href="#s4">简洁实现</a> <span class="desc">— nn.Dropout + net.eval()</span></li>
+    <li><a href="#s5">实验结果</a> <span class="desc">— 有/无 Dropout 的对比</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— Dropout vs 权重衰减</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：为什么要随机丢弃？</h2>
+
+  <p>过拟合的另一个原因是神经元之间产生了<strong>"共适应"</strong>（co-adaptation）：某些神经元过度依赖其他特定神经元的输出，导致模型对训练数据的特定模式过于敏感。</p>
+
+  <p>Dropout 的做法很暴力：<strong>训练时，每次前向传播随机将一部分神经元的输出置零</strong>。这样每个神经元都不能依赖"邻居"，必须独立地学习有用的特征。</p>
+
+  <div class="card">
+    <p><strong>Dropout 的工作原理</strong></p>
+    <div class="flow">
+      <div class="flow-item">原始输出 h</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item" style="border-color:var(--accent2)">随机 mask</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">h' = mask * h / (1-p)</div>
+    </div>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      以概率 p 将元素置零，保留的元素除以 (1-p) 做缩放，保证期望不变：<code>E[h'] = h</code>
+    </p>
+  </div>
+
+  <div class="card">
+    <p><strong>直观类比</strong></p>
+    <table>
+      <tr><th>类比</th><th>说明</th></tr>
+      <tr><td>团队协作</td><td>如果每次开会随机一半人请假，每个人都必须学会独立完成工作，而不是依赖某几个"大腿"</td></tr>
+      <tr><td>集成学习</td><td>每次 dropout 相当于训练一个不同的子网络，最终预测相当于所有子网络的集成</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>为什么除以 (1-p)？</strong> 如果丢弃概率 p=0.5，保留的输出要乘以 2。这样即使训练时一半神经元被丢弃，输出的期望值和测试时（不丢弃）一致，不需要在测试时做任何调整。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 从零实现 -->
+<!-- ============================================ -->
+
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 从零实现：dropout_layer 函数</h2>
+
+  <pre><code><span class="kw">def</span> <span class="fn">dropout_layer</span>(X, dropout):
+    <span class="str">"""以概率 dropout 丢弃元素，保留部分做 1/(1-p) 缩放"""</span>
+    <span class="kw">assert</span> <span class="num">0</span> <= dropout <= <span class="num">1</span>
+    <span class="kw">if</span> dropout == <span class="num">1</span>:
+        <span class="kw">return</span> torch.zeros_like(X)    <span class="cm"># 全部丢弃</span>
+    <span class="kw">if</span> dropout == <span class="num">0</span>:
+        <span class="kw">return</span> X                      <span class="cm"># 不丢弃</span>
+    mask = (torch.rand(X.shape) > dropout).float()
+    <span class="kw">return</span> mask * X / (<span class="num">1.0</span> - dropout)</code></pre>
+
+  <p>逐行解读：</p>
+  <ul>
+    <li><code>torch.rand(X.shape)</code>：生成 [0,1) 均匀分布的随机数，形状和 X 一样</li>
+    <li><code>> dropout</code>：大于 p 的位置为 True（保留），小于等于 p 的为 False（丢弃）</li>
+    <li><code>.float()</code>：True→1.0，False→0.0，变成 mask</li>
+    <li><code>mask * X</code>：被丢弃的位置变成 0</li>
+    <li><code>/ (1.0 - dropout)</code>：缩放保留的元素，保持期望不变</li>
+  </ul>
+
+  <div class="card">
+    <p><strong>举例：dropout = 0.5</strong></p>
+    <table>
+      <tr><th>原始输出</th><th>随机 mask</th><th>结果（×2 缩放）</th></tr>
+      <tr><td>[0.8, 0.3, 0.5, 0.9]</td><td>[1, 0, 1, 0]</td><td>[1.6, 0, 1.0, 0]</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      原始均值 = 0.625，丢弃后均值 = 0.65，近似相等（随机性导致的微小差异）。
+    </p>
+  </div>
+
+  <div class="warn">
+    <strong>dropout=0 和 dropout=1 是特殊情况：</strong> 0 表示不丢弃（直接返回原值），1 表示全丢弃（返回全零）。这两个边界情况要单独处理，避免除以零。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 训练 vs 测试 -->
+<!-- ============================================ -->
+
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 训练 vs 测试：关键差异</h2>
+
+  <div class="card">
+    <table>
+      <tr><th></th><th>训练时</th><th>测试时</th></tr>
+      <tr>
+        <td><strong>Dropout</strong></td>
+        <td style="color:var(--accent2)">开启：随机丢弃神经元</td>
+        <td style="color:var(--green)">关闭：使用全部神经元</td>
+      </tr>
+      <tr>
+        <td><strong>目的</strong></td>
+        <td>打破共适应，防止过拟合</td>
+        <td>用完整网络做确定性预测</td>
+      </tr>
+      <tr>
+        <td><strong>输出</strong></td>
+        <td>随机的（每次不同）</td>
+        <td>确定的（每次相同）</td>
+      </tr>
+      <tr>
+        <td><strong>缩放</strong></td>
+        <td>保留元素除以 (1-p)</td>
+        <td>不需要缩放</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>为什么测试时不丢弃？</strong> 测试时我们需要最稳定的预测。训练时已经通过缩放 (1/(1-p)) 保证了期望一致，所以测试时直接用全部神经元即可，不需要再做随机。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 从零实现：带 Dropout 的 MLP -->
+<!-- ============================================ -->
+
+<div class="section" id="s3">
+  <h2><span class="num">3</span> 从零实现：带 Dropout 的 MLP</h2>
+
+  <pre><code>dropout1, dropout2 = <span class="num">0.2</span>, <span class="num">0.5</span>
+
+<span class="kw">class</span> <span class="fn">ScratchNet</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, num_inputs, num_outputs,
+                 num_hiddens1, num_hiddens2, is_training=<span class="num">True</span>):
+        <span class="fn">super</span>().__init__()
+        self.training = is_training
+        self.lin1 = nn.Linear(num_inputs, num_hiddens1)
+        self.lin2 = nn.Linear(num_hiddens1, num_hiddens2)
+        self.lin3 = nn.Linear(num_hiddens2, num_outputs)
+        self.relu = nn.ReLU()
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X):
+        H1 = self.relu(self.lin1(X))
+        <span class="kw">if</span> self.training:
+            H1 = dropout_layer(H1, dropout1)  <span class="cm"># 第一层后 dropout</span>
+        H2 = self.relu(self.lin2(H1))
+        <span class="kw">if</span> self.training:
+            H2 = dropout_layer(H2, dropout2)  <span class="cm"># 第二层后 dropout</span>
+        <span class="kw">return</span> self.lin3(H2)</code></pre>
+
+  <p>关键设计：</p>
+  <ul>
+    <li>用 <code>self.training</code> 标志控制是否启用 dropout</li>
+    <li>训练时：ReLU 输出经过 dropout 后再传给下一层</li>
+    <li>测试时：跳过 dropout_layer，直接传递</li>
+    <li>两个隐藏层使用不同的丢弃率（0.2 和 0.5）</li>
+  </ul>
+
+  <div class="card">
+    <p><strong>数据流对比</strong></p>
+    <div class="shape-diagram">
+      <div class="shape-box">
+        <div class="dims">X: (batch, 64)</div>
+        <div class="name">输入</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">Linear + ReLU</div>
+        <div class="name">隐藏层1</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--accent2)">
+        <div class="dims">Dropout(0.2)</div>
+        <div class="name">训练时生效</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">Linear + ReLU</div>
+        <div class="name">隐藏层2</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--accent2)">
+        <div class="dims">Dropout(0.5)</div>
+        <div class="name">训练时生效</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box">
+        <div class="dims">Linear</div>
+        <div class="name">输出层</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>两个丢弃率不同？</strong> 通常靠近输入的层用较小的 p（如 0.2），靠近输出的层用较大的 p（如 0.5）。因为靠近输出的层更容易过拟合，需要更强的正则化。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 简洁实现 -->
+<!-- ============================================ -->
+
+<div class="section" id="s4">
+  <h2><span class="num">4</span> 简洁实现：nn.Dropout</h2>
+
+  <pre><code>net = nn.Sequential(
+    nn.Linear(<span class="num">64</span>, <span class="num">256</span>),
+    nn.ReLU(),
+    nn.Dropout(<span class="num">0.2</span>),        <span class="cm"># 第一个隐藏层后</span>
+    nn.Linear(<span class="num">256</span>, <span class="num">256</span>),
+    nn.ReLU(),
+    nn.Dropout(<span class="num">0.5</span>),        <span class="cm"># 第二个隐藏层后</span>
+    nn.Linear(<span class="num">256</span>, <span class="num">10</span>)
+)</code></pre>
+
+  <p>PyTorch 的 <code>nn.Dropout</code> 自动处理了训练/测试模式的切换。</p>
+
+  <div class="card">
+    <p><strong>从零实现 vs 简洁实现</strong></p>
+    <table>
+      <tr><th>从零实现</th><th>简洁实现</th></tr>
+      <tr>
+        <td>手写 <code>dropout_layer()</code> 函数</td>
+        <td><code>nn.Dropout(p)</code></td>
+      </tr>
+      <tr>
+        <td>用 <code>self.training</code> 手动判断</td>
+        <td><code>net.train()</code> / <code>net.eval()</code> 自动切换</td>
+      </tr>
+      <tr>
+        <td>手动处理 mask 和缩放</td>
+        <td>PyTorch 内部自动处理</td>
+      </tr>
+    </table>
+  </div>
+
+  <pre><code><span class="cm"># 训练时</span>
+net.train()    <span class="cm"># Dropout 生效</span>
+y_hat = net(X_batch)
+
+<span class="cm"># 测试时</span>
+net.eval()     <span class="cm"># Dropout 自动关闭</span>
+<span class="kw">with</span> torch.no_grad():
+    test_acc = accuracy(net(X_test), y_test)</code></pre>
+
+  <div class="tip">
+    <strong><code>net.train()</code> vs <code>net.eval()</code>：</strong> 这两个方法切换模型的模式。除了 Dropout，BatchNorm 等层在两种模式下行为也不同。养成好习惯：训练前 <code>train()</code>，测试前 <code>eval()</code>。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 实验结果 -->
+<!-- ============================================ -->
+
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 实验结果：有/无 Dropout 的对比</h2>
+
+  <div class="card">
+    <p><strong>从零实现对比</strong></p>
+    <table>
+      <tr><th></th><th>无 Dropout</th><th>Dropout (0.2, 0.5)</th></tr>
+      <tr>
+        <td><strong>epoch=100 loss</strong></td>
+        <td>1.9575</td>
+        <td>1.7376</td>
+      </tr>
+      <tr>
+        <td><strong>test_acc</strong></td>
+        <td>0.9556</td>
+        <td><span style="color:var(--green)">0.9583</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>简洁实现对比</strong></p>
+    <table>
+      <tr><th></th><th>无 Dropout</th><th>Dropout (0.2, 0.5)</th></tr>
+      <tr>
+        <td><strong>epoch=100 loss</strong></td>
+        <td>1.2882</td>
+        <td>1.7487</td>
+      </tr>
+      <tr>
+        <td><strong>test_acc</strong></td>
+        <td>0.9361</td>
+        <td><span style="color:var(--green)">0.9611</span></td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="flow">
+    <div class="flow-item" style="border-color:var(--muted)">无 Dropout</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">test_acc=0.936</div>
+    <div class="flow-arrow" style="color:var(--green)">vs</div>
+    <div class="flow-item" style="border-color:var(--green)">有 Dropout</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item" style="border-color:var(--green)">test_acc=0.961</div>
+  </div>
+
+  <div class="note">
+    <strong>观察：</strong> 在 digits 数据集上，Dropout 的提升不算剧烈（数据量较小），但测试准确率确实更高。在更大的数据集和更深的网络上，Dropout 的效果会更加显著。
+  </div>
+
+  <div class="warn">
+    <strong>训练时 loss 会更高？</strong> 这是正常的！Dropout 让训练变得更"难"（每次只有部分神经元工作），所以训练 loss 通常比不用 Dropout 时高。但测试 loss 会更低，这才是我们关心的。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：Dropout vs 权重衰减</h2>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">丢弃率</div>
+      <div class="value" style="color:var(--accent)">p</div>
+    </div>
+    <div class="item">
+      <div class="label">作用位置</div>
+      <div class="value" style="color:var(--accent2)">隐藏层输出</div>
+    </div>
+    <div class="item">
+      <div class="label">训练时</div>
+      <div class="value" style="color:var(--orange)">随机丢弃</div>
+    </div>
+    <div class="item">
+      <div class="label">测试时</div>
+      <div class="value" style="color:var(--green)">全部使用</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>Dropout vs 权重衰减</strong></p>
+    <table>
+      <tr><th></th><th>权重衰减</th><th>Dropout</th></tr>
+      <tr>
+        <td><strong>原理</strong></td>
+        <td>惩罚大权重（L2 正则化）</td>
+        <td>随机丢弃神经元，打破共适应</td>
+      </tr>
+      <tr>
+        <td><strong>作用对象</strong></td>
+        <td>权重参数 w</td>
+        <td>隐藏层的输出值</td>
+      </tr>
+      <tr>
+        <td><strong>超参数</strong></td>
+        <td>λ（惩罚强度）</td>
+        <td>p（丢弃概率）</td>
+      </tr>
+      <tr>
+        <td><strong>实现方式</strong></td>
+        <td>optimizer 的 weight_decay 参数</td>
+        <td>nn.Dropout(p) 层</td>
+      </tr>
+      <tr>
+        <td><strong>训练时影响</strong></td>
+        <td>损失函数多一项惩罚</td>
+        <td>前向传播随机屏蔽神经元</td>
+      </tr>
+      <tr>
+        <td><strong>测试时影响</strong></td>
+        <td>无特殊处理</td>
+        <td>需要 net.eval() 关闭</td>
+      </tr>
+      <tr>
+        <td><strong>能否同时用？</strong></td>
+        <td colspan="2" style="text-align:center;color:var(--green)">可以！两者互补，同时使用效果更好</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>关键知识点</strong></p>
+    <table>
+      <tr><th>概念</th><th>说明</th></tr>
+      <tr>
+        <td><strong>无偏性</strong></td>
+        <td>保留元素除以 (1-p)，保证 E[h'] = h，训练和测试的期望一致</td>
+      </tr>
+      <tr>
+        <td><strong>共适应</strong></td>
+        <td>神经元之间过度依赖，Dropout 强迫每个神经元独立学习</td>
+      </tr>
+      <tr>
+        <td><strong>train/eval 模式</strong></td>
+        <td>训练时 Dropout 开启，测试时关闭。用 net.train() 和 net.eval() 切换</td>
+      </tr>
+      <tr>
+        <td><strong>丢弃率选择</strong></td>
+        <td>常用 0.1~0.5，靠近输出的层可以用更大的 p</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步学什么？</strong>
+    <ul style="margin-top:8px;padding-left:20px">
+      <li>Batch Normalization — 另一种加速训练、轻微正则化的技术</li>
+      <li>早停（Early Stopping）— 监控验证集，防止训练过度</li>
+      <li>数据增强 — 增加训练数据多样性，从根本上对抗过拟合</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footer">
+  基于 dropout_test.py 生成 &middot; 丢弃法（Dropout）
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kaggle 房价预测 - 数据预处理与 PyTorch 实现</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  /* Section */
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section > p, .section > ul, .section > ol {
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  /* Code block */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    color: var(--fg);
+  }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  .param { color: #ff7b72; }
+
+  /* Card */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  /* Note callout */
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(108,140,255,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+  .warn {
+    border-left: 3px solid var(--orange);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(245,166,35,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .warn strong { color: var(--orange); }
+  .tip {
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,207,139,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .tip strong { color: var(--green); }
+
+  /* Flow */
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--card);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  /* Formula */
+  .formula {
+    text-align: center;
+    padding: 24px;
+    margin: 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+
+  /* Dim highlight */
+  .dim { color: var(--orange); font-weight: 600; }
+
+  /* Summary */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-grid .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .summary-grid .item .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  /* Inline code */
+  p code, li code, td code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* TOC */
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin: 24px 0 48px;
+  }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  /* Before/After */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .compare .before, .compare .after {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    overflow-x: auto;
+  }
+  .compare .label-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
+  }
+  .compare .before .label-tag { background: rgba(255,107,157,0.15); color: var(--accent2); }
+  .compare .after .label-tag { background: rgba(78,207,139,0.15); color: var(--green); }
+
+  .highlight-row { background: rgba(108,140,255,0.08); }
+
+  @media (max-width: 700px) {
+    .compare { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ============================== Header ============================== -->
+<div class="header">
+  <div class="tag">KAGGLE COMPETITION</div>
+  <h1>房价预测：数据预处理与 PyTorch 实现</h1>
+  <p>从原始 CSV 到 Kaggle 提交的完整流程</p>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s1">竞赛简介</a> <span class="desc">任务与评价指标</span></li>
+    <li><a href="#s2">认识原始数据</a> <span class="desc">样本示例、列类型</span></li>
+    <li><a href="#s3">缺失值处理</a> <span class="desc">NA 的两种含义、填充策略</span></li>
+    <li><a href="#s4">字符串/类别特征处理</a> <span class="desc">One-Hot 编码</span></li>
+    <li><a href="#s5">数值特征标准化</a> <span class="desc">零均值、单位方差</span></li>
+    <li><a href="#s6">模型、损失与训练</a> <span class="desc">线性模型 + log RMSE</span></li>
+    <li><a href="#s7">完整代码</a> <span class="desc">可直接运行</span></li>
+  </ol>
+</div>
+
+<!-- ============================== Section 1 ============================== -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span>竞赛简介</h2>
+  <p>Kaggle 的 <strong>House Prices: Advanced Regression Techniques</strong> 是一个经典的回归竞赛：给定爱荷华州 Ames 市的 79 个房屋特征，预测房屋售价。</p>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">训练样本</div>
+      <div class="value" style="color:var(--accent)">1,460</div>
+    </div>
+    <div class="item">
+      <div class="label">测试样本</div>
+      <div class="value" style="color:var(--accent2)">1,459</div>
+    </div>
+    <div class="item">
+      <div class="label">特征数量</div>
+      <div class="value" style="color:var(--green)">79</div>
+    </div>
+    <div class="item">
+      <div class="label">评价指标</div>
+      <div class="value" style="color:var(--orange)">RMSLE</div>
+    </div>
+  </div>
+
+  <p>竞赛使用 <strong>RMSLE（Root Mean Squared Logarithmic Error）</strong> 作为评价指标：</p>
+  <div class="formula">
+    RMSLE = sqrt( (1/n) &Sigma; (log y&#770; - log y)&sup2; )
+  </div>
+  <p>取对数后，模型更关注 <strong>相对误差</strong> 而非绝对误差。预测 15 万 vs 实际 16 万，和预测 30 万 vs 实际 31 万，惩罚相同（差 1 万），这符合房价预测的实际需求。</p>
+</div>
+
+<!-- ============================== Section 2 ============================== -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span>认识原始数据</h2>
+  <p>先看看 CSV 长什么样。以下是训练集前 6 行的部分列：</p>
+
+  <table>
+    <tr>
+      <th>MSSubClass</th><th>MSZoning</th><th>LotFrontage</th><th>LotArea</th>
+      <th>Street</th><th>Alley</th><th>OverallQual</th><th>YearBuilt</th><th>SalePrice</th>
+    </tr>
+    <tr>
+      <td>60</td><td>RL</td><td>65</td><td>8450</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>7</td><td>2003</td><td>208,500</td>
+    </tr>
+    <tr>
+      <td>20</td><td>RL</td><td>80</td><td>9600</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>6</td><td>1976</td><td>181,500</td>
+    </tr>
+    <tr>
+      <td>60</td><td>RL</td><td>68</td><td>11250</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>7</td><td>2001</td><td>223,500</td>
+    </tr>
+    <tr>
+      <td>70</td><td>RL</td><td>60</td><td>9550</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>7</td><td>1915</td><td>140,000</td>
+    </tr>
+    <tr>
+      <td>60</td><td>RL</td><td>84</td><td>14260</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>8</td><td>2000</td><td>250,000</td>
+    </tr>
+    <tr>
+      <td>50</td><td>RL</td><td>85</td><td>14115</td>
+      <td>Pave</td><td style="color:var(--accent2)">NaN</td><td>5</td><td>1993</td><td>143,000</td>
+    </tr>
+  </table>
+
+  <div class="note">
+    <strong>两种列类型：</strong>
+    <ul style="margin-top:8px">
+      <li><strong>数值列</strong>（37 列）：<code>LotFrontage</code>、<code>LotArea</code>、<code>OverallQual</code>、<code>YearBuilt</code> 等，可以直接参与数学运算</li>
+      <li><strong>类别列</strong>（43 列）：<code>MSZoning</code>（RL/RM/FV...）、<code>Street</code>（Pave/Grvl）、<code>Alley</code>（Grvl/Pave/NA）等，是字符串，不能直接做数学运算</li>
+    </ul>
+  </div>
+
+  <p>数值列的统计特征：</p>
+  <table>
+    <tr><th>列名</th><th>均值</th><th>标准差</th><th>最小值</th><th>最大值</th><th>缺失数</th></tr>
+    <tr><td>LotFrontage</td><td>70.0</td><td>24.3</td><td>21</td><td>313</td><td style="color:var(--accent2)">259</td></tr>
+    <tr><td>LotArea</td><td>10,517</td><td>9,981</td><td>1,300</td><td>215,245</td><td>0</td></tr>
+    <tr><td>OverallQual</td><td>6.1</td><td>1.4</td><td>1</td><td>10</td><td>0</td></tr>
+    <tr><td>YearBuilt</td><td>1,971</td><td>30.2</td><td>1,872</td><td>2,010</td><td>0</td></tr>
+    <tr><td>SalePrice</td><td>180,921</td><td>79,443</td><td>34,900</td><td>755,000</td><td>0</td></tr>
+  </table>
+
+  <div class="warn">
+    <strong>注意量级差异！strong> <code>LotArea</code> 的范围是 1300~215245，而 <code>OverallQual</code> 是 1~10。如果不做标准化，大数值特征会主导模型训练。这就是为什么后面要做<strong>标准化</strong>。
+  </div>
+</div>
+
+<!-- ============================== Section 3 ============================== -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span>缺失值处理</h2>
+  <p>缺失值是真实数据中最常见的问题。这个数据集有大量缺失：</p>
+
+  <table>
+    <tr><th>列名</th><th>缺失数</th><th>缺失率</th><th>含义</th></tr>
+    <tr><td>PoolQC</td><td>1,453</td><td>99.5%</td><td>泳池质量 — 缺失表示没有泳池</td></tr>
+    <tr><td>MiscFeature</td><td>1,406</td><td>96.3%</td><td>其他特征 — 缺失表示没有</td></tr>
+    <tr><td>Alley</td><td>1,369</td><td>93.8%</td><td>胡同通道 — 缺失表示没有胡同</td></tr>
+    <tr><td>Fence</td><td>1,179</td><td>80.8%</td><td>围栏质量 — 缺失表示没有围栏</td></tr>
+    <tr><td>FireplaceQu</td><td>690</td><td>47.3%</td><td>壁炉质量 — 缺失表示没有壁炉</td></tr>
+    <tr><td>LotFrontage</td><td>259</td><td>17.7%</td><td>街道连接长度 — 真正缺失</td></tr>
+  </table>
+
+  <div class="warn">
+    <strong>关键认知：NA 有两种含义！</strong>
+    <ul style="margin-top:8px">
+      <li><strong>"有意义的 NA"：</strong>如 <code>Alley</code> 列的 NA 表示"没有胡同通道"，这是一个有效值，不是数据丢失</li>
+      <li><strong>"真正的缺失"：</strong>如 <code>LotFrontage</code> 列的 NA 表示"数据采集时漏掉了"</li>
+    </ul>
+    <p style="margin-top:8px">这个数据集的 CSV 文件中，两种 NA 都用字符串 <code>"NA"</code> 表示。而 pandas 默认把 <code>"NA"</code> 识别为 NaN（缺失），这会丢失"有意义的 NA"的信息。</p>
+  </div>
+
+  <p>我们的处理策略分两步：</p>
+
+  <h3 style="margin:20px 0 12px; color:var(--fg)">步骤 1：读取时保留 NA 字符串</h3>
+  <p>pandas 的 <code>read_csv</code> 默认把 <code>NA</code>、<code>NaN</code>、<code>null</code> 等识别为缺失值。为了区分两种 NA，我们先用 <code>keep_default_na=False</code> 保留所有字符串，再手动处理：</p>
+<pre><code><span class="cm"># 读取时保留 "NA" 字符串，不让 pandas 自动转为 NaN</span>
+train_data = pd.read_csv(<span class="str">"train.csv"</span>, keep_default_na=<span class="kw">False</span>)</code></pre>
+
+  <p>读取后 <code>Alley</code> 列的值是字符串 <code>"NA"</code>，而不是 NaN：</p>
+<pre><code>train_data[<span class="str">"Alley"</span>].unique()
+<span class="cm"># array(['NA', 'Grvl', 'Pave'], dtype=object)</span>
+<span class="cm"># "NA" = 没有胡同，"Grvl" = 碎石路，"Pave" = 柏油路</span></code></pre>
+
+  <h3 style="margin:20px 0 12px; color:var(--fg)">步骤 2：对类别列，NA 就是一个合法类别</h3>
+  <p>对于类别特征，<code>"NA"</code> 本身就是一种取值，one-hot 编码时自然会变成一列（如 <code>Alley_NA</code>），不需要特殊处理。</p>
+
+  <h3 style="margin:20px 0 12px; color:var(--fg)">步骤 3：对数值列，先转为数值，再用均值填充</h3>
+  <p>数值列中真正的缺失值（如 <code>LotFrontage</code> 的 259 个空值），先用 <code>pd.to_numeric(errors='coerce')</code> 把无法转换的值变成 NaN，再用该列均值填充：</p>
+<pre><code><span class="kw">for</span> col <span class="kw">in</span> numeric_columns:
+    all_features[col] = pd.to_numeric(all_features[col], errors=<span class="str">"coerce"</span>)
+    all_features[col] = all_features[col].fillna(all_features[col].mean())</code></pre>
+
+  <div class="tip">
+    <strong>为什么用均值填充？</strong>均值填充是最简单的策略，不会改变该列的均值统计量。更高级的方法还有中位数填充、KNN 填充、模型预测填充等，但对这个任务来说均值填充已经够用。
+  </div>
+</div>
+
+<!-- ============================== Section 4 ============================== -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span>字符串/类别特征处理 — One-Hot 编码</h2>
+  <p>神经网络只能处理数字，不能直接处理 <code>"RL"</code>、<code>"Pave"</code> 这样的字符串。我们需要把类别特征转为数值表示。</p>
+
+  <div class="warn">
+    <strong>为什么不能直接用 0, 1, 2, 3 编码？</strong>
+    <p style="margin-top:4px">如果把 <code>MSZoning</code> 编码为 RL=0, RM=1, FV=2, RH=3，模型会认为 FV(2) 在 RL(0) 和 RM(1) 的"中间"，暗示了一种大小关系。但这些类别之间没有顺序关系！</p>
+  </div>
+
+  <p><strong>One-Hot 编码</strong>（独热编码）的做法：每个类别变成一列，属于该类别的行填 1，否则填 0。</p>
+
+  <p>以 <code>MSZoning</code> 和 <code>Street</code> 两列为例：</p>
+
+  <div class="compare">
+    <div class="before">
+      <div class="label-tag">BEFORE (原始)</div>
+<pre><code>MSZoning  Street
+   RL     Pave
+   RL     Pave
+   RM     Pave
+   FV     Grvl</code></pre>
+    </div>
+    <div class="after">
+      <div class="label-tag">AFTER (One-Hot)</div>
+<pre><code>MSZ_RL  MSZ_RM  MSZ_FV  St_Pave  St_Grvl
+  1       0       0       1        0
+  1       0       0       1        0
+  0       1       0       1        0
+  0       0       1       0        1</code></pre>
+    </div>
+  </div>
+
+  <p>原来 2 列变成了 5 列。对于 43 个类别列，one-hot 后特征数会从 79 膨胀到约 <strong>330</strong> 列。</p>
+
+  <p>用 pandas 的 <code>get_dummies</code> 一行搞定：</p>
+<pre><code><span class="cm"># dummy_na=True 表示把 NaN 也当作一个类别，生成对应的 0/1 列</span>
+all_features = pd.get_dummies(all_features, dummy_na=<span class="kw">True</span>)</code></pre>
+
+  <div class="note">
+    <strong><code>dummy_na=True</code> 的作用：</strong>对于 <code>Alley</code> 列，会生成 <code>Alley_Grvl</code>、<code>Alley_Pave</code>、<code>Alley_nan</code> 三列。其中 <code>Alley_nan=1</code> 表示该样本没有胡同信息，这对预测房价是有意义的信号。
+  </div>
+</div>
+
+<!-- ============================== Section 5 ============================== -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span>数值特征标准化</h2>
+  <p>前面看到 <code>LotArea</code> 的范围是 1300~215245，而 <code>OverallQual</code> 是 1~10。不同特征的量级差异巨大，这会导致：</p>
+  <ul>
+    <li>大数值特征主导梯度更新，小数值特征被"淹没"</li>
+    <li>优化器收敛变慢</li>
+  </ul>
+
+  <p><strong>标准化（Standardization）</strong>将每个特征转为均值 0、标准差 1 的分布：</p>
+
+  <div class="formula">
+    x' = (x - &mu;) / &sigma;
+  </div>
+
+  <p>标准化前后对比：</p>
+  <table>
+    <tr><th>列名</th><th>原始范围</th><th>标准化后范围</th></tr>
+    <tr><td>LotArea</td><td>1,300 ~ 215,245</td><td>-0.92 ~ 20.5</td></tr>
+    <tr><td>OverallQual</td><td>1 ~ 10</td><td>-3.6 ~ 2.8</td></tr>
+    <tr><td>YearBuilt</td><td>1,872 ~ 2,010</td><td>-3.3 ~ 1.3</td></tr>
+  </table>
+
+  <p>代码实现：</p>
+<pre><code><span class="cm"># 对数值列做标准化：(x - mean) / std</span>
+numeric_features = all_features.select_dtypes(include=[<span class="str">"number"</span>]).columns
+all_features[numeric_features] = all_features[numeric_features].apply(
+    <span class="kw">lambda</span> x: (x - x.mean()) / (x.std() + <span class="num">1e-8</span>)
+)
+
+<span class="cm"># 标准化后，缺失值被转为 NaN，再用 0 填充（0 = 均值，是中性值）</span>
+all_features[numeric_features] = all_features[numeric_features].fillna(<span class="num">0</span>)</code></pre>
+
+  <div class="tip">
+    <strong>为什么 <code>fillna(0)</code>？</strong>标准化后均值是 0，所以用 0 填充缺失值相当于用"平均水平"来代替缺失，这是合理的默认值。
+  </div>
+
+  <h3 style="margin:20px 0 12px; color:var(--fg)">完整的预处理流程图</h3>
+  <div class="flow">
+    <div class="flow-item">原始 CSV</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">拼接 train + test</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">区分 NA 含义</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">数值列标准化</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">类别列 One-Hot</div>
+    <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">转 Tensor</div>
+  </div>
+</div>
+
+<!-- ============================== Section 6 ============================== -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span>模型、损失与训练</h2>
+
+  <h3 style="margin:12px 0; color:var(--fg)">模型：最简单的线性回归</h3>
+  <p>一个线性层：<code>y = Wx + b</code>，输入 330 维特征，输出 1 维预测价格。</p>
+<pre><code>net = nn.Sequential(
+    nn.Linear(<span class="num">330</span>, <span class="num">1</span>)
+)</code></pre>
+
+  <h3 style="margin:12px 0; color:var(--fg)">损失函数：MSE</h3>
+  <p>虽然竞赛用 RMSLE 评价，但我们可以在 log 空间用 MSE 来等价优化：</p>
+<pre><code>loss_fn = nn.MSELoss()
+
+<span class="kw">def</span> <span class="fn">log_rmse</span>(net, features, labels):
+    clipped_preds = torch.clamp(net(features), min=<span class="num">1.0</span>)
+    <span class="kw">return</span> torch.sqrt(loss_fn(
+        torch.log(clipped_preds),
+        torch.log(labels)
+    )).item()</code></pre>
+
+  <div class="note">
+    <strong>为什么 <code>clamp(min=1.0)</code>？</strong>取 log 时，如果预测值是负数或零，log 会报错。clamp(1.0) 保证预测值至少为 1，避免数值问题。
+  </div>
+
+  <h3 style="margin:12px 0; color:var(--fg)">训练循环</h3>
+  <p>标准的 mini-batch SGD 流程：</p>
+<pre><code><span class="kw">for</span> epoch <span class="kw">in</span> range(epochs):
+    <span class="kw">for</span> X_batch, y_batch <span class="kw">in</span> batch_iterator(train_features, train_labels, batch_size):
+        y_hat = net(X_batch)          <span class="cm"># 前向传播</span>
+        l = loss_fn(y_hat, y_batch)   <span class="cm"># 计算损失</span>
+
+        trainer.zero_grad()           <span class="cm"># 清空梯度</span>
+        l.backward()                  <span class="cm"># 反向传播</span>
+        trainer.step()                <span class="cm"># 更新参数</span></code></pre>
+
+  <h3 style="margin:12px 0; color:var(--fg)">超参数选择</h3>
+  <table>
+    <tr><th>超参数</th><th>值</th><th>说明</th></tr>
+    <tr><td>学习率 (lr)</td><td>5</td><td>Adam 优化器的学习率。标准化后特征量级统一，可以用较大的学习率</td></tr>
+    <tr><td>批次大小 (batch_size)</td><td>64</td><td>每次更新用 64 个样本计算梯度</td></tr>
+    <tr><td>训练轮数 (epochs)</td><td>100</td><td>遍历完整训练集 100 次</td></tr>
+    <tr><td>优化器</td><td>Adam</td><td>自适应学习率，比 SGD 收敛更快</td></tr>
+  </table>
+
+  <p>训练 100 轮后，最终 <code>train_log_rmse &asymp; 0.163</code>。</p>
+</div>
+
+<!-- ============================== Section 7 ============================== -->
+<div class="section" id="s7">
+  <h2><span class="num">7</span>完整代码</h2>
+  <p>以下是可直接运行的完整代码：</p>
+
+<pre><code><span class="cm">"""
+Kaggle House Prices - PyTorch 简版实现
+"""</span>
+
+<span class="kw">import</span> numpy <span class="kw">as</span> np
+<span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> torch
+<span class="kw">from</span> torch <span class="kw">import</span> nn
+
+torch.manual_seed(<span class="num">42</span>)
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 1. 加载数据</span>
+<span class="cm"># =========================================</span>
+
+DATA_DIR = <span class="str">"zj_test/kaggle/input/house-prices-advanced-regression-techniques"</span>
+
+train_data = pd.read_csv(f<span class="str">"{DATA_DIR}/train.csv"</span>)
+test_data = pd.read_csv(f<span class="str">"{DATA_DIR}/test.csv"</span>)
+
+print(f<span class="str">"训练集: {train_data.shape}, 测试集: {test_data.shape}"</span>)
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 2. 数据预处理</span>
+<span class="cm"># =========================================</span>
+
+<span class="cm"># 去掉 Id 列，拼接 train/test 统一做特征工程</span>
+all_features = pd.concat([train_data.iloc[:, <span class="num">1</span>:-<span class="num">1</span>], test_data.iloc[:, <span class="num">1</span>:]], axis=<span class="num">0</span>)
+
+<span class="cm"># 把 "NA" 字符串替换为真正的 NaN，再尝试转数值</span>
+all_features = all_features.replace(<span class="str">"NA"</span>, np.nan)
+<span class="kw">for</span> col <span class="kw">in</span> all_features.columns:
+    <span class="kw">try</span>:
+        all_features[col] = pd.to_numeric(all_features[col])
+    <span class="kw">except</span> (ValueError, TypeError):
+        <span class="kw">pass</span>
+
+<span class="cm"># 数值特征: 标准化 (x - mean) / std，缺失值填 0</span>
+numeric_features = all_features.select_dtypes(include=[<span class="str">"number"</span>]).columns
+all_features[numeric_features] = all_features[numeric_features].apply(
+    <span class="kw">lambda</span> x: (x - x.mean()) / (x.std() + <span class="num">1e-8</span>)
+)
+all_features[numeric_features] = all_features[numeric_features].fillna(<span class="num">0</span>)
+
+<span class="cm"># 类别特征: one-hot 编码</span>
+all_features = pd.get_dummies(all_features, dummy_na=<span class="kw">True</span>)
+all_features = all_features.astype(float)
+
+<span class="cm"># 转为 tensor</span>
+n_train = train_data.shape[<span class="num">0</span>]
+train_features = torch.tensor(all_features[:n_train].values, dtype=torch.float32)
+test_features = torch.tensor(all_features[n_train:].values, dtype=torch.float32)
+train_labels = torch.tensor(
+    train_data.SalePrice.values.reshape(-<span class="num">1</span>, <span class="num">1</span>), dtype=torch.float32
+)
+
+print(f<span class="str">"特征维度: {train_features.shape[1]}"</span>)
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 3. 定义模型</span>
+<span class="cm"># =========================================</span>
+
+in_features = train_features.shape[<span class="num">1</span>]
+net = nn.Sequential(nn.Linear(in_features, <span class="num">1</span>))
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 4. 损失函数 &amp; 优化器</span>
+<span class="cm"># =========================================</span>
+
+loss_fn = nn.MSELoss()
+trainer = torch.optim.Adam(net.parameters(), lr=<span class="num">5</span>)
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 5. 评估指标: log RMSE</span>
+<span class="cm"># =========================================</span>
+
+<span class="kw">def</span> <span class="fn">log_rmse</span>(net, features, labels):
+    <span class="kw">with</span> torch.no_grad():
+        clipped_preds = torch.clamp(net(features), min=<span class="num">1.0</span>)
+        rmse = torch.sqrt(loss_fn(torch.log(clipped_preds), torch.log(labels)))
+    <span class="kw">return</span> rmse.item()
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 6. mini-batch</span>
+<span class="cm"># =========================================</span>
+
+<span class="kw">def</span> <span class="fn">batch_iterator</span>(X, y, batch_size):
+    indices = torch.randperm(len(X))
+    <span class="kw">for</span> start <span class="kw">in</span> range(<span class="num">0</span>, len(X), batch_size):
+        batch_idx = indices[start:start + batch_size]
+        <span class="kw">yield</span> X[batch_idx], y[batch_idx]
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 7. 超参数</span>
+<span class="cm"># =========================================</span>
+
+batch_size = <span class="num">64</span>
+epochs = <span class="num">100</span>
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 8. 训练</span>
+<span class="cm"># =========================================</span>
+
+<span class="kw">for</span> epoch <span class="kw">in</span> range(epochs):
+
+    total_loss = <span class="num">0</span>
+    num_batches = <span class="num">0</span>
+
+    <span class="kw">for</span> X_batch, y_batch <span class="kw">in</span> batch_iterator(train_features, train_labels, batch_size):
+
+        y_hat = net(X_batch)
+        l = loss_fn(y_hat, y_batch)
+
+        total_loss += l.item()
+        num_batches += <span class="num">1</span>
+
+        trainer.zero_grad()
+        l.backward()
+        trainer.step()
+
+    train_rmse = log_rmse(net, train_features, train_labels)
+
+    print(
+        f<span class="str">"epoch={epoch+1:03d} "</span>
+        f<span class="str">"loss={total_loss / num_batches:.4f} "</span>
+        f<span class="str">"train_log_rmse={train_rmse:.5f}"</span>
+    )
+
+
+<span class="cm"># =========================================</span>
+<span class="cm"># 9. 预测 &amp; 生成提交文件</span>
+<span class="cm"># =========================================</span>
+
+<span class="kw">with</span> torch.no_grad():
+    preds = net(test_features).numpy()
+
+submission = pd.DataFrame({
+    <span class="str">"Id"</span>: test_data[<span class="str">"Id"</span>],
+    <span class="str">"SalePrice"</span>: preds.reshape(-<span class="num">1</span>),
+})
+submission.to_csv(<span class="str">"zj_test/kaggle/submission.csv"</span>, index=<span class="kw">False</span>)
+print(<span class="str">"\n提交文件已保存到 zj_test/kaggle/submission.csv"</span>)</code></pre>
+</div>
+
+<!-- Footer -->
+<div style="text-align:center; padding:40px 0 0; border-top:1px solid var(--border); margin-top:48px;">
+  <p style="color:var(--muted); font-size:13px;">
+    参考：<a href="https://zh-v2.d2l.ai/chapter_multilayer-perceptrons/kaggle-house-price.html" style="color:var(--accent); text-decoration:none;">d2l.ai - Kaggle 房价预测</a>
+    &nbsp;|&nbsp;
+    <a href="https://www.kaggle.com/competitions/house-prices-advanced-regression-techniques" style="color:var(--accent); text-decoration:none;">Kaggle 竞赛页面</a>
+  </p>
+</div>
+
+</div>
+</body>
+</html>

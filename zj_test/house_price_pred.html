@@ -417,7 +417,7 @@
   </table>
 
   <div class="warn">
-    <strong>注意量级差异！strong> <code>LotArea</code> 的范围是 1300~215245，而 <code>OverallQual</code> 是 1~10。如果不做标准化，大数值特征会主导模型训练。这就是为什么后面要做<strong>标准化</strong>。
+    <strong>注意量级差异！<strong> <code>LotArea</code> 的范围是 1300~215245，而 <code>OverallQual</code> 是 1~10。如果不做标准化，大数值特征会主导模型训练。这就是为什么后面要做<strong>标准化</strong>。
   </div>
 </div>
 
@@ -564,6 +564,8 @@ all_features[numeric_features] = all_features[numeric_features].fillna(<span cla
     <div class="flow-arrow">&rarr;</div>
     <div class="flow-item">类别列 One-Hot</div>
     <div class="flow-arrow">&rarr;</div>
+    <div class="flow-item">标签取 log</div>
+    <div class="flow-arrow">&rarr;</div>
     <div class="flow-item">转 Tensor</div>
   </div>
 </div>
@@ -578,19 +580,27 @@ all_features[numeric_features] = all_features[numeric_features].fillna(<span cla
     nn.Linear(<span class="num">330</span>, <span class="num">1</span>)
 )</code></pre>
 
-  <h3 style="margin:12px 0; color:var(--fg)">损失函数：MSE</h3>
-  <p>虽然竞赛用 RMSLE 评价，但我们可以在 log 空间用 MSE 来等价优化：</p>
-<pre><code>loss_fn = nn.MSELoss()
+  <h3 style="margin:12px 0; color:var(--fg)">标签取 log：把乘法问题变成加法问题</h3>
+  <p>RMSLE 评价指标关心的是<strong>相对误差</strong>而非绝对误差：预测 15 万 vs 实际 16 万，和预测 30 万 vs 实际 31 万，惩罚相同（都是差约 6%）。</p>
+  <p>对数有一个好性质：<code>log(a) - log(b) = log(a/b)</code>。所以 <code>log(150000) - log(160000) = log(15/16) &asymp; -0.065</code>，<code>log(300000) - log(310000) = log(30/31) &asymp; -0.033</code>。对数空间的差值天然就是相对误差。</p>
+  <p>具体做法：训练前对标签取 <code>np.log</code>，让模型直接预测 log(价格)，损失函数用普通 MSE 即可：</p>
+<pre><code><span class="cm"># 标签取 log：200000 -> 12.2</span>
+train_labels = np.log(train_data.SalePrice)</code></pre>
+
+  <h3 style="margin:24px 0 12px; color:var(--fg)">损失函数：MSE（在 log 空间）</h3>
+  <p>竞赛用 RMSLE 评价：<code>sqrt( mean( (log ŷ - log y)² ) )</code>。如果把标签提前取 log，模型直接预测 log(价格)，那普通 MSE 就等价于 RMSLE：</p>
+<pre><code><span class="cm"># 标签已在 log 空间（见上方第56行的 np.log）</span>
+<span class="cm"># 模型输出也是 log 空间</span>
+<span class="cm"># MSE(pred, log_label) = (log ŷ - log y)²  ← 就是 RMSLE 的平方项</span>
+loss_fn = nn.MSELoss()
 
 <span class="kw">def</span> <span class="fn">log_rmse</span>(net, features, labels):
-    clipped_preds = torch.clamp(net(features), min=<span class="num">1.0</span>)
-    <span class="kw">return</span> torch.sqrt(loss_fn(
-        torch.log(clipped_preds),
-        torch.log(labels)
-    )).item()</code></pre>
+    <span class="cm"># sqrt(MSE) = RMSLE，不需要 clamp 和 log，因为标签已经在 log 空间</span>
+    <span class="kw">with</span> torch.no_grad():
+        <span class="kw">return</span> torch.sqrt(loss_fn(net(features), labels)).item()</code></pre>
 
   <div class="note">
-    <strong>为什么 <code>clamp(min=1.0)</code>？</strong>取 log 时，如果预测值是负数或零，log 会报错。clamp(1.0) 保证预测值至少为 1，避免数值问题。
+    <strong>为什么不直接在损失函数里取 log？</strong>如果标签保持原始价格（200000），在损失函数里对预测值取 log，模型初始输出接近 0，<code>log(0)</code> 会爆炸；用 <code>clamp(min=1.0)</code> 强制截断又会让梯度为 0。把标签提前取 log 是更干净的做法。
   </div>
 
   <h3 style="margin:12px 0; color:var(--fg)">训练循环</h3>
@@ -607,13 +617,17 @@ all_features[numeric_features] = all_features[numeric_features].fillna(<span cla
   <h3 style="margin:12px 0; color:var(--fg)">超参数选择</h3>
   <table>
     <tr><th>超参数</th><th>值</th><th>说明</th></tr>
-    <tr><td>学习率 (lr)</td><td>5</td><td>Adam 优化器的学习率。标准化后特征量级统一，可以用较大的学习率</td></tr>
+    <tr><td>学习率 (lr)</td><td>0.01</td><td>Adam 优化器的学习率。标签取 log 后值域约 11~13，学习率要相应调小</td></tr>
     <tr><td>批次大小 (batch_size)</td><td>64</td><td>每次更新用 64 个样本计算梯度</td></tr>
     <tr><td>训练轮数 (epochs)</td><td>100</td><td>遍历完整训练集 100 次</td></tr>
     <tr><td>优化器</td><td>Adam</td><td>自适应学习率，比 SGD 收敛更快</td></tr>
   </table>
 
-  <p>训练 100 轮后，最终 <code>train_log_rmse &asymp; 0.163</code>。</p>
+  <p>训练 100 轮后，最终 <code>train_log_rmse &asymp; 0.10</code>。</p>
+
+  <h3 style="margin:24px 0 12px; color:var(--fg)">预测时转回原始价格</h3>
+  <p>模型输出的是 log(价格)，比如 12.2。但 Kaggle 提交要的是真实价格，所以用 <code>exp</code> 转回去：<code>exp(12.2) &asymp; 200000</code>。</p>
+<pre><code>preds = torch.exp(net(test_features)).numpy()</code></pre>
 </div>
 
 <!-- ============================== Section 7 ============================== -->
@@ -676,7 +690,7 @@ n_train = train_data.shape[<span class="num">0</span>]
 train_features = torch.tensor(all_features[:n_train].values, dtype=torch.float32)
 test_features = torch.tensor(all_features[n_train:].values, dtype=torch.float32)
 train_labels = torch.tensor(
-    train_data.SalePrice.values.reshape(-<span class="num">1</span>, <span class="num">1</span>), dtype=torch.float32
+    np.log(train_data.SalePrice.values.reshape(-<span class="num">1</span>, <span class="num">1</span>)), dtype=torch.float32
 )
 
 print(f<span class="str">"特征维度: {train_features.shape[1]}"</span>)
@@ -695,18 +709,16 @@ net = nn.Sequential(nn.Linear(in_features, <span class="num">1</span>))
 <span class="cm"># =========================================</span>
 
 loss_fn = nn.MSELoss()
-trainer = torch.optim.Adam(net.parameters(), lr=<span class="num">5</span>)
+trainer = torch.optim.Adam(net.parameters(), lr=<span class="num">0.01</span>)
 
 
 <span class="cm"># =========================================</span>
-<span class="cm"># 5. 评估指标: log RMSE</span>
+<span class="cm"># 5. 评估指标: log RMSE (标签已在 log 空间，sqrt(MSE) = RMSLE)</span>
 <span class="cm"># =========================================</span>
 
 <span class="kw">def</span> <span class="fn">log_rmse</span>(net, features, labels):
     <span class="kw">with</span> torch.no_grad():
-        clipped_preds = torch.clamp(net(features), min=<span class="num">1.0</span>)
-        rmse = torch.sqrt(loss_fn(torch.log(clipped_preds), torch.log(labels)))
-    <span class="kw">return</span> rmse.item()
+        <span class="kw">return</span> torch.sqrt(loss_fn(net(features), labels)).item()
 
 
 <span class="cm"># =========================================</span>
@@ -763,7 +775,7 @@ epochs = <span class="num">100</span>
 <span class="cm"># =========================================</span>
 
 <span class="kw">with</span> torch.no_grad():
-    preds = net(test_features).numpy()
+    preds = torch.exp(net(test_features)).numpy()  <span class="cm"># log 空间 -> 原始价格</span>
 
 submission = pd.DataFrame({
     <span class="str">"Id"</span>: test_data[<span class="str">"Id"</span>],

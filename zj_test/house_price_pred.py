@@ -54,7 +54,7 @@ n_train = train_data.shape[0]
 train_features = torch.tensor(all_features[:n_train].values, dtype=torch.float32)
 test_features = torch.tensor(all_features[n_train:].values, dtype=torch.float32)
 train_labels = torch.tensor(
-    train_data.SalePrice.values.reshape(-1, 1), dtype=torch.float32
+    np.log(train_data.SalePrice.values.reshape(-1, 1)), dtype=torch.float32
 )
 
 print(f"特征维度: {train_features.shape[1]}")
@@ -76,18 +76,16 @@ net = nn.Sequential(
 # =========================================
 
 loss_fn = nn.MSELoss()
-trainer = torch.optim.Adam(net.parameters(), lr=5)
+trainer = torch.optim.Adam(net.parameters(), lr=0.01)
 
 
 # =========================================
-# 5. 评估指标: log RMSE
+# 5. 评估指标: log RMSE (标签已在 log 空间，直接算 MSE 的 sqrt 即 RMSLE)
 # =========================================
 
 def log_rmse(net, features, labels):
     with torch.no_grad():
-        clipped_preds = torch.clamp(net(features), min=1.0)
-        rmse = torch.sqrt(loss_fn(torch.log(clipped_preds), torch.log(labels)))
-    return rmse.item()
+        return torch.sqrt(loss_fn(net(features), labels)).item()
 
 
 # =========================================
@@ -144,7 +142,7 @@ for epoch in range(epochs):
 # =========================================
 
 with torch.no_grad():
-    preds = net(test_features).numpy()
+    preds = torch.exp(net(test_features)).numpy()  # log 空间 -> 原始价格
 
 submission = pd.DataFrame({
     "Id": test_data["Id"],

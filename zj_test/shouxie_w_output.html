@@ -270,12 +270,12 @@ function downsampleTo8x8() {
     const dx = CANVAS_SIZE / 2 - cx;
     const dy = CANVAS_SIZE / 2 - cy;
 
-    // 居中 + 高斯模糊
+    // 居中 + 轻微高斯模糊（只用于抗锯齿，不扩散笔画）
     const blurred = document.createElement('canvas');
     blurred.width = CANVAS_SIZE;
     blurred.height = CANVAS_SIZE;
     const bCtx = blurred.getContext('2d');
-    bCtx.filter = 'blur(10px)';
+    bCtx.filter = 'blur(4px)';
     bCtx.drawImage(canvas, dx, dy);
 
     // 降采样到 8x8（浏览器双线性插值）
@@ -289,10 +289,22 @@ function downsampleTo8x8() {
 
     // 读取灰阶像素值
     const smallData = sCtx.getImageData(0, 0, 8, 8);
-    const pixels = [];
+    const raw = [];
     for (let i = 0; i < 64; i++) {
-        pixels.push(smallData.data[i * 4] / 255);
+        raw.push(smallData.data[i * 4] / 255);
     }
+
+    // 对齐训练集特征：
+    // 1. 以最大值归一化，确保笔画中心达到 1.0（训练集中 ~18% 非零像素是满值）
+    // 2. 裁掉噪声（< 0.1 的极小值置 0，匹配训练集约 50% 零像素的稀疏性）
+    // 3. 对剩余值做 gamma 压缩（gamma < 1），使整体分布更接近训练集的均值 ~0.59
+    const maxVal = Math.max(...raw);
+    const pixels = raw.map(v => {
+        if (maxVal === 0) return 0;
+        const normalized = v / maxVal;
+        if (normalized < 0.1) return 0;               // 去噪：模拟训练集的稀疏性
+        return Math.pow(normalized, 0.6);              // gamma=0.6：提升中间值，贴近均值 0.59
+    });
     return pixels;
 }
 

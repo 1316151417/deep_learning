@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>卷积神经网络（CNN）与 LeNet - 教学报告</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 48px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section > p, .section > ul, .section > ol {
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code {
+    font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace;
+    color: var(--fg);
+  }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  .param { color: #ff7b72; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+
+  .note {
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(108,140,255,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .note strong { color: var(--accent); }
+  .warn {
+    border-left: 3px solid var(--orange);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(245,166,35,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .warn strong { color: var(--orange); }
+  .tip {
+    border-left: 3px solid var(--green);
+    padding: 16px 20px;
+    margin: 16px 0;
+    background: rgba(78,207,139,0.06);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .tip strong { color: var(--green); }
+
+  .flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .flow-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th {
+    background: var(--card);
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  .formula {
+    text-align: center;
+    padding: 24px;
+    margin: 16px 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 18px;
+    letter-spacing: 1px;
+  }
+  .formula .big { font-size: 22px; }
+
+  .dim { color: var(--orange); font-weight: 600; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0;
+  }
+  .summary-grid .item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    text-align: center;
+  }
+  .summary-grid .item .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .summary-grid .item .value {
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  p code, li code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 32px;
+    margin: 24px 0 48px;
+  }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a {
+    color: var(--fg);
+    text-decoration: none;
+    font-size: 15px;
+    transition: color 0.2s;
+  }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .shape-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .shape-box {
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.4;
+  }
+  .shape-box .dims { color: var(--orange); }
+  .shape-box .name { color: var(--muted); font-size: 11px; }
+  .shape-op {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .footer {
+    text-align: center;
+    padding: 40px 0 0;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="tag">卷积神经网络</div>
+  <h1>卷积神经网络（CNN）与 ModernCNN</h1>
+  <p>从 LeNet 到现代 CNN：理解卷积、池化与特征提取的完整流程</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 为什么需要卷积神经网络</span></li>
+    <li><a href="#s1">卷积层</a> <span class="desc">— 局部感受野与参数共享</span></li>
+    <li><a href="#s2">池化层</a> <span class="desc">— 降采样与平移不变性</span></li>
+    <li><a href="#s3">LeNet 架构</a> <span class="desc">— 经典 CNN 的结构与数据流</span></li>
+    <li><a href="#s4">ModernCNN 实现</a> <span class="desc">— PyTorch 完整代码逐行解析</span></li>
+    <li><a href="#s5">训练与测试</a> <span class="desc">— 超参数、优化器与评估</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— CNN vs 全连接网络</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：为什么需要卷积神经网络？</h2>
+
+  <p>全连接网络（MLP）处理图像时有两个致命问题：<strong>参数量爆炸</strong>和<strong>忽略空间结构</strong>。一张 28&times;28 的灰度图展平后有 784 个输入，第一个隐藏层若有 256 个神经元，仅第一层就需要 784&times;256 &asymp; 20 万个参数。</p>
+
+  <p>CNN 通过两个关键思想解决这些问题：</p>
+
+  <div class="card">
+    <p><strong>CNN 的两大支柱</strong></p>
+    <table>
+      <tr><th>机制</th><th>含义</th><th>效果</th></tr>
+      <tr>
+        <td><strong>局部感受野</strong></td>
+        <td>每个神经元只看输入的一个小区域（如 3&times;3）</td>
+        <td>大幅减少参数量</td>
+      </tr>
+      <tr>
+        <td><strong>参数共享</strong></td>
+        <td>同一个卷积核在整个输入上滑动，共享权重</td>
+        <td>参数量与输入尺寸无关</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>直观类比</strong></p>
+    <table>
+      <tr><th>类比</th><th>说明</th></tr>
+      <tr><td>人眼扫视</td><td>你看一张照片时，不会同时看所有像素，而是聚焦局部区域，逐步拼出全貌</td></tr>
+      <tr><td>特征检测器</td><td>每个卷积核就像一个"特征探测器"，专门检测某种模式（边缘、纹理、形状）</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>MLP vs CNN 的参数量对比：</strong> 对于 28&times;28 输入，MLP 第一层需要 ~20 万参数，而一个 3&times;3 卷积核只有 9 个参数。即使有 32 个卷积核，也才 288 个参数——少了近 1000 倍。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 卷积层 -->
+<!-- ============================================ -->
+
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 卷积层：局部特征提取</h2>
+
+  <p>卷积操作的核心：用一个小的<strong>卷积核</strong>（filter/kernel）在输入上滑动，每个位置做元素相乘再求和，生成一个输出值。</p>
+
+  <div class="formula">
+    <span class="big">output[i, j] = &Sigma; input[i+m, j+n] &times; kernel[m, n] + bias</span>
+  </div>
+
+  <div class="card">
+    <p><strong>3&times;3 卷积核的工作过程</strong></p>
+    <table>
+      <tr><th>输入区域 (3&times;3)</th><th>卷积核 (3&times;3)</th><th>输出</th></tr>
+      <tr><td>[1,2,3; 4,5,6; 7,8,9]</td><td>[1,0,-1; 1,0,-1; 1,0,-1]</td><td>(1-3)+(4-6)+(7-9) = -6</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      这个核检测<strong>垂直边缘</strong>：左边正值、右边负值，水平差异大的地方输出绝对值大。
+    </p>
+  </div>
+
+  <div class="card">
+    <p><strong>关键参数</strong></p>
+    <table>
+      <tr><th>参数</th><th>含义</th><th>本代码中的值</th></tr>
+      <tr><td><code>in_channels</code></td><td>输入通道数（灰度=1，RGB=3）</td><td>1 或 32 或 64</td></tr>
+      <tr><td><code>out_channels</code></td><td>卷积核个数，决定输出通道数</td><td>32 或 64</td></tr>
+      <tr><td><code>kernel_size</code></td><td>卷积核尺寸</td><td>3</td></tr>
+      <tr><td><code>padding</code></td><td>输入边缘填充的圈数</td><td>1</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>padding=1 的作用：</strong> 不加 padding 时，3&times;3 卷积会让输出比输入小 2 像素。加 padding=1（在边缘补一圈零）后，输出尺寸和输入相同，方便堆叠多层。
+  </div>
+
+  <div class="card">
+    <p><strong>输出尺寸公式</strong></p>
+    <div class="formula">
+      H_out = (H_in + 2&times;padding - kernel_size) / stride + 1
+    </div>
+    <p style="font-size:14px;color:var(--muted);text-align:center;margin-top:8px">
+      例：H_in=28, padding=1, kernel=3, stride=1 &rarr; H_out = (28+2-3)/1+1 = <span class="dim">28</span>（尺寸不变）
+    </p>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 池化层 -->
+<!-- ============================================ -->
+
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 池化层：降采样与不变性</h2>
+
+  <p>池化（Pooling）的作用是对特征图进行<strong>降采样</strong>，减少数据量的同时增强模型对微小位移的鲁棒性。</p>
+
+  <div class="card">
+    <p><strong>最大池化 (MaxPool2d) 工作过程</strong></p>
+    <table>
+      <tr><th>输入 (4&times;4)</th><th>2&times;2 最大池化</th><th>输出 (2&times;2)</th></tr>
+      <tr>
+        <td style="font-size:13px">[1, 3, 2, 4]<br>[5, 6, 1, 2]<br>[3, 2, 7, 8]<br>[1, 4, 3, 6]</td>
+        <td style="font-size:13px">每个 2&times;2 区域取最大值</td>
+        <td style="font-size:13px;color:var(--green)">[6, 4]<br>[4, 8]</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>池化层的作用</strong></p>
+    <table>
+      <tr><th>作用</th><th>说明</th></tr>
+      <tr><td><strong>降维</strong></td><td>2&times;2 池化将特征图尺寸减半，减少后续计算量</td></tr>
+      <tr><td><strong>平移不变性</strong></td><td>目标移动一两个像素，池化后的输出几乎不变</td></tr>
+      <tr><td><strong>扩大感受野</strong></td><td>后层神经元"看到"的输入区域更大，能捕捉更大范围的特征</td></tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    <strong>池化没有可学习参数：</strong> 池化层只做固定的取最大值（或求平均）操作，不参与梯度计算和参数更新。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. LeNet 架构 -->
+<!-- ============================================ -->
+
+<div class="section" id="s3">
+  <h2><span class="num">3</span> LeNet 架构：经典 CNN 的结构</h2>
+
+  <p>LeNet-5 由 Yann LeCun 在 1998 年提出，是 CNN 的开山之作。本代码实现了其现代简化版本。</p>
+
+  <div class="card">
+    <p><strong>ModernCNN 数据流（以 28&times;28 灰度图为例）</strong></p>
+    <div class="shape-diagram">
+      <div class="shape-box">
+        <div class="dims">1&times;28&times;28</div>
+        <div class="name">输入</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">32&times;28&times;28</div>
+        <div class="name">Conv+ReLU</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">32&times;28&times;28</div>
+        <div class="name">Conv+ReLU</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--accent2)">
+        <div class="dims">32&times;14&times;14</div>
+        <div class="name">MaxPool 2&times;2</div>
+      </div>
+    </div>
+    <div class="shape-diagram">
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">64&times;14&times;14</div>
+        <div class="name">Conv+ReLU</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--green)">
+        <div class="dims">64&times;14&times;14</div>
+        <div class="name">Conv+ReLU</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--accent2)">
+        <div class="dims">64&times;7&times;7</div>
+        <div class="name">MaxPool 2&times;2</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--purple)">
+        <div class="dims">3136</div>
+        <div class="name">展平</div>
+      </div>
+      <div class="shape-op">&rarr;</div>
+      <div class="shape-box" style="border-color:var(--orange)">
+        <div class="dims">128 &rarr; 10</div>
+        <div class="name">全连接</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>逐层参数统计</strong></p>
+    <table>
+      <tr><th>层</th><th>输出形状</th><th>参数量</th></tr>
+      <tr><td>Conv2d(1&rarr;32, 3&times;3)</td><td>32&times;28&times;28</td><td>32&times;(9+1) = <span class="dim">320</span></td></tr>
+      <tr><td>Conv2d(32&rarr;32, 3&times;3)</td><td>32&times;28&times;28</td><td>32&times;(32&times;9+1) = <span class="dim">9,248</span></td></tr>
+      <tr><td>MaxPool2d(2&times;2)</td><td>32&times;14&times;14</td><td>0</td></tr>
+      <tr><td>Conv2d(32&rarr;64, 3&times;3)</td><td>64&times;14&times;14</td><td>64&times;(32&times;9+1) = <span class="dim">18,496</span></td></tr>
+      <tr><td>Conv2d(64&rarr;64, 3&times;3)</td><td>64&times;14&times;14</td><td>64&times;(64&times;9+1) = <span class="dim">36,928</span></td></tr>
+      <tr><td>MaxPool2d(2&times;2)</td><td>64&times;7&times;7</td><td>0</td></tr>
+      <tr><td>Linear(3136&rarr;128)</td><td>128</td><td>3136&times;128+128 = <span class="dim">401,536</span></td></tr>
+      <tr><td>Linear(128&rarr;10)</td><td>10</td><td>128&times;10+10 = <span class="dim">1,290</span></td></tr>
+      <tr style="font-weight:700"><td>总计</td><td></td><td style="color:var(--green)">~467,818</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>为什么用两层 Conv 再池化？</strong> 两个 3&times;3 卷积的感受野等价于一个 5&times;5 卷积，但参数更少（2&times;9=18 vs 25），非线性更强（两次 ReLU）。这是 VGG 网络的核心思想。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. ModernCNN 实现 -->
+<!-- ============================================ -->
+
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ModernCNN 实现：PyTorch 代码逐行解析</h2>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">4.1 网络定义</h3>
+
+  <pre><code><span class="kw">class</span> <span class="fn">ModernCNN</span>(nn.Module):
+
+    <span class="kw">def</span> <span class="fn">__init__</span>(self):
+        <span class="fn">super</span>().__init__()
+
+        <span class="cm"># ===== 特征提取部分 =====</span>
+        self.features = nn.Sequential(
+            <span class="cm"># 第一个卷积块</span>
+            nn.Conv2d(<span class="num">1</span>, <span class="num">32</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>),  <span class="cm"># 1通道 &rarr; 32通道</span>
+            nn.ReLU(),
+
+            nn.Conv2d(<span class="num">32</span>, <span class="num">32</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>), <span class="cm"># 32通道 &rarr; 32通道</span>
+            nn.ReLU(),
+            nn.MaxPool2d(<span class="num">2</span>),                                <span class="cm"># 尺寸减半：28&rarr;14</span>
+
+            <span class="cm"># 第二个卷积块</span>
+            nn.Conv2d(<span class="num">32</span>, <span class="num">64</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>), <span class="cm"># 32通道 &rarr; 64通道</span>
+            nn.ReLU(),
+
+            nn.Conv2d(<span class="num">64</span>, <span class="num">64</span>, kernel_size=<span class="num">3</span>, padding=<span class="num">1</span>), <span class="cm"># 64通道 &rarr; 64通道</span>
+            nn.ReLU(),
+            nn.MaxPool2d(<span class="num">2</span>)                                 <span class="cm"># 尺寸减半：14&rarr;7</span>
+        )
+
+        <span class="cm"># ===== 分类器部分 =====</span>
+        self.classifier = nn.Sequential(
+            nn.Linear(<span class="num">64</span> * <span class="num">7</span> * <span class="num">7</span>, <span class="num">128</span>),  <span class="cm"># 3136 &rarr; 128</span>
+            nn.ReLU(),
+            nn.Linear(<span class="num">128</span>, <span class="num">10</span>)              <span class="cm"># 128 &rarr; 10（10个数字类别）</span>
+        )</code></pre>
+
+  <div class="card">
+    <p><strong>设计要点</strong></p>
+    <table>
+      <tr><th>设计</th><th>原因</th></tr>
+      <tr><td>features + classifier 分离</td><td>职责清晰：features 提取特征，classifier 做分类</td></tr>
+      <tr><td>通道数递增 1&rarr;32&rarr;64</td><td>浅层检测简单特征（边缘），深层检测复杂特征（形状）</td></tr>
+      <tr><td>两层 Conv 后接 MaxPool</td><td>充分提取特征后再降采样，避免信息过早丢失</td></tr>
+      <tr><td>最终 64&times;7&times;7 = 3136 维</td><td>两次 2&times;2 池化将 28 变为 7</td></tr>
+    </table>
+  </div>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">4.2 前向传播</h3>
+
+  <pre><code>    <span class="kw">def</span> <span class="fn">forward</span>(self, x):
+        x = self.features(x)          <span class="cm"># 特征提取：(B,1,28,28) &rarr; (B,64,7,7)</span>
+        x = x.view(x.size(<span class="num">0</span>), <span class="num">-1</span>)  <span class="cm"># 展平：(B,64,7,7) &rarr; (B,3136)</span>
+        x = self.classifier(x)        <span class="cm"># 分类：(B,3136) &rarr; (B,10)</span>
+        <span class="kw">return</span> x</code></pre>
+
+  <div class="tip">
+    <strong><code>x.view(x.size(0), -1)</code>：</strong> 保留 batch 维度，将剩余维度自动展平。-1 表示 PyTorch 自动计算该维度大小（64&times;7&times;7=3136）。这是 CNN 过渡到全连接层的标准操作。
+  </div>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">4.3 设备检测</h3>
+
+  <pre><code>DEVICE = torch.device(
+    <span class="str">"cuda"</span> <span class="kw">if</span> torch.cuda.is_available()
+    <span class="kw">else</span> <span class="str">"mps"</span> <span class="kw">if</span> torch.backends.mps.is_available()
+    <span class="kw">else</span> <span class="str">"cpu"</span>
+)</code></pre>
+
+  <div class="card">
+    <p><strong>三种设备优先级</strong></p>
+    <table>
+      <tr><th>设备</th><th>适用场景</th><th>速度</th></tr>
+      <tr><td>CUDA (NVIDIA GPU)</td><td>有 N 卡的 Windows/Linux 机器</td><td style="color:var(--green)">最快</td></tr>
+      <tr><td>MPS (Apple Silicon)</td><td>M1/M2/M3/M4 芯片的 Mac</td><td style="color:var(--orange)">较快</td></tr>
+      <tr><td>CPU</td><td>任何设备的保底方案</td><td style="color:var(--muted)">最慢</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 训练与测试 -->
+<!-- ============================================ -->
+
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 训练与测试</h2>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">5.1 数据准备</h3>
+
+  <pre><code>transform = transforms.Compose([
+    transforms.ToTensor(),                              <span class="cm"># 像素 [0,255] &rarr; [0,1]</span>
+    transforms.Normalize((<span class="num">0.1307</span>,), (<span class="num">0.3081</span>,))  <span class="cm"># 标准化：(x-0.1307)/0.3081</span>
+])</code></pre>
+
+  <div class="card">
+    <p><strong>MNIST 数据集的均值和标准差</strong></p>
+    <table>
+      <tr><th>统计量</th><th>值</th><th>作用</th></tr>
+      <tr><td>均值</td><td>0.1307</td><td>数据中心化，使均值为 0</td></tr>
+      <tr><td>标准差</td><td>0.3081</td><td>数据缩放，使方差为 1</td></tr>
+    </table>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      标准化后数据分布更稳定，梯度更新更平滑，训练收敛更快。
+    </p>
+  </div>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">5.2 超参数与优化器</h3>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">Batch Size</div>
+      <div class="value" style="color:var(--accent)">128</div>
+    </div>
+    <div class="item">
+      <div class="label">学习率</div>
+      <div class="value" style="color:var(--accent2)">0.01</div>
+    </div>
+    <div class="item">
+      <div class="label">Epochs</div>
+      <div class="value" style="color:var(--orange)">10</div>
+    </div>
+    <div class="item">
+      <div class="label">优化器</div>
+      <div class="value" style="color:var(--green)">SGD+Momentum</div>
+    </div>
+  </div>
+
+  <pre><code>optimizer = optim.SGD(
+    model.parameters(),
+    lr=<span class="num">0.01</span>,
+    momentum=<span class="num">0.9</span>   <span class="cm"># 动量：加速收敛，减少震荡</span>
+)</code></pre>
+
+  <div class="note">
+    <strong>Momentum 的作用：</strong> 想象球滚下山坡，动量让它保持之前的运动方向。在梯度方向一致的维度加速，在梯度方向变化的维度减速，从而更快收敛。
+  </div>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">5.3 训练循环</h3>
+
+  <pre><code><span class="kw">for</span> epoch <span class="kw">in</span> range(EPOCHS):
+
+    model.train()           <span class="cm"># 开启训练模式（影响 Dropout、BatchNorm 等）</span>
+    total_loss = <span class="num">0</span>
+
+    <span class="kw">for</span> images, labels <span class="kw">in</span> train_loader:
+
+        images = images.to(DEVICE)   <span class="cm"># 数据搬到 GPU/MPS</span>
+        labels = labels.to(DEVICE)
+
+        optimizer.zero_grad()        <span class="cm"># 清空上一步的梯度</span>
+
+        outputs = model(images)      <span class="cm"># 前向传播</span>
+
+        loss = criterion(outputs, labels)  <span class="cm"># 计算损失</span>
+        loss.backward()              <span class="cm"># 反向传播：计算梯度</span>
+        optimizer.step()             <span class="cm"># 更新参数</span>
+
+        total_loss += loss.item()
+
+    print(<span class="str">f"Epoch [{epoch+1}/{EPOCHS}] Loss: {total_loss / len(train_loader):.4f}"</span>)</code></pre>
+
+  <div class="card">
+    <p><strong>训练四步曲</strong></p>
+    <div class="flow">
+      <div class="flow-item">zero_grad()</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">forward</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">loss.backward()</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item">optimizer.step()</div>
+    </div>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      每个 batch 都重复这四步。<strong>为什么先 zero_grad？</strong> 因为 PyTorch 默认累加梯度，不清零会导致梯度越来越大。
+    </p>
+  </div>
+
+  <h3 style="margin: 20px 0 12px; color: var(--fg);">5.4 测试评估</h3>
+
+  <pre><code>model.eval()               <span class="cm"># 切换到评估模式</span>
+correct = <span class="num">0</span>
+total = <span class="num">0</span>
+
+<span class="kw">with</span> torch.no_grad():      <span class="cm"># 禁用梯度计算，节省内存和计算</span>
+    <span class="kw">for</span> images, labels <span class="kw">in</span> test_loader:
+        images = images.to(DEVICE)
+        labels = labels.to(DEVICE)
+
+        outputs = model(images)
+        _, predicted = torch.max(outputs, <span class="num">1</span>)  <span class="cm"># 取概率最大的类别</span>
+
+        total += labels.size(<span class="num">0</span>)
+        correct += (predicted == labels).sum().item()
+
+accuracy = <span class="num">100</span> * correct / total
+print(<span class="str">f"\nTest Accuracy: {accuracy:.2f}%"</span>)</code></pre>
+
+  <div class="tip">
+    <strong><code>torch.max(outputs, 1)</code>：</strong> 返回每行最大值及其索引。索引就是预测的类别（0-9），与真实标签比较即可计算准确率。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：CNN vs 全连接网络</h2>
+
+  <div class="card">
+    <p><strong>CNN vs MLP 对比</strong></p>
+    <table>
+      <tr><th></th><th>MLP（全连接）</th><th>CNN（卷积）</th></tr>
+      <tr>
+        <td><strong>参数量</strong></td>
+        <td style="color:var(--accent2)">784&times;256 = 200,704（仅第一层）</td>
+        <td style="color:var(--green)">~467,818（整个网络）</td>
+      </tr>
+      <tr>
+        <td><strong>空间结构</strong></td>
+        <td>丢失（展平为一维向量）</td>
+        <td>保留（二维特征图）</td>
+      </tr>
+      <tr>
+        <td><strong>特征提取</strong></td>
+        <td>全局混合，无层次</td>
+        <td>局部 &rarr; 全局，逐层抽象</td>
+      </tr>
+      <tr>
+        <td><strong>平移不变性</strong></td>
+        <td>无</td>
+        <td>有（池化层提供）</td>
+      </tr>
+      <tr>
+        <td><strong>适用场景</strong></td>
+        <td>表格数据、简单任务</td>
+        <td>图像、视频、空间数据</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>CNN 核心组件总结</strong></p>
+    <table>
+      <tr><th>组件</th><th>作用</th><th>关键参数</th></tr>
+      <tr><td><strong>Conv2d</strong></td><td>局部特征提取</td><td>kernel_size, padding, stride</td></tr>
+      <tr><td><strong>ReLU</strong></td><td>引入非线性</td><td>无参数</td></tr>
+      <tr><td><strong>MaxPool2d</strong></td><td>降采样、扩大感受野</td><td>pool_size (通常 2&times;2)</td></tr>
+      <tr><td><strong>Linear</strong></td><td>最终分类</td><td>输入/输出维度</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>CNN 的"积木式"搭建</strong></p>
+    <div class="flow">
+      <div class="flow-item" style="border-color:var(--green)">[Conv+ReLU] &times; N</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item" style="border-color:var(--accent2)">MaxPool</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item" style="border-color:var(--green)">[Conv+ReLU] &times; M</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item" style="border-color:var(--accent2)">MaxPool</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-item" style="border-color:var(--orange)">Flatten + Linear</div>
+    </div>
+    <p style="margin-top:12px;font-size:14px;color:var(--muted)">
+      这就是几乎所有现代 CNN（VGG、ResNet、EfficientNet）的基本骨架，区别只在于怎么堆叠和连接这些积木。
+    </p>
+  </div>
+
+  <div class="note">
+    <strong>下一步学什么？</strong>
+    <ul style="margin-top:8px;padding-left:20px">
+      <li>VGG / ResNet — 更深的网络与残差连接</li>
+      <li>Batch Normalization — 加速训练，稳定梯度</li>
+      <li>数据增强 — 旋转、翻转、裁剪，增加训练样本多样性</li>
+      <li>迁移学习 — 用预训练模型（如 ResNet）做特征提取</li>
+    </ul>
+  </div>
+</div>
+
+<div class="footer">
+  基于 08_lenet_modern.py 生成 &middot; 卷积神经网络（CNN）与 ModernCNN
+</div>
+
+</div>
+</body>
+</html>

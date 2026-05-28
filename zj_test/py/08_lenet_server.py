@@ -24,9 +24,15 @@ from PIL import Image, ImageOps
 # ============================
 # 配置
 # ============================
-MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "08_lenet_model.pth")
+MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "08_lenet_model.pth")
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 HOST, PORT = "localhost", 8000
+
+DEVICE = torch.device(
+    "cuda" if torch.cuda.is_available()
+    else "mps" if torch.backends.mps.is_available()
+    else "cpu"
+)
 
 # ============================
 # 模型定义（和 08_lenet_modern.py 一致）
@@ -61,13 +67,7 @@ class ModernCNN(nn.Module):
 
 def train_and_save():
     print("未找到模型，开始训练...")
-
-    device = torch.device(
-        "cuda" if torch.cuda.is_available()
-        else "mps" if torch.backends.mps.is_available()
-        else "cpu"
-    )
-    print(f"  设备: {device}")
+    print(f"  设备: {DEVICE}")
 
     transform = transforms.Compose([
         transforms.ToTensor(),
@@ -79,7 +79,7 @@ def train_and_save():
     )
     loader = DataLoader(dataset, batch_size=128, shuffle=True)
 
-    model = ModernCNN().to(device)
+    model = ModernCNN().to(DEVICE)
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     criterion = nn.CrossEntropyLoss()
 
@@ -87,7 +87,7 @@ def train_and_save():
         model.train()
         total_loss = 0
         for images, labels in loader:
-            images, labels = images.to(device), labels.to(device)
+            images, labels = images.to(DEVICE), labels.to(DEVICE)
             optimizer.zero_grad()
             loss = criterion(model(images), labels)
             loss.backward()
@@ -169,7 +169,7 @@ class Handler(BaseHTTPRequestHandler):
             result = {"digit": -1, "confidence": 0, "probs": [0] * 10}
         else:
             with torch.no_grad():
-                output = model(tensor)
+                output = model(tensor.to(DEVICE))
                 probs = torch.softmax(output, dim=1)[0].tolist()
                 digit = int(max(range(10), key=lambda i: probs[i]))
             result = {
@@ -208,10 +208,10 @@ if __name__ == "__main__":
     model = ModernCNN()
     if os.path.exists(MODEL_PATH):
         print(f"加载模型: {MODEL_PATH}")
-        model.load_state_dict(torch.load(MODEL_PATH, map_location="cpu", weights_only=True))
+        model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE, weights_only=True))
     else:
         model = train_and_save()
-    model.eval().to("cpu")
+    model.eval().to(DEVICE)
 
     print(f"\n服务已启动: http://{HOST}:{PORT}")
     print("请用浏览器打开 08_digit_recognizer.html 开始手写识别\n")

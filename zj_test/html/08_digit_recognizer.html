@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手写数字识别 - MNIST CNN</title>
+<style>
+body {
+    font-family: -apple-system, sans-serif;
+    max-width: 600px;
+    margin: 40px auto;
+    text-align: center;
+    background: #f5f5f5;
+}
+h2 { color: #333; }
+canvas {
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    cursor: crosshair;
+    background: #fff;
+    touch-action: none;
+}
+.buttons { margin: 16px 0; }
+button {
+    padding: 10px 28px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin: 0 6px;
+}
+.btn-clear { background: #eee; color: #333; }
+.btn-recog { background: #4a90d9; color: #fff; }
+.btn-recog:hover { background: #3a7bc8; }
+#result {
+    font-size: 32px;
+    font-weight: bold;
+    color: #333;
+    min-height: 48px;
+    margin: 12px 0;
+}
+/* 概率分布条形图 */
+.bar-row {
+    display: flex;
+    align-items: center;
+    margin: 3px 0;
+    font-size: 14px;
+}
+.bar-label { width: 24px; text-align: right; margin-right: 8px; color: #666; }
+.bar-track { flex: 1; background: #e8e8e8; border-radius: 3px; height: 18px; }
+.bar-fill { height: 100%; border-radius: 3px; background: #4a90d9; transition: width 0.3s; }
+.bar-fill.top { background: #e74c3c; }
+.bar-pct { width: 52px; text-align: right; margin-left: 8px; color: #666; }
+#probs { max-width: 360px; margin: 0 auto; }
+.hint { color: #999; font-size: 13px; margin-top: 20px; }
+</style>
+</head>
+<body>
+
+<h2>手写数字识别</h2>
+<p>在下方画板写一个数字（0-9），点击识别</p>
+
+<canvas id="canvas" width="280" height="280"></canvas>
+
+<div class="buttons">
+    <button class="btn-clear" onclick="clearCanvas()">清除</button>
+    <button class="btn-recog" onclick="recognize()">识别</button>
+</div>
+
+<div id="result"></div>
+<div id="probs"></div>
+
+<p class="hint">
+    模型: ModernCNN (4 层 Conv + 2 层 FC)<br>
+    数据集: MNIST | 框架: PyTorch
+</p>
+
+<script>
+// ============================
+// 画板
+// ============================
+var canvas = document.getElementById('canvas');
+var ctx = canvas.getContext('2d');
+
+// 初始化白色背景
+ctx.fillStyle = '#fff';
+ctx.fillRect(0, 0, 280, 280);
+
+// 画笔设置
+ctx.lineWidth = 16;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+ctx.strokeStyle = '#000';
+
+var drawing = false;
+var lastX, lastY;
+
+function getPos(e) {
+    var rect = canvas.getBoundingClientRect();
+    var scaleX = canvas.width / rect.width;
+    var scaleY = canvas.height / rect.height;
+    if (e.touches) {
+        return {
+            x: (e.touches[0].clientX - rect.left) * scaleX,
+            y: (e.touches[0].clientY - rect.top) * scaleY
+        };
+    }
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+    var pos = getPos(e);
+    lastX = pos.x;
+    lastY = pos.y;
+    // 画一个点（处理单击不拖动的情况）
+    ctx.beginPath();
+    ctx.arc(lastX, lastY, ctx.lineWidth / 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#000';
+    ctx.fill();
+}
+
+function moveDraw(e) {
+    e.preventDefault();
+    if (!drawing) return;
+    var pos = getPos(e);
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+    lastX = pos.x;
+    lastY = pos.y;
+}
+
+function stopDraw() { drawing = false; }
+
+// 鼠标事件
+canvas.addEventListener('mousedown', startDraw);
+canvas.addEventListener('mousemove', moveDraw);
+canvas.addEventListener('mouseup', stopDraw);
+canvas.addEventListener('mouseleave', stopDraw);
+
+// 触摸事件
+canvas.addEventListener('touchstart', startDraw);
+canvas.addEventListener('touchmove', moveDraw);
+canvas.addEventListener('touchend', stopDraw);
+
+// ============================
+// 清除画板
+// ============================
+function clearCanvas() {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, 280, 280);
+    ctx.strokeStyle = '#000';
+    document.getElementById('result').textContent = '';
+    renderProbs([0,0,0,0,0,0,0,0,0,0]);
+}
+
+// ============================
+// 识别
+// ============================
+function recognize() {
+    var dataURL = canvas.toDataURL('image/png');
+
+    document.getElementById('result').textContent = '识别中...';
+
+    fetch('http://localhost:8000/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataURL })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.digit < 0) {
+            document.getElementById('result').textContent = '请先写一个数字';
+            return;
+        }
+        var pct = (data.confidence * 100).toFixed(1);
+        document.getElementById('result').textContent =
+            '识别结果: ' + data.digit + '  (' + pct + '%)';
+        document.getElementById('result').style.color = '#e74c3c';
+        renderProbs(data.probs);
+    })
+    .catch(function() {
+        document.getElementById('result').textContent = '服务连接失败，请确认 server.py 已启动';
+        document.getElementById('result').style.color = '#999';
+    });
+}
+
+// ============================
+// 概率分布可视化
+// ============================
+function renderProbs(probs) {
+    var maxIdx = 0;
+    for (var i = 1; i < 10; i++) {
+        if (probs[i] > probs[maxIdx]) maxIdx = i;
+    }
+
+    var html = '';
+    for (var i = 0; i < 10; i++) {
+        var pct = (probs[i] * 100).toFixed(1);
+        var isTop = (i === maxIdx);
+        html += '<div class="bar-row">' +
+            '<span class="bar-label">' + i + '</span>' +
+            '<div class="bar-track">' +
+            '<div class="bar-fill' + (isTop ? ' top' : '') +
+            '" style="width:' + pct + '%"></div></div>' +
+            '<span class="bar-pct">' + pct + '%</span></div>';
+    }
+    document.getElementById('probs').innerHTML = html;
+}
+
+// 初始化概率图
+renderProbs([0,0,0,0,0,0,0,0,0,0]);
+</script>
+</body>
+</html>

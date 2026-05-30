@@ -78,26 +78,26 @@ class LeNet5(nn.Module):
         self.features = nn.Sequential(
             # C1: 1x32x32 -> 6x28x28
             nn.Conv2d(1, 6, kernel_size=5),
-            nn.Tanh(),
+            nn.Sigmoid(),
 
             # S2: 6x28x28 -> 6x14x14
             nn.AvgPool2d(kernel_size=2, stride=2),
 
             # C3: 6x14x14 -> 16x10x10
             nn.Conv2d(6, 16, kernel_size=5),
-            nn.Tanh(),
+            nn.Sigmoid(),
 
             # S4: 16x10x10 -> 16x5x5
             nn.AvgPool2d(kernel_size=2, stride=2),
 
             # C5: 16x5x5 -> 120x1x1
             nn.Conv2d(16, 120, kernel_size=5),
-            nn.Tanh()
+            nn.Sigmoid()
         )
 
         self.classifier = nn.Sequential(
             nn.Linear(120, 84),
-            nn.Tanh(),
+            nn.Sigmoid(),
 
             nn.Linear(84, 10)
         )

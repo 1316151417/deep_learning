@@ -1,5 +1,5 @@
 """
-AlexNet - 在 Fashion-MNIST 上训练和测试
+AlexNet - 在 MNIST 上训练和测试
 基于 d2l 教材实现,参照原始 AlexNet (Krizhevsky et al., 2012) 设计
 """
 import torch
@@ -17,7 +17,7 @@ print(f"使用设备: {device}")
 
 # ──────────────────────────────────────────────────────
 # AlexNet 模型定义
-# 原始输入: 1×224×224, 这里适配 Fashion-MNIST (28×28 resize 到 224×224)
+# 原始输入: 1×224×224, 这里适配 MNIST (28×28 resize 到 224×224)
 # ──────────────────────────────────────────────────────
 class AlexNet(nn.Module):
     def __init__(self):
@@ -60,7 +60,7 @@ class AlexNet(nn.Module):
 
 
 # ──────────────────────────────────────────────────────
-# 数据加载: Fashion-MNIST, resize 到 224×224 以适配 AlexNet
+# 数据加载: MNIST, resize 到 224×224 以适配 AlexNet
 # ──────────────────────────────────────────────────────
 transform = transforms.Compose([
     transforms.Resize(224),
@@ -68,17 +68,16 @@ transform = transforms.Compose([
     transforms.Normalize((0.5,), (0.5,)),
 ])
 
-train_dataset = datasets.FashionMNIST(
+train_dataset = datasets.MNIST(
     root='./data', train=True, download=True, transform=transform)
-test_dataset = datasets.FashionMNIST(
+test_dataset = datasets.MNIST(
     root='./data', train=False, download=True, transform=transform)
 
 train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False)
 
-# Fashion-MNIST 类别名
-classes = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
-           'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+# MNIST 类别名
+classes = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 
 # ──────────────────────────────────────────────────────

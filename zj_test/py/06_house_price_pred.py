@@ -15,7 +15,7 @@ torch.manual_seed(42)
 # 1. 加载数据
 # =========================================
 
-DATA_DIR = "zj_test/kaggle/input/house-prices-advanced-regression-techniques"
+DATA_DIR = "data/house-prices"
 
 train_data = pd.read_csv(f"{DATA_DIR}/train.csv")
 test_data = pd.read_csv(f"{DATA_DIR}/test.csv")
@@ -148,6 +148,6 @@ submission = pd.DataFrame({
     "Id": test_data["Id"],
     "SalePrice": preds.reshape(-1),
 })
-submission.to_csv("zj_test/kaggle/submission.csv", index=False)
+submission.to_csv("data/house-prices/submission.csv", index=False)
 
-print("\n提交文件已保存到 zj_test/kaggle/submission.csv")
+print("\n提交文件已保存到 data/house-prices/submission.csv")

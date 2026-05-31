@@ -9,6 +9,9 @@ dependencies = [
     "matplotlib>=3.10.9",
     "pandas>=3.0.2",
     "scikit-learn>=1.8.0",
-    "torch>=2.11.0",
-    "torchvision>=0.26.0",
+    "torch>=2.6.0",
+    "torchvision>=0.21.0",
 ]
+
+[tool.uv]
+extra-index-url = ["https://download.pytorch.org/whl/cu124"]

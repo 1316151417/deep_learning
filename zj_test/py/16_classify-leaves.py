@@ -29,9 +29,8 @@ from torchvision import transforms
 # ──────────────────────────────────────────────────────
 # 设备检测
 # ──────────────────────────────────────────────────────
-device = torch.device("mps" if torch.backends.mps.is_available() else
-                       "cuda" if torch.cuda.is_available() else "cpu")
-print(f"使用设备: {device}")
+device = torch.device("cuda" if torch.cuda.is_available() else
+                       "mps" if torch.backends.mps.is_available() else "cpu")
 
 
 # ──────────────────────────────────────────────────────
@@ -41,7 +40,6 @@ DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__
 TRAIN_CSV = os.path.join(DATA_DIR, 'train.csv')
 TEST_CSV = os.path.join(DATA_DIR, 'test.csv')
 IMG_DIR = DATA_DIR  # images/ 目录在 DATA_DIR 下
-print(f"数据路径: {DATA_DIR}")
 
 
 # ──────────────────────────────────────────────────────
@@ -104,25 +102,14 @@ val_transform = transforms.Compose([
 
 
 # ──────────────────────────────────────────────────────
-# 构建数据集和数据加载器
+# 超参数
 # ──────────────────────────────────────────────────────
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 
-# 先用完整训练集建立 label2idx 映射
-full_dataset = LeafDataset(TRAIN_CSV, IMG_DIR, transform=train_transform)
-label2idx = full_dataset.label2idx
-idx2label = {v: k for k, v in label2idx.items()}
-num_classes = len(label2idx)
-print(f"类别数: {num_classes}")
 
-# 按 8:2 划分训练集和验证集
-total_len = len(full_dataset)
-train_len = int(total_len * 0.8)
-val_len = total_len - train_len
-train_dataset, val_dataset = torch.utils.data.random_split(
-    full_dataset, [train_len, val_len])
-
-# 验证集使用 val_transform (通过 wrapper)
+# ──────────────────────────────────────────────────────
+# 验证集 wrapper (类定义可留在模块级)
+# ──────────────────────────────────────────────────────
 class TransformSubset(Dataset):
     """带独立 transform 的子集"""
     def __init__(self, subset, transform):
@@ -134,26 +121,7 @@ class TransformSubset(Dataset):
 
     def __getitem__(self, idx):
         image, label = self.subset[idx]
-        # image 已经过 train_transform, 重新用 PIL 处理会丢失信息
-        # 直接使用已有的 tensor
         return image, label
-
-# 由于 random_split 后无法重新应用 transform, 我们直接用 train_transform
-# 在验证时效果差别不大
-PIN = device.type == 'cuda'
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
-                          shuffle=True, num_workers=0, pin_memory=PIN)
-val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
-                        shuffle=False, num_workers=0, pin_memory=PIN)
-
-# 测试集
-test_dataset = LeafDataset(TEST_CSV, IMG_DIR, label2idx=label2idx,
-                           transform=val_transform)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
-                         shuffle=False, num_workers=0, pin_memory=PIN)
-
-print(f"训练集: {train_len}, 验证集: {val_len}, 测试集: {len(test_dataset)}")
 
 
 # ══════════════════════════════════════════════════════
@@ -345,19 +313,28 @@ class DenseNet(nn.Module):
 #  训练与评估
 # ══════════════════════════════════════════════════════
 
-def train_epoch(model, loader, criterion, optimizer, scheduler, device):
+def train_epoch(model, loader, criterion, optimizer, scheduler, device, scaler=None):
     model.train()
     running_loss = 0.0
     correct = 0
     total = 0
+    use_amp = scaler is not None
 
     for batch_idx, (data, target) in enumerate(loader):
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
-        output = model(data)
-        loss = criterion(output, target)
-        loss.backward()
-        optimizer.step()
+
+        with torch.amp.autocast(device_type=device.type, enabled=use_amp):
+            output = model(data)
+            loss = criterion(output, target)
+
+        if use_amp:
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            loss.backward()
+            optimizer.step()
 
         running_loss += loss.item() * data.size(0)
         _, predicted = output.max(1)
@@ -379,12 +356,14 @@ def evaluate(model, loader, criterion, device):
     running_loss = 0.0
     correct = 0
     total = 0
+    use_amp = device.type == 'cuda'
 
     with torch.no_grad():
         for data, target in loader:
             data, target = data.to(device), target.to(device)
-            output = model(data)
-            loss = criterion(output, target)
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp):
+                output = model(data)
+                loss = criterion(output, target)
 
             running_loss += loss.item() * data.size(0)
             _, predicted = output.max(1)
@@ -423,6 +402,12 @@ def train_and_evaluate(model_name, model, train_loader, val_loader, test_loader,
     optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs)
 
+    # AMP 混合精度 (仅 CUDA)
+    use_amp = device.type == 'cuda'
+    scaler = torch.amp.GradScaler(device.type) if use_amp else None
+    if use_amp:
+        print("  ✓ 启用 AMP 混合精度训练 (FP16)")
+
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"参数量: {total_params:,} (可训练: {trainable_params:,})")
@@ -435,7 +420,7 @@ def train_and_evaluate(model_name, model, train_loader, val_loader, test_loader,
     for epoch in range(1, num_epochs + 1):
         start_time = time.time()
         train_loss, train_acc = train_epoch(
-            model, train_loader, criterion, optimizer, scheduler, device)
+            model, train_loader, criterion, optimizer, scheduler, device, scaler)
         val_loss, val_acc = evaluate(
             model, val_loader, criterion, device)
         elapsed = time.time() - start_time
@@ -478,6 +463,38 @@ def train_and_evaluate(model_name, model, train_loader, val_loader, test_loader,
 # ══════════════════════════════════════════════════════
 
 if __name__ == "__main__":
+    # ── 构建数据集和数据加载器 ──
+    print(f"使用设备: {device}")
+    print(f"数据路径: {DATA_DIR}")
+
+    full_dataset = LeafDataset(TRAIN_CSV, IMG_DIR, transform=train_transform)
+    label2idx = full_dataset.label2idx
+    idx2label = {v: k for k, v in label2idx.items()}
+    num_classes = len(label2idx)
+    print(f"类别数: {num_classes}")
+
+    # 按 8:2 划分训练集和验证集
+    total_len = len(full_dataset)
+    train_len = int(total_len * 0.8)
+    val_len = total_len - train_len
+    train_dataset, val_dataset = torch.utils.data.random_split(
+        full_dataset, [train_len, val_len])
+
+    PIN = device.type == 'cuda'
+    NUM_WORKERS = 4 if device.type == 'cuda' else 0
+
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
+                              shuffle=True, num_workers=NUM_WORKERS, pin_memory=PIN)
+    val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
+                            shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN)
+
+    test_dataset = LeafDataset(TEST_CSV, IMG_DIR, label2idx=label2idx,
+                               transform=val_transform)
+    test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
+                             shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN)
+
+    print(f"训练集: {train_len}, 验证集: {val_len}, 测试集: {len(test_dataset)}")
+
     NUM_EPOCHS = 20
     LR = 1e-3
 

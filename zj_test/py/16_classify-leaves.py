@@ -2,8 +2,7 @@
 Classify Leaves - Kaggle 叶子分类竞赛
 使用 ResNet-18 和 DenseNet-121 进行 176 类叶子物种分类并对比结果
 
-数据下载: kaggle competitions download -c classify-leaves
-数据格式:
+数据路径: data/classify-leaves/
   - train.csv: [label, filename]  训练集标签
   - test.csv:  [filename]         测试集
   - images/    叶子图片 (RGB JPG)
@@ -15,9 +14,7 @@ Classify Leaves - Kaggle 叶子分类竞赛
 两者均为原始论文中最轻量的变体, 保持完整架构深度不变
 """
 import os
-import subprocess
 import time
-import zipfile
 import numpy as np
 import pandas as pd
 from PIL import Image
@@ -38,31 +35,13 @@ print(f"使用设备: {device}")
 
 
 # ──────────────────────────────────────────────────────
-# 数据下载与路径
+# 数据路径
 # ──────────────────────────────────────────────────────
-data_path = os.path.join(os.path.dirname(__file__), 'data', 'classify-leaves')
-os.makedirs(data_path, exist_ok=True)
-
-train_csv = os.path.join(data_path, 'train.csv')
-if not os.path.exists(train_csv):
-    print("正在下载 Kaggle 竞赛数据...")
-    subprocess.run([
-        'kaggle', 'competitions', 'download',
-        '-c', 'classify-leaves', '-p', data_path
-    ], check=True)
-    # 解压所有 zip 文件
-    for f in os.listdir(data_path):
-        if f.endswith('.zip'):
-            with zipfile.ZipFile(os.path.join(data_path, f), 'r') as z:
-                z.extractall(data_path)
-            os.remove(os.path.join(data_path, f))
-    print(f"数据下载完成: {data_path}")
-else:
-    print(f"数据已存在: {data_path}")
-
-TRAIN_CSV = train_csv
-TEST_CSV = os.path.join(data_path, 'test.csv')
-IMG_DIR = data_path  # images/ 目录在 data_path 下
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'classify-leaves')
+TRAIN_CSV = os.path.join(DATA_DIR, 'train.csv')
+TEST_CSV = os.path.join(DATA_DIR, 'test.csv')
+IMG_DIR = DATA_DIR  # images/ 目录在 DATA_DIR 下
+print(f"数据路径: {DATA_DIR}")
 
 
 # ──────────────────────────────────────────────────────

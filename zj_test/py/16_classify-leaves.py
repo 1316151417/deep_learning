@@ -49,33 +49,38 @@ class LeafDataset(Dataset):
     """叶子分类数据集"""
 
     def __init__(self, csv_file, img_dir, label2idx=None, transform=None):
-        self.df = pd.read_csv(csv_file)
+        df = pd.read_csv(csv_file)
         self.img_dir = img_dir
         self.transform = transform
-        self.has_label = 'label' in self.df.columns
+        self.has_label = 'label' in df.columns
 
         if self.has_label and label2idx is None:
-            labels = sorted(self.df['label'].unique())
+            labels = sorted(df['label'].unique())
             self.label2idx = {label: idx for idx, label in enumerate(labels)}
         else:
             self.label2idx = label2idx
 
+        # 预转换为 Python list，避免 __getitem__ 中的 pandas 开销
+        self.images = df['image'].tolist()
+        if self.has_label:
+            self.labels = [self.label2idx[l] for l in df['label']]
+        else:
+            self.labels = None
+
     def __len__(self):
-        return len(self.df)
+        return len(self.images)
 
     def __getitem__(self, idx):
-        row = self.df.iloc[idx]
-        img_path = os.path.join(self.img_dir, row['image'])
+        img_path = os.path.join(self.img_dir, self.images[idx])
         image = Image.open(img_path).convert('RGB')
 
         if self.transform:
             image = self.transform(image)
 
         if self.has_label:
-            label = self.label2idx[row['label']]
-            return image, label
+            return image, self.labels[idx]
         else:
-            return image, row['image']
+            return image, self.images[idx]
 
 
 # ──────────────────────────────────────────────────────
@@ -84,11 +89,8 @@ class LeafDataset(Dataset):
 IMG_SIZE = 224
 
 train_transform = transforms.Compose([
-    transforms.RandomResizedCrop(IMG_SIZE, scale=(0.7, 1.0)),
+    transforms.RandomResizedCrop(IMG_SIZE, scale=(0.8, 1.0)),
     transforms.RandomHorizontalFlip(),
-    transforms.RandomVerticalFlip(),
-    transforms.RandomRotation(20),
-    transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
 ])
@@ -121,6 +123,8 @@ class TransformSubset(Dataset):
 
     def __getitem__(self, idx):
         image, label = self.subset[idx]
+        if self.transform:
+            image = self.transform(image)
         return image, label
 
 
@@ -467,7 +471,7 @@ if __name__ == "__main__":
     print(f"使用设备: {device}")
     print(f"数据路径: {DATA_DIR}")
 
-    full_dataset = LeafDataset(TRAIN_CSV, IMG_DIR, transform=train_transform)
+    full_dataset = LeafDataset(TRAIN_CSV, IMG_DIR)
     label2idx = full_dataset.label2idx
     idx2label = {v: k for k, v in label2idx.items()}
     num_classes = len(label2idx)
@@ -477,21 +481,33 @@ if __name__ == "__main__":
     total_len = len(full_dataset)
     train_len = int(total_len * 0.8)
     val_len = total_len - train_len
-    train_dataset, val_dataset = torch.utils.data.random_split(
+    train_subset, val_subset = torch.utils.data.random_split(
         full_dataset, [train_len, val_len])
 
+    # 分别应用训练/验证 transform
+    train_dataset = TransformSubset(train_subset, train_transform)
+    val_dataset = TransformSubset(val_subset, val_transform)
+
     PIN = device.type == 'cuda'
-    NUM_WORKERS = 4 if device.type == 'cuda' else 0
+    NUM_WORKERS = min(os.cpu_count() or 4, 12)
+    if device.type != 'cuda':
+        NUM_WORKERS = 0
 
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
-                              shuffle=True, num_workers=NUM_WORKERS, pin_memory=PIN)
+                              shuffle=True, num_workers=NUM_WORKERS,
+                              pin_memory=PIN, persistent_workers=NUM_WORKERS > 0,
+                              prefetch_factor=4 if NUM_WORKERS > 0 else None)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
-                            shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN)
+                            shuffle=False, num_workers=NUM_WORKERS,
+                            pin_memory=PIN, persistent_workers=NUM_WORKERS > 0,
+                            prefetch_factor=4 if NUM_WORKERS > 0 else None)
 
     test_dataset = LeafDataset(TEST_CSV, IMG_DIR, label2idx=label2idx,
                                transform=val_transform)
     test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
-                             shuffle=False, num_workers=NUM_WORKERS, pin_memory=PIN)
+                             shuffle=False, num_workers=NUM_WORKERS,
+                             pin_memory=PIN, persistent_workers=NUM_WORKERS > 0,
+                             prefetch_factor=4 if NUM_WORKERS > 0 else None)
 
     print(f"训练集: {train_len}, 验证集: {val_len}, 测试集: {len(test_dataset)}")
 

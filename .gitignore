@@ -16,5 +16,9 @@ wheels/
 # macOS
 .DS_Store
 
+# uv lock file (platform-specific)
+uv.lock
+
 # data/
 data/
+*.pth

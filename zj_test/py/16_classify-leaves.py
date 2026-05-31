@@ -67,7 +67,7 @@ class LeafDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.df.iloc[idx]
-        img_path = os.path.join(self.img_dir, row['filename'])
+        img_path = os.path.join(self.img_dir, row['image'])
         image = Image.open(img_path).convert('RGB')
 
         if self.transform:
@@ -77,7 +77,7 @@ class LeafDataset(Dataset):
             label = self.label2idx[row['label']]
             return image, label
         else:
-            return image, row['filename']
+            return image, row['image']
 
 
 # ──────────────────────────────────────────────────────
@@ -140,16 +140,18 @@ class TransformSubset(Dataset):
 
 # 由于 random_split 后无法重新应用 transform, 我们直接用 train_transform
 # 在验证时效果差别不大
+PIN = device.type == 'cuda'
+
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE,
-                          shuffle=True, num_workers=0, pin_memory=True)
+                          shuffle=True, num_workers=0, pin_memory=PIN)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE,
-                        shuffle=False, num_workers=0, pin_memory=True)
+                        shuffle=False, num_workers=0, pin_memory=PIN)
 
 # 测试集
 test_dataset = LeafDataset(TEST_CSV, IMG_DIR, label2idx=label2idx,
                            transform=val_transform)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE,
-                         shuffle=False, num_workers=0, pin_memory=True)
+                         shuffle=False, num_workers=0, pin_memory=PIN)
 
 print(f"训练集: {train_len}, 验证集: {val_len}, 测试集: {len(test_dataset)}")
 

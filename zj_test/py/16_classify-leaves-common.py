@@ -276,7 +276,7 @@ def build_loaders():
     val_dataset = TransformSubset(val_subset, val_transform)
 
     PIN = device.type == 'cuda'
-    NUM_WORKERS = min(os.cpu_count() or 4, 12)
+    NUM_WORKERS = 0 if os.name == 'nt' else min(os.cpu_count() or 4, 12)
     if device.type != 'cuda':
         NUM_WORKERS = 0
 

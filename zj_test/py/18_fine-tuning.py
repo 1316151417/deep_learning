@@ -5,7 +5,7 @@ https://zh-v2.d2l.ai/chapter_computer-vision/fine-tuning.html
 演示内容:
 1. 下载热狗识别数据集，可视化样本
 2. 使用 torchvision 预训练 ResNet-18 微调 (输出层用 10× 学习率)
-3. 对比: 微调 vs 从头训练 vs 冻结骨干仅训练输出层
+3. 对比四种策略: 微调 vs 从头训练 vs 冻结骨干 vs 两阶段微调
 
 全部使用 PyTorch / torchvision 官方 API，无自定义实现。
 """
@@ -38,9 +38,11 @@ HOTDOG_DIR = os.path.join(DATA_DIR, "hotdog")
 HOTDOG_URL = "http://d2l-data.s3-accelerate.amazonaws.com/hotdog.zip"
 
 BATCH_SIZE = 128
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
+WEIGHT_DECAY = 1e-4
 LR_FINETUNE = 5e-5
 LR_SCRATCH = 5e-4
+LR_FROZEN_FC = 1e-3
 
 
 # ──────────────────────────────────────────────────────
@@ -84,22 +86,19 @@ def show_samples(dataset, n=8):
 # ──────────────────────────────────────────────────────
 # 增广 & 数据加载
 # ──────────────────────────────────────────────────────
-normalize = transforms.Normalize([0.485, 0.456, 0.406],
-                                 [0.229, 0.224, 0.225])
+# 使用官方预处理流程，确保输入分布与预训练阶段一致
+_weights = models.ResNet18_Weights.DEFAULT
+_official_transforms = _weights.transforms()
 
+# 训练集: 官方预处理前插入数据增广
 train_augs = transforms.Compose([
     transforms.RandomResizedCrop(224),
     transforms.RandomHorizontalFlip(),
-    transforms.ToTensor(),
-    normalize,
+    _official_transforms,
 ])
 
-test_augs = transforms.Compose([
-    transforms.Resize([256, 256]),
-    transforms.CenterCrop(224),
-    transforms.ToTensor(),
-    normalize,
-])
+# 测试集: 直接使用官方预处理
+test_augs = _official_transforms
 
 
 def load_data(augs, is_train=True):
@@ -114,7 +113,7 @@ def load_data(augs, is_train=True):
 # ──────────────────────────────────────────────────────
 def build_finetune_net():
     """加载 ImageNet 预训练 ResNet-18，替换输出层为 2 类"""
-    net = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
+    net = models.resnet18(weights=_weights)
     net.fc = nn.Linear(net.fc.in_features, 2)
     nn.init.xavier_uniform_(net.fc.weight)
     return net
@@ -130,13 +129,18 @@ def build_scratch_net():
 
 def build_frozen_net():
     """冻结骨干网络，仅训练输出层"""
-    net = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
-    # 冻结所有参数
+    net = models.resnet18(weights=_weights)
     for param in net.parameters():
         param.requires_grad = False
-    # 替换输出层（新层默认 requires_grad=True）
     net.fc = nn.Linear(net.fc.in_features, 2)
     nn.init.xavier_uniform_(net.fc.weight)
+    return net
+
+
+def unfreeze_backbone(net):
+    """解冻骨干网络，用于两阶段微调的第二阶段"""
+    for param in net.parameters():
+        param.requires_grad = True
     return net
 
 
@@ -150,6 +154,7 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
 
     param_group=True 时，输出层使用 10× 学习率（微调模式）。
     损失使用 reduction="none" + .sum().backward()，与 d2l 保持一致。
+    日志包含梯度范数和 FC 层参数更新量，用于诊断训练状态。
     """
     net = net.to(device)
 
@@ -160,23 +165,29 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
         optimizer = optim.SGD([
             {"params": params_1x},
             {"params": net.fc.parameters(), "lr": lr * 10},
-        ], lr=lr, weight_decay=0.001)
+        ], lr=lr, weight_decay=WEIGHT_DECAY)
     else:
         optimizer = optim.SGD(
             filter(lambda p: p.requires_grad, net.parameters()),
-            lr=lr, weight_decay=0.001
+            lr=lr, weight_decay=WEIGHT_DECAY
         )
 
     # reduction="none" + .sum() — 与 d2l 一致，梯度按 batch_size 放大
     loss_fn = nn.CrossEntropyLoss(reduction="none")
-    history = {"train_loss": [], "train_acc": [], "test_acc": []}
+    history = {"train_loss": [], "train_acc": [], "test_acc": [],
+               "grad_norm": [], "fc_update": []}
     timer = time.time()
 
     print(f"\n--- {label} ---")
     for epoch in range(num_epochs):
+        # 记录 FC 层训练前参数 (用于计算更新量)
+        fc_weight_before = net.fc.weight.data.clone()
+
         # 训练
         net.train()
         total_loss, total_correct, total_samples = 0.0, 0, 0
+        epoch_grad_norms = []
+
         for X, y in train_iter:
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
@@ -189,8 +200,15 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
             total_correct += (y_hat.argmax(dim=1) == y).sum().item()
             total_samples += y.size(0)
 
+            # 收集梯度范数 (仅统计有梯度的参数)
+            for p in net.parameters():
+                if p.grad is not None:
+                    epoch_grad_norms.append(p.grad.data.norm(2).item())
+
         train_loss = total_loss / total_samples
         train_acc = total_correct / total_samples
+        avg_grad_norm = sum(epoch_grad_norms) / len(epoch_grad_norms) if epoch_grad_norms else 0.0
+        fc_update = (net.fc.weight.data - fc_weight_before).norm(2).item()
 
         # 测试
         net.eval()
@@ -206,15 +224,150 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
         history["train_loss"].append(train_loss)
         history["train_acc"].append(train_acc)
         history["test_acc"].append(test_acc)
+        history["grad_norm"].append(avg_grad_norm)
+        history["fc_update"].append(fc_update)
 
         print(f"  epoch {epoch + 1:2d}/{num_epochs} | "
               f"loss {train_loss:.4f} | "
               f"train acc {train_acc:.3f} | "
-              f"test acc {test_acc:.3f}")
+              f"test acc {test_acc:.3f} | "
+              f"grad_norm {avg_grad_norm:.4f} | "
+              f"fc_update {fc_update:.6f}")
 
     elapsed = time.time() - timer
     print(f"  耗时 {elapsed:.1f}s, "
           f"速度 {total_samples * num_epochs / elapsed:.0f} samples/sec on {device}")
+    return history
+
+
+def train_two_stage(net, train_iter, test_iter,
+                    frozen_epochs=5, finetune_epochs=15):
+    """两阶段微调: 先冻结骨干训练分类层，再解冻全模型继续微调"""
+    net = net.to(device)
+    loss_fn = nn.CrossEntropyLoss(reduction="none")
+    history = {"train_loss": [], "train_acc": [], "test_acc": [],
+               "grad_norm": [], "fc_update": []}
+    timer = time.time()
+
+    # ── 第一阶段: 冻结骨干，仅训练 FC 层 ──
+    print(f"\n--- 两阶段微调: 阶段1 冻结骨干 ({frozen_epochs} epochs, lr={LR_FROZEN_FC}) ---")
+    optimizer = optim.SGD(
+        filter(lambda p: p.requires_grad, net.parameters()),
+        lr=LR_FROZEN_FC, weight_decay=WEIGHT_DECAY
+    )
+
+    for epoch in range(frozen_epochs):
+        fc_weight_before = net.fc.weight.data.clone()
+        net.train()
+        total_loss, total_correct, total_samples = 0.0, 0, 0
+        epoch_grad_norms = []
+
+        for X, y in train_iter:
+            X, y = X.to(device), y.to(device)
+            optimizer.zero_grad()
+            y_hat = net(X)
+            l = loss_fn(y_hat, y)
+            l.sum().backward()
+            optimizer.step()
+
+            total_loss += l.sum().item()
+            total_correct += (y_hat.argmax(dim=1) == y).sum().item()
+            total_samples += y.size(0)
+            for p in net.parameters():
+                if p.grad is not None:
+                    epoch_grad_norms.append(p.grad.data.norm(2).item())
+
+        train_loss = total_loss / total_samples
+        train_acc = total_correct / total_samples
+        avg_grad_norm = sum(epoch_grad_norms) / len(epoch_grad_norms) if epoch_grad_norms else 0.0
+        fc_update = (net.fc.weight.data - fc_weight_before).norm(2).item()
+
+        # 测试
+        net.eval()
+        test_correct, test_total = 0, 0
+        with torch.no_grad():
+            for X, y in test_iter:
+                X, y = X.to(device), y.to(device)
+                test_correct += (net(X).argmax(dim=1) == y).sum().item()
+                test_total += y.size(0)
+        test_acc = test_correct / test_total
+
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
+        history["test_acc"].append(test_acc)
+        history["grad_norm"].append(avg_grad_norm)
+        history["fc_update"].append(fc_update)
+
+        print(f"  epoch {epoch + 1:2d}/{frozen_epochs} | "
+              f"loss {train_loss:.4f} | "
+              f"train acc {train_acc:.3f} | "
+              f"test acc {test_acc:.3f} | "
+              f"grad_norm {avg_grad_norm:.4f} | "
+              f"fc_update {fc_update:.6f}")
+
+    # ── 第二阶段: 解冻全模型微调 ──
+    print(f"\n--- 两阶段微调: 阶段2 解冻全模型 ({finetune_epochs} epochs, "
+          f"lr={LR_FINETUNE}, fc_lr={LR_FINETUNE * 10}) ---")
+    unfreeze_backbone(net)
+    params_1x = [p for name, p in net.named_parameters()
+                 if name not in ("fc.weight", "fc.bias")]
+    optimizer = optim.SGD([
+        {"params": params_1x},
+        {"params": net.fc.parameters(), "lr": LR_FINETUNE * 10},
+    ], lr=LR_FINETUNE, weight_decay=WEIGHT_DECAY)
+
+    for epoch in range(finetune_epochs):
+        fc_weight_before = net.fc.weight.data.clone()
+        net.train()
+        total_loss, total_correct, total_samples = 0.0, 0, 0
+        epoch_grad_norms = []
+
+        for X, y in train_iter:
+            X, y = X.to(device), y.to(device)
+            optimizer.zero_grad()
+            y_hat = net(X)
+            l = loss_fn(y_hat, y)
+            l.sum().backward()
+            optimizer.step()
+
+            total_loss += l.sum().item()
+            total_correct += (y_hat.argmax(dim=1) == y).sum().item()
+            total_samples += y.size(0)
+            for p in net.parameters():
+                if p.grad is not None:
+                    epoch_grad_norms.append(p.grad.data.norm(2).item())
+
+        train_loss = total_loss / total_samples
+        train_acc = total_correct / total_samples
+        avg_grad_norm = sum(epoch_grad_norms) / len(epoch_grad_norms) if epoch_grad_norms else 0.0
+        fc_update = (net.fc.weight.data - fc_weight_before).norm(2).item()
+
+        # 测试
+        net.eval()
+        test_correct, test_total = 0, 0
+        with torch.no_grad():
+            for X, y in test_iter:
+                X, y = X.to(device), y.to(device)
+                test_correct += (net(X).argmax(dim=1) == y).sum().item()
+                test_total += y.size(0)
+        test_acc = test_correct / test_total
+
+        history["train_loss"].append(train_loss)
+        history["train_acc"].append(train_acc)
+        history["test_acc"].append(test_acc)
+        history["grad_norm"].append(avg_grad_norm)
+        history["fc_update"].append(fc_update)
+
+        print(f"  epoch {epoch + 1:2d}/{finetune_epochs} | "
+              f"loss {train_loss:.4f} | "
+              f"train acc {train_acc:.3f} | "
+              f"test acc {test_acc:.3f} | "
+              f"grad_norm {avg_grad_norm:.4f} | "
+              f"fc_update {fc_update:.6f}")
+
+    elapsed = time.time() - timer
+    print(f"  耗时 {elapsed:.1f}s, "
+          f"速度 {total_samples * (frozen_epochs + finetune_epochs) / elapsed:.0f} samples/sec on {device}")
     return history
 
 
@@ -259,9 +412,9 @@ def main():
     train_iter = load_data(train_augs, is_train=True)
     test_iter = load_data(test_augs, is_train=False)
 
-    # 4. 三种训练策略对比
+    # 4. 四种训练策略对比
     print("\n" + "=" * 60)
-    print("Part 2: 微调 vs 从头训练 vs 冻结骨干")
+    print("Part 2: 四种策略对比")
     print("=" * 60)
 
     # 4.1 微调 (预训练权重 + 输出层 10× 学习率)
@@ -278,27 +431,35 @@ def main():
         label=f"从头训练 (lr={LR_SCRATCH})",
     )
 
-    # 4.3 冻结骨干，仅训练输出层
+    # 4.3 冻结骨干，仅训练输出层 (提高分类层学习率)
     h_frozen = train_model(
         build_frozen_net(), train_iter, test_iter,
-        lr=LR_SCRATCH, param_group=False,
-        label=f"冻结骨干 (lr={LR_SCRATCH})",
+        lr=LR_FROZEN_FC, param_group=False,
+        label=f"冻结骨干 (fc lr={LR_FROZEN_FC})",
+    )
+
+    # 4.4 两阶段微调: 先冻结训练 FC → 再解冻全模型微调
+    h_two_stage = train_two_stage(
+        build_frozen_net(), train_iter, test_iter,
+        frozen_epochs=5, finetune_epochs=15,
     )
 
     # 5. 对比结果
     print("\n" + "=" * 60)
     print("对比结果")
     print("=" * 60)
-    print(f"  微调     → 最终 test acc: {h_finetune['test_acc'][-1]:.3f}")
-    print(f"  从头训练 → 最终 test acc: {h_scratch['test_acc'][-1]:.3f}")
-    print(f"  冻结骨干 → 最终 test acc: {h_frozen['test_acc'][-1]:.3f}")
+    print(f"  微调       → 最终 test acc: {h_finetune['test_acc'][-1]:.3f}")
+    print(f"  从头训练   → 最终 test acc: {h_scratch['test_acc'][-1]:.3f}")
+    print(f"  冻结骨干   → 最终 test acc: {h_frozen['test_acc'][-1]:.3f}")
+    print(f"  两阶段微调 → 最终 test acc: {h_two_stage['test_acc'][-1]:.3f}")
 
     plot_histories(
-        [h_finetune, h_scratch, h_frozen],
+        [h_finetune, h_scratch, h_frozen, h_two_stage],
         [
             f"Fine-Tune (lr={LR_FINETUNE})",
             f"Scratch (lr={LR_SCRATCH})",
-            f"Frozen Backbone (lr={LR_SCRATCH})",
+            f"Frozen (fc lr={LR_FROZEN_FC})",
+            "Two-Stage (frozen→finetune)",
         ],
     )
 

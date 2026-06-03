@@ -146,25 +146,20 @@ def build_frozen_net():
 def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
                 param_group=False, label=""):
     """
-    训练模型。
+    训练模型（与 d2l train_fine_tuning 对齐）。
 
     param_group=True 时，输出层使用 10× 学习率（微调模式）。
+    损失使用 reduction="none" + .sum().backward()，与 d2l 保持一致。
     """
-    net = nn.DataParallel(net).to(device)
+    net = net.to(device)
 
-    # 参数分组: 骨干小学习率, 输出层大学习率
+    # 参数分组: 骨干小学习率, 输出层大学习率 (d2l 做法)
     if param_group:
-        params_backbone = []
-        params_fc = []
-        for name, param in net.named_parameters():
-            if param.requires_grad:
-                if "fc" in name:
-                    params_fc.append(param)
-                else:
-                    params_backbone.append(param)
+        params_1x = [p for name, p in net.named_parameters()
+                     if name not in ("fc.weight", "fc.bias")]
         optimizer = optim.SGD([
-            {"params": params_backbone},
-            {"params": params_fc, "lr": lr * 10},
+            {"params": params_1x},
+            {"params": net.fc.parameters(), "lr": lr * 10},
         ], lr=lr, weight_decay=0.001)
     else:
         optimizer = optim.SGD(
@@ -172,7 +167,8 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
             lr=lr, weight_decay=0.001
         )
 
-    loss_fn = nn.CrossEntropyLoss()
+    # reduction="none" + .sum() — 与 d2l 一致，梯度按 batch_size 放大
+    loss_fn = nn.CrossEntropyLoss(reduction="none")
     history = {"train_loss": [], "train_acc": [], "test_acc": []}
     timer = time.time()
 
@@ -185,11 +181,11 @@ def train_model(net, train_iter, test_iter, lr, num_epochs=NUM_EPOCHS,
             X, y = X.to(device), y.to(device)
             optimizer.zero_grad()
             y_hat = net(X)
-            loss = loss_fn(y_hat, y)
-            loss.backward()
+            l = loss_fn(y_hat, y)
+            l.sum().backward()
             optimizer.step()
 
-            total_loss += loss.item() * y.size(0)
+            total_loss += l.sum().item()
             total_correct += (y_hat.argmax(dim=1) == y).sum().item()
             total_samples += y.size(0)
 

@@ -66,8 +66,11 @@ def show_samples(dataset, n=8):
     pos = [dataset[i][0] for i in range(n)]
     neg = [dataset[-i - 1][0] for i in range(n)]
     images = pos + neg
-    # PIL → Tensor
-    to_tensor = transforms.ToTensor()
+    # PIL → 统一尺寸 → Tensor
+    to_tensor = transforms.Compose([
+        transforms.Resize([224, 224]),
+        transforms.ToTensor(),
+    ])
     tensors = [to_tensor(img) for img in images]
     grid = vutils.make_grid(tensors, nrow=n, padding=2, normalize=True)
     plt.figure(figsize=(n * 1.8, 3.5))

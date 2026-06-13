@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>序列模型（Sequence Models）- 交互式讲解</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --fg: #e4e6ed;
+    --muted: #8b8fa3;
+    --accent: #6c8cff;
+    --accent2: #ff6b9d;
+    --green: #4ecf8b;
+    --orange: #f5a623;
+    --purple: #b07cff;
+    --code-bg: #12141c;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .header .tag {
+    display: inline-block;
+    background: rgba(108,140,255,0.12);
+    color: var(--accent);
+    font-size: 13px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .header h1 {
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 56px; }
+  .section h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section h2 .num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--accent); color: #fff; font-size: 14px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .section h3 { font-size: 17px; margin: 20px 0 8px; color: var(--fg); }
+  .section > p, .section > ul, .section > ol { color: var(--muted); margin-bottom: 12px; }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    tab-size: 4;
+  }
+  code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
+  .kw { color: var(--purple); }
+  .fn { color: #79c0ff; }
+  .str { color: var(--green); }
+  .num { color: var(--orange); }
+  .cm { color: #5a5f73; font-style: italic; }
+  .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  p code, li code {
+    background: rgba(108,140,255,0.1);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 16px 0;
+  }
+  .note { border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0;
+    background: rgba(108,140,255,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; }
+  .note strong { color: var(--accent); }
+  .warn { border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0;
+    background: rgba(245,166,35,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; }
+  .warn strong { color: var(--orange); }
+  .tip { border-left: 3px solid var(--green); padding: 16px 20px; margin: 16px 0;
+    background: rgba(78,207,139,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; }
+  .tip strong { color: var(--green); }
+
+  .formula {
+    text-align: center; padding: 22px; margin: 16px 0;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 18px; letter-spacing: 1px;
+    overflow-x: auto;
+  }
+  .formula .big { font-size: 22px; }
+  .formula em { color: var(--orange); font-style: normal; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: rgba(255,255,255,0.03); padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--border); font-weight: 600; color: var(--fg); }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--muted); }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px;
+    flex-wrap: wrap; margin: 20px 0; }
+  .flow-item { background: var(--card); border: 1px solid var(--border);
+    padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .flow-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+  .toc { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px 32px; margin: 24px 0 48px; }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px;
+    letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; margin: 16px 0; }
+  .summary-grid .item { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; text-align: center; }
+  .summary-grid .item .label { font-size: 12px; color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 1px; }
+  .summary-grid .item .value { font-size: 22px; font-weight: 700; }
+
+  /* ── 交互控件 ── */
+  .demo {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .demo .demo-title {
+    font-size: 14px; color: var(--accent); font-weight: 600;
+    margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .canvas-wrap { position: relative; width: 100%; border-radius: 8px;
+    overflow: hidden; background: #0c0e14; border: 1px solid var(--border); }
+  canvas { display: block; width: 100%; height: auto; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
+    padding: 14px 4px 0; border-top: 1px dashed var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; min-width: 150px; flex: 1; }
+  .ctrl label { font-size: 12px; color: var(--muted); display: flex;
+    justify-content: space-between; gap: 8px; }
+  .ctrl label .val { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px;
+    border-radius: 3px; background: var(--border); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent);
+    cursor: pointer; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+    margin-top: 4px; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    font-size: 13px; color: var(--muted); user-select: none; }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .readouts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .readout { background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 16px; flex: 1; min-width: 130px; }
+  .readout .k { font-size: 11px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.5px; }
+  .readout .v { font-size: 20px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+    margin: 10px 0 2px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="tag">循环神经网络 · §8.1</div>
+  <h1>序列模型（Sequence Models）</h1>
+  <p>用历史预测未来：自回归、单步 vs 多步、误差累积</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 序列数据为何特殊，自回归 vs 隐变量</span></li>
+    <li><a href="#s1">生成数据</a> <span class="desc">— 拖动滑块感受“动力学不变 + 噪声”</span></li>
+    <li><a href="#s2">构造特征-标签对</a> <span class="desc">— 滑窗：把序列切成 X → y</span></li>
+    <li><a href="#s3">训练极简 MLP</a> <span class="desc">— Linear+ReLU+Linear + Adam + MSELoss</span></li>
+    <li><a href="#s4">单步 vs 多步预测</a> <span class="desc">— ⭐交互模拟器：看误差如何滚雪球</span></li>
+    <li><a href="#s5">k 步预测</a> <span class="desc">— 拖动 k，看预测质量如何坍塌</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— 真实运行结果 + 关键结论</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：序列数据为何特殊？</h2>
+
+  <p>电影评分、股价、语音、文本、地震——它们的共同点是<strong>顺序很重要</strong>。“狗咬人”和“人咬狗”字完全相同，含义却天差地别。打乱序列，意义就消失了。</p>
+
+  <p>对于时间步 <code>t</code> 的观测 <code>x_t</code>，我们想预测它，依据是过去的全部历史：</p>
+
+  <div class="formula">
+    <span class="big">x<sub>t</sub> ~ P(x<sub>t</sub> | x<sub>t-1</sub>, x<sub>t-2</sub>, …, x<sub>1</sub>)</span>
+  </div>
+
+  <p>问题在于：输入长度会随 <code>t</code> 不断增长，无法直接训练一个固定大小的网络。d2l 给出两种应对策略：</p>
+
+  <div class="card">
+    <table>
+      <tr><th>策略</th><th>做法</th><th>代表</th></tr>
+      <tr>
+        <td><strong style="color:var(--accent)">自回归模型</strong></td>
+        <td>只看固定长度 τ 的窗口：<code>[x<sub>t-τ</sub>, …, x<sub>t-1</sub>]</code></td>
+        <td>本节使用 ✅</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--accent2)">隐变量自回归</strong></td>
+        <td>维护一个对过去的“总结” h<sub>t</sub>，每步更新它</td>
+        <td>RNN / LSTM / GRU</td>
+      </tr>
+    </table>
+    <div class="formula" style="margin:14px 0 0">
+      隐变量：<em>h<sub>t</sub></em> = g(<em>h<sub>t-1</sub></em>, x<sub>t-1</sub>) &nbsp;&nbsp;|&nbsp;&nbsp; 预测：x̂<sub>t</sub> = P(x<sub>t</sub> | <em>h<sub>t</sub></em>)
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>本节做最朴素的事</strong>：用<strong>自回归</strong>策略，τ=4。把过去的 4 个值当特征、下一个值当标签，丢进一个普通 MLP。它没有记忆，只是个“滑动窗口回归器”，却足以暴露序列预测的根本难题。
+  </div>
+
+  <div class="tip">
+    <strong>因果关系</strong>：时间是向前走的，未来不能影响过去。所以我们<strong>始终只用过去预测未来</strong>（外推 extrapolation），训练时绝不混入未来数据。这正是后面“多步预测会崩”的根源。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 生成数据 -->
+<!-- ============================================ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 生成数据：动力学不变 + 可加性噪声</h2>
+
+  <p>用一条正弦波加上高斯噪声当玩具序列：<code>x_t = sin(0.01·t) + ε</code>。规则（动力学）是固定的正弦，但每个观测都抖动。<strong>拖动下面的滑块改变噪声强度</strong>，感受“动力学不变、数值变化”。</p>
+
+  <pre><code><span class="kw">import</span> torch
+T = <span class="num">1000</span>
+time = torch.arange(<span class="num">1</span>, T + <span class="num">1</span>, dtype=torch.float32)
+x = torch.sin(<span class="num">0.01</span> * time) + torch.normal(<span class="num">0</span>, sigma, (T,))</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 1 · 生成序列</div>
+    <div class="demo-sub">拖动 σ 滑块，观察噪声如何淹没信号。这正是模型要学习的对象。</div>
+    <div class="canvas-wrap"><canvas id="cv1" width="1700" height="420"></canvas></div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>噪声 σ <span class="val" id="sigmaVal">0.20</span></label>
+        <input type="range" id="sigma" min="0" max="0.5" step="0.01" value="0.2">
+      </div>
+      <div class="toggle-row" style="margin-top:2px">
+        <label class="toggle"><span class="swatch" style="background:#6c8cff"></span><input type="checkbox" id="showSig" checked> 纯净信号 sin</label>
+        <label class="toggle"><span class="swatch" style="background:#5a6378"></span><input type="checkbox" id="showNoisy" checked> 带噪观测 x</label>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">序列长度</div><div class="v">1000</div></div>
+      <div class="readout"><div class="k">噪声方差 σ²</div><div class="v" id="varReadout">0.040</div></div>
+      <div class="readout"><div class="k">不可约误差</div><div class="v" id="irrReadout">0.040</div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>关键直觉</strong>：就算模型完美学会规则，它也<strong>无法预测随机噪声 ε</strong>。所以单步预测的理论最低误差 ≈ σ²。这正是下一节“单步 MSE ≈ 0.06”（σ²=0.04 附近）的原因。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 构造特征-标签对 -->
+<!-- ============================================ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 构造特征-标签对：滑窗</h2>
+
+  <p>把一维序列用长度 τ=4 的窗口滑过，每个窗口是一个样本：4 个历史值为特征，紧接的下一个值为标签。</p>
+
+  <pre><code>tau = <span class="num">4</span>
+features = torch.zeros((T - tau, tau))
+<span class="kw">for</span> i <span class="kw">in</span> range(tau):
+    features[:, i] = x[i: T - tau + i]      <span class="cm"># 第 i 列 = x 错位 i 步</span>
+labels = x[tau:].reshape((-1, <span class="num">1</span>))          <span class="cm"># 标签 = x[4:]</span>
+
+<span class="cm"># 前 600 个样本训练 (复用框架的 DataLoader, 自动分批+打乱)</span>
+train_iter = DataLoader(
+    TensorDataset(features[:<span class="num">600</span>], labels[:<span class="num">600</span>]),
+    batch_size=<span class="num">16</span>, shuffle=<span class="num">True</span>)</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 2 · 滑窗构造样本</div>
+    <div class="demo-sub">窗口向右滑动，红色窗口 = 特征（4 个历史值），黄色点 = 要预测的标签。</div>
+    <div class="canvas-wrap"><canvas id="cv2" width="1700" height="360"></canvas></div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>窗口起点 t <span class="val" id="winVal">10</span></label>
+        <input type="range" id="winStart" min="5" max="120" step="1" value="10">
+      </div>
+      <div class="ctrl">
+        <label>自动滑动</label>
+        <button id="winPlay" style="padding:6px 14px;background:var(--accent);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">▶ 播放</button>
+      </div>
+    </div>
+    <div class="readouts" id="winReadout">
+      <div class="readout"><div class="k">特征 X = [xₜ₋₄, xₜ₋₃, xₜ₋₂, xₜ₋₁]</div><div class="v" id="featVals" style="font-size:14px">—</div></div>
+      <div class="readout"><div class="k">标签 y = xₜ</div><div class="v" id="labelVal" style="font-size:16px">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>特征矩阵的形状</strong></p>
+    <div class="flow">
+      <div class="flow-item">序列长度 T = 1000</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item" style="border-color:var(--accent)">features: (996, 4)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item" style="border-color:var(--accent2)">labels: (996, 1)</div>
+    </div>
+    <p style="font-size:14px;color:var(--muted);margin-top:10px">
+      样本数 = T − τ = 996（前 τ 个点没有足够历史）。每行是一组 (特征, 标签) 对。
+    </p>
+  </div>
+
+  <div class="warn">
+    <strong>为什么只用前 600 个训练？</strong> 为了<strong>尊重时间顺序</strong>。绝不能用 t&gt;600 的数据去训练、再回头预测它——那是“用未来作弊”。后 396 个点留给测试 / 预测，检验模型的<strong>外推</strong>能力。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 训练 MLP -->
+<!-- ============================================ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> 训练极简 MLP：复用框架模块</h2>
+
+  <p>网络简单到不能再简单：两层全连接 + ReLU。损失用 MSE，优化器用 Adam。全部复用 <code>torch.nn</code>，零自定义实现。</p>
+
+  <pre><code><span class="kw">def</span> <span class="fn">get_net</span>():
+    <span class="kw">return</span> nn.Sequential(
+        nn.Linear(<span class="num">4</span>, <span class="num">10</span>),   <span class="cm"># 输入 = τ 个历史值</span>
+        nn.ReLU(),
+        nn.Linear(<span class="num">10</span>, <span class="num">1</span>),    <span class="cm"># 输出 = 下一步的预测值</span>
+    )
+
+loss_fn = nn.MSELoss(reduction=<span class="str">"none"</span>)
+optimizer = torch.optim.Adam(net.parameters(), lr=<span class="num">0.01</span>)
+
+<span class="kw">for</span> epoch <span class="kw">in</span> range(<span class="num">5</span>):
+    <span class="kw">for</span> X, y <span class="kw">in</span> train_iter:
+        optimizer.zero_grad()
+        l = loss_fn(net(X), y)
+        l.sum().backward()        <span class="cm"># 与 d2l 一致: 按批求和反传</span>
+        optimizer.step()</code></pre>
+
+  <div class="card">
+    <p><strong>网络数据流</strong></p>
+    <div class="flow">
+      <div class="flow-item">X: (4,)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item" style="border-color:var(--green)">Linear(4→10)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item" style="border-color:var(--accent2)">ReLU</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item" style="border-color:var(--green)">Linear(10→1)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-item">x̂: (1,)</div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 3 · 真实训练损失曲线（来自实际运行）</div>
+    <div class="demo-sub">5 个 epoch，loss 从 0.126 降到 0.049，逼近噪声方差下界。</div>
+    <div class="canvas-wrap"><canvas id="cv3" width="1700" height="300"></canvas></div>
+    <div class="readouts">
+      <div class="readout"><div class="k">初始 loss (epoch 1)</div><div class="v">0.126</div></div>
+      <div class="readout"><div class="k">收敛 loss (epoch 5)</div><div class="v" style="color:var(--green)">0.049</div></div>
+      <div class="readout"><div class="k">≈ 噪声方差 σ²=0.04</div><div class="v" style="color:var(--accent)">✓ 触底</div></div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>loss 为什么卡在 ~0.05 不再降？</strong> 因为这已经是<strong>不可约误差</strong>——噪声 ε 的方差。模型完美学会了正弦动力学，剩下的 0.04~0.05 是随机噪声造成的，任何模型都无法预测。这是健康的收敛。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 单步 vs 多步预测 -->
+<!-- ============================================ -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ⭐ 单步 vs 多步预测：误差累积</h2>
+
+  <p>模型训练好了，怎么用它预测？这里藏着一个大坑。<strong>拖动滑块、勾选曲线，亲眼看看两种预测的天壤之别。</strong></p>
+
+  <div class="card">
+    <table>
+      <tr><th></th><th>单步预测 one-step</th><th>多步预测 multi-step</th></tr>
+      <tr><td><strong>输入用什么</strong></td>
+        <td style="color:var(--green)">真实历史 x</td>
+        <td style="color:var(--accent2)">自己的预测 x̂</td></tr>
+      <tr><td><strong>效果</strong></td>
+        <td style="color:var(--green)">贴近真实曲线</td>
+        <td style="color:var(--accent2)">很快坍缩成常数</td></tr>
+      <tr><td><strong>原因</strong></td>
+        <td>每步都有“正确答案”兜底</td>
+        <td>错误被一步步放大</td></tr>
+    </table>
+  </div>
+
+  <div class="formula">
+    误差累积：ε<sub>k</sub> = ε̄ + c·ε<sub>k-1</sub> &nbsp; → &nbsp; 预测越远，偏离越快
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 4 · 误差累积模拟器</div>
+    <div class="demo-sub">训练截止线（红虚线）右侧：绿线（单步）依然准，红线（多步）急剧发散。下方两行 MSE 量化对比。</div>
+    <div class="canvas-wrap"><canvas id="cv4" width="1700" height="460"></canvas></div>
+    <div class="legend">
+      <span><span class="swatch" style="background:#5a6378"></span>真实数据</span>
+      <span><span class="swatch" style="background:#4ecf8b"></span>单步预测</span>
+      <span><span class="swatch" style="background:#ff6b9d"></span>多步预测</span>
+      <span><span class="swatch" style="background:#f5a623"></span>训练截止 (604)</span>
+    </div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>噪声 σ <span class="val" id="sigma4Val">0.20</span></label>
+        <input type="range" id="sigma4" min="0.05" max="0.4" step="0.01" value="0.2">
+      </div>
+      <div class="ctrl">
+        <label>模型残差 (单步不可约误差) <span class="val" id="res4Val">0.15</span></label>
+        <input type="range" id="res4" min="0.05" max="0.4" step="0.01" value="0.15">
+      </div>
+      <div class="ctrl">
+        <label>展示步数 (多步延伸到) <span class="val" id="step4Val">1000</span></label>
+        <input type="range" id="step4" min="650" max="1000" step="10" value="1000">
+      </div>
+      <div class="toggle-row" style="flex-basis:100%;margin-top:0">
+        <label class="toggle"><span class="swatch" style="background:#5a6378"></span><input type="checkbox" id="t4data" checked> 真实数据</label>
+        <label class="toggle"><span class="swatch" style="background:#4ecf8b"></span><input type="checkbox" id="t4one" checked> 单步预测</label>
+        <label class="toggle"><span class="swatch" style="background:#ff6b9d"></span><input type="checkbox" id="t4multi" checked> 多步预测</label>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">单步预测 MSE (测试段)</div><div class="v" id="mse1" style="color:var(--green)">—</div></div>
+      <div class="readout"><div class="k">多步预测 MSE (测试段)</div><div class="v" id="mseN" style="color:var(--accent2)">—</div></div>
+      <div class="readout"><div class="k">比值 (多步/单步)</div><div class="v" id="mseRatio" style="color:var(--orange)">—</div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>为什么多步会崩？</strong> 假设第 1 步积累误差 ε₁=ε̄。第 2 步的输入被 ε₁ 扰动，误差变成 ε₂=ε̄+c·ε₁……每一步都把上一步的误差再放大一次，指数级偏离。就像<strong>天气预报</strong>：未来 24 小时挺准，一周后基本靠猜。
+  </div>
+
+  <div class="warn">
+    <strong>真实运行结果（σ=0.2）：</strong> 单步 MSE = <strong style="color:var(--green)">0.060</strong>，多步 MSE = <strong style="color:var(--accent2)">1.811</strong> —— 相差约 30 倍。这正是上面模拟器要传达的现象。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. k 步预测 -->
+<!-- ============================================ -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span> k 步预测：预测质量随 k 坍塌</h2>
+
+  <p>对每个起点，向前预测 k 步（期间都用自己之前的预测当输入）。<strong>拖动 k</strong>，看预测曲线从“贴着真实”到“坍成一条直线”。</p>
+
+  <pre><code>max_steps = <span class="num">64</span>
+feats = torch.zeros((T - tau - max_steps + <span class="num">1</span>, tau + max_steps))
+<span class="kw">for</span> i <span class="kw">in</span> range(tau, tau + max_steps):
+    feats[:, i] = net(feats[:, i - tau:i]).reshape(-<span class="num">1</span>)   <span class="cm"># 列 i 是 (i-tau+1) 步预测</span></code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 5 · k 步预测对比</div>
+    <div class="demo-sub">k=1 几乎完美；k=4 还像样；k=16 开始走样；k=64 已经是一条无用的直线。</div>
+    <div class="canvas-wrap"><canvas id="cv5" width="1700" height="420"></canvas></div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>预测步数 k <span class="val" id="kVal">4</span></label>
+        <input type="range" id="kStep" min="1" max="64" step="1" value="4">
+      </div>
+      <div class="toggle-row" style="flex-basis:100%;margin-top:0">
+        <button id="k1" class="kbtn">k=1</button>
+        <button id="k4" class="kbtn">k=4</button>
+        <button id="k16" class="kbtn">k=16</button>
+        <button id="k64" class="kbtn">k=64</button>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">当前 k</div><div class="v" id="kShow">4</div></div>
+      <div class="readout"><div class="k">信号保留率</div><div class="v" id="kRet" style="color:var(--green)">—</div></div>
+      <div class="readout"><div class="k">质量评估</div><div class="v" id="kQuality" style="font-size:15px">—</div></div>
+    </div>
+  </div>
+
+  <style>
+    .kbtn { padding:6px 14px; background:var(--card); color:var(--muted);
+      border:1px solid var(--border); border-radius:6px; cursor:pointer; font-size:13px;
+      transition:all .15s; }
+    .kbtn:hover { border-color:var(--accent); color:var(--fg); }
+    .kbtn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  </style>
+
+  <div class="tip">
+    <strong>结论</strong>：4 步以内尚可，超过这个跨度几乎全无价值。想要预测更远的未来，必须引入<strong>显式的记忆机制</strong>——这正是下一章 RNN / GRU / LSTM 要解决的问题（隐变量自回归模型）。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：真实结果 + 关键结论</h2>
+
+  <p>下面是 <code>19_sequence.py</code> 实际运行（σ=0.2，τ=4，5 epoch）的结果：</p>
+
+  <div class="card">
+    <p><strong>训练损失（每 epoch）</strong></p>
+    <table>
+      <tr><th>epoch</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+      <tr><td><strong>train loss</strong></td>
+        <td>0.126</td><td>0.053</td><td style="color:var(--green)">0.048</td><td>0.049</td><td style="color:var(--green)">0.049</td></tr>
+    </table>
+  </div>
+
+  <div class="summary-grid">
+    <div class="item">
+      <div class="label">单步预测 MSE</div>
+      <div class="value" style="color:var(--green)">0.060</div>
+    </div>
+    <div class="item">
+      <div class="label">多步预测 MSE</div>
+      <div class="value" style="color:var(--accent2)">1.811</div>
+    </div>
+    <div class="item">
+      <div class="label">误差放大倍数</div>
+      <div class="value" style="color:var(--orange)">≈ 30×</div>
+    </div>
+    <div class="item">
+      <div class="label">理论下界 σ²</div>
+      <div class="value" style="color:var(--accent)">0.040</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>四条核心结论</strong></p>
+    <table>
+      <tr><th>结论</th><th>说明</th></tr>
+      <tr>
+        <td><strong>内插 ≠ 外推</strong></td>
+        <td>用真实历史做单步（内插）很准；用自己的预测往前滚（外推）很快崩。训练时务必尊重时间顺序。</td>
+      </tr>
+      <tr>
+        <td><strong>自回归 vs 隐变量</strong></td>
+        <td>本节用固定窗口 τ 的自回归模型；维护隐藏状态 h<sub>t</sub> 的隐变量模型（RNN）是后续内容。</td>
+      </tr>
+      <tr>
+        <td><strong>不可约误差</strong></td>
+        <td>训练 loss 收敛到 ≈ σ²（噪声方差）即最优，再多训练也无法预测随机噪声本身。</td>
+      </tr>
+      <tr>
+        <td><strong>误差累积</strong></td>
+        <td>k 步预测：k 越大误差累积越快。短期预测可用，长期预测需要更强的记忆结构。</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步学什么？</strong> 自回归 MLP 没有记忆，窗口一滑过去就忘了。要捕捉长程依赖，需要<strong>循环神经网络</strong>（RNN）——它就是“隐变量自回归模型”的神经网络实现：用一个隐藏状态 h<sub>t</sub> 压缩所有历史。
+  </div>
+
+  <div class="flow" style="margin-top:28px">
+    <div class="flow-item">本节：自回归 MLP</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">文本预处理</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">语言模型</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">RNN / GRU / LSTM</div>
+  </div>
+</div>
+
+<div class="footer">
+  基于 19_sequence.py 生成 · 动手学深度学习 §8.1 序列模型 · 交互式可视化
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 工具：可复现随机数 + 高斯采样 + 数据生成
+// ══════════════════════════════════════════════════════
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gaussian(rng, mu, sigma){
+  let u=0,v=0; while(u===0)u=rng(); while(v===0)v=rng();
+  return mu+sigma*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+const T=1000, TAU=4, N_TRAIN=600, CUTOFF=N_TRAIN+TAU; // 604
+
+// 生成数据（固定种子，σ 可调）
+function genData(sigma){
+  const rng=mulberry32(42), x=new Array(T);
+  for(let t=1;t<=T;t++) x[t-1]=Math.sin(0.01*t)+gaussian(rng,0,sigma);
+  return x;
+}
+// 纯净信号
+function genSignal(){
+  const s=new Array(T);
+  for(let t=1;t<=T;t++) s[t-1]=Math.sin(0.01*t);
+  return s;
+}
+
+// ── HiDPI canvas 设置 ──
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.width, H=cv.height;
+  cv.style.width='100%';
+  if(!cv._scaled){ const tmp=document.createElement('canvas'); tmp.width=W*dpr; tmp.height=H*dpr;
+    cv.width=W*dpr; cv.height=H*dpr; cv._scaled=true; cv._dpr=dpr; cv._W=W; cv._H=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
+  return {ctx,W:cv._W,H:cv._H};
+}
+function clear(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+// 数据坐标 → 画布坐标
+function px(W, i, marginL, marginR){ return marginL + i/(T-1)*(W-marginL-marginR); }
+
+// 简单线性外推预测器：pred = 2·x[t-1] - x[t-2]
+// 用真实历史 → 单步（误差≈残差+噪声）；用自身预测 → 多步（误差累积，忠实复现现象）
+function linExtrap2(a,b){ return 2*b - a; }
+
+// ══════════════════════════════════════════════════════
+// DEMO 1：生成数据
+// ══════════════════════════════════════════════════════
+const cv1=document.getElementById('cv1');
+function drawDemo1(){
+  const {ctx,W,H}=setupCanvas(cv1); clear(ctx,W,H);
+  const sigma=parseFloat(document.getElementById('sigma').value);
+  const sig=genSignal(), x=genData(sigma);
+  const mL=50,mR=30,mT=24,mB=32, yMin=-1.6,yMax=1.6;
+  const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
+  // 网格
+  ctx.strokeStyle='#222533';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#5a5f73';
+  for(const v of [-1,0,1]){ const yy=py(v); ctx.beginPath();ctx.moveTo(mL,yy);ctx.lineTo(W-mR,yy);ctx.stroke();
+    ctx.fillText(v,mL-26,yy+4); }
+  // 纯净信号
+  if(document.getElementById('showSig').checked){
+    ctx.strokeStyle='#6c8cff';ctx.lineWidth=2.4;ctx.beginPath();
+    for(let i=0;i<T;i++){ const X=px(W,i,mL,mR),Y=py(sig[i]); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);} ctx.stroke();
+  }
+  // 带噪观测
+  if(document.getElementById('showNoisy').checked){
+    ctx.strokeStyle='#5a6378';ctx.lineWidth=1;ctx.globalAlpha=0.65;ctx.beginPath();
+    for(let i=0;i<T;i++){ const X=px(W,i,mL,mR),Y=py(x[i]); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);} ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  // 坐标轴标签
+  ctx.fillStyle='#8b8fa3';ctx.fillText('x',6,py(0)+4);ctx.fillText('time →',W-mR-40,H-8);
+  ctx.fillText('1',mL-14,mT+4);ctx.fillText('1000',W-mR-14,H-8);
+  // 读数
+  document.getElementById('sigmaVal').textContent=sigma.toFixed(2);
+  document.getElementById('varReadout').textContent=(sigma*sigma).toFixed(3);
+  document.getElementById('irrReadout').textContent=(sigma*sigma).toFixed(3);
+}
+document.getElementById('sigma').oninput=drawDemo1;
+document.getElementById('showSig').onchange=drawDemo1;
+document.getElementById('showNoisy').onchange=drawDemo1;
+
+// ══════════════════════════════════════════════════════
+// DEMO 2：滑窗构造样本
+// ══════════════════════════════════════════════════════
+const cv2=document.getElementById('cv2');
+const dataForWin=genData(0.2);
+function drawDemo2(){
+  const {ctx,W,H}=setupCanvas(cv2); clear(ctx,W,H);
+  const start=parseInt(document.getElementById('winStart').value);
+  const mL=46,mR=24,mT=24,mB=32;
+  // 只显示 start-3 到 start+14 这一小段，放大看
+  const lo=Math.max(0,start-3), hi=Math.min(T-1,start+14), span=hi-lo;
+  const PX=i=>mL+(i-lo)/(span)*(W-mL-mR);
+  const all=dataForWin.slice(lo,hi+1), yMin=Math.min(...all)-0.4,yMax=Math.max(...all)+0.4;
+  const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
+  // 数据点连线
+  ctx.strokeStyle='#5a6378';ctx.lineWidth=1.5;ctx.beginPath();
+  for(let i=lo;i<=hi;i++){const X=PX(i),Y=py(dataForWin[i]); (i===lo)?ctx.moveTo(X,Y):ctx.lineTo(X,Y);}ctx.stroke();
+  // 数据点
+  for(let i=lo;i<=hi;i++){ctx.fillStyle='#8b8fa3';ctx.beginPath();ctx.arc(PX(i),py(dataForWin[i]),3,0,7);ctx.fill();}
+  // 窗口高亮 (特征: start..start+TAU-1)
+  const w0=start, w1=start+TAU-1;
+  ctx.fillStyle='rgba(255,107,157,0.13)';ctx.fillRect(PX(w0)-6,mT,PX(w1)-PX(w0)+12,H-mT-mB);
+  // 窗口内的特征点
+  for(let i=w0;i<=w1;i++){ctx.fillStyle='#ff6b9d';ctx.beginPath();ctx.arc(PX(i),py(dataForWin[i]),5,0,7);ctx.fill();}
+  // 标签点 start+TAU
+  const lb=start+TAU;
+  if(lb<=hi){ctx.fillStyle='#f5a623';ctx.beginPath();ctx.arc(PX(lb),py(dataForWin[lb]),6,0,7);ctx.fill();
+    ctx.strokeStyle='#f5a623';ctx.lineWidth=2;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(PX(w1)+6,py(dataForWin[w1]));ctx.lineTo(PX(lb)-6,py(dataForWin[lb]));ctx.stroke();ctx.setLineDash([]);}
+  // 标注
+  ctx.font='13px monospace';
+  for(let i=w0;i<=w1;i++){ctx.fillStyle='#ff6b9d';ctx.fillText('x'+(i),PX(i)-6,py(dataForWin[i])-10);}
+  if(lb<=hi){ctx.fillStyle='#f5a623';ctx.fillText('y=x'+(lb),PX(lb)-6,py(dataForWin[lb])-12);}
+  ctx.fillStyle='#8b8fa3';ctx.fillText('特征窗口 (4个历史值)',PX(w0),H-8);
+  // 读数
+  const feat=dataForWin.slice(w0,w1+1);
+  document.getElementById('winVal').textContent=start;
+  document.getElementById('featVals').innerHTML=feat.map(v=>v.toFixed(2)).join(', ');
+  document.getElementById('labelVal').textContent=dataForWin[lb].toFixed(3);
+}
+document.getElementById('winStart').oninput=drawDemo2;
+let winTimer=null;
+document.getElementById('winPlay').onclick=function(){
+  if(winTimer){clearInterval(winTimer);winTimer=null;this.textContent='▶ 播放';return;}
+  this.textContent='⏸ 暂停';
+  winTimer=setInterval(()=>{
+    let s=parseInt(document.getElementById('winStart').value)+1;
+    if(s>120)s=5; document.getElementById('winStart').value=s; drawDemo2();
+  },350);
+};
+
+// ══════════════════════════════════════════════════════
+// DEMO 3：训练损失曲线（真实数据）
+// ══════════════════════════════════════════════════════
+const cv3=document.getElementById('cv3');
+const realLosses=[0.126041,0.053308,0.047547,0.048823,0.048838];
+function drawDemo3(){
+  const {ctx,W,H}=setupCanvas(cv3); clear(ctx,W,H);
+  const mL=60,mR=30,mT=24,mB=36,yMax=0.14,yMin=0.03;
+  const pxs=e=>mL+(e-1)/(realLosses.length-1)*(W-mL-mR);
+  const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
+  // 网格 + y 轴
+  ctx.strokeStyle='#222533';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#5a5f73';
+  for(const v of [0.04,0.06,0.08,0.10,0.12]){const yy=py(v);ctx.beginPath();ctx.moveTo(mL,yy);ctx.lineTo(W-mR,yy);ctx.stroke();ctx.fillText(v.toFixed(2),12,yy+4);}
+  // 噪声方差参考线 σ²=0.04
+  ctx.strokeStyle='#f5a623';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
+  const yref=py(0.04);ctx.beginPath();ctx.moveTo(mL,yref);ctx.lineTo(W-mR,yref);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#f5a623';ctx.fillText('σ²=0.04 (不可约)',W-mR-150,yref-6);
+  // 损失曲线
+  ctx.strokeStyle='#6c8cff';ctx.lineWidth=3;ctx.beginPath();
+  realLosses.forEach((v,e)=>{const X=pxs(e),Y=py(v);e?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});ctx.stroke();
+  // 点 + 标签
+  realLosses.forEach((v,e)=>{const X=pxs(e),Y=py(v);
+    ctx.fillStyle='#6c8cff';ctx.beginPath();ctx.arc(X,Y,5,0,7);ctx.fill();
+    ctx.fillStyle='#e4e6ed';ctx.font='12px monospace';ctx.fillText(v.toFixed(3),X-14,Y-10);
+    ctx.fillStyle='#8b8fa3';ctx.fillText('e'+(e+1),X-8,H-12);});
+  ctx.fillStyle='#8b8fa3';ctx.fillText('epoch →',W-mR-50,H-12);
+}
+
+// ══════════════════════════════════════════════════════
+// DEMO 4：单步 vs 多步 (核心)
+// ══════════════════════════════════════════════════════
+const cv4=document.getElementById('cv4');
+// 现象级模型（忠实复现训练好的 MLP 行为）:
+//   单步预测 = 恢复纯净信号 + 残差噪声 (MSE ≈ 噪声方差, 与真实 0.06 一致)
+//   多步预测 = 信号向均值衰减 + 一段杂散振荡 (MLP 超出训练分布后饱和→坍缩成常数)
+//   这是 d2l "预测很快衰减到一个常数" 的直接建模, 真实运行数字 (0.06 vs 1.81) 见正文。
+function drawDemo4(){
+  const {ctx,W,H}=setupCanvas(cv4); clear(ctx,W,H);
+  const sigma=parseFloat(document.getElementById('sigma4').value);
+  const res=parseFloat(document.getElementById('res4').value);
+  const maxStep=parseInt(document.getElementById('step4').value);
+  const s=genSignal(), x=genData(sigma);
+  const mL=50,mR=30,mT=22,mB=34,yMin=-1.9,yMax=1.9;
+  const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
+  const TDEC=8, SPUR=1.15, Wsp=0.06, OSPDEC=35;
+
+  // 单步预测: 用真实历史 → 近似恢复纯净信号 (+ 残差)
+  const rr=mulberry32(9), one=new Array(T);
+  for(let t=0;t<T;t++) one[t]=s[t]+gaussian(rr,0,res);
+  // 多步预测: 截止前用真值; 之后信号衰减到均值 + 杂散振荡 (误差累积)
+  const rr2=mulberry32(11), multi=new Array(T);
+  for(let t=0;t<T;t++){
+    const d=t-CUTOFF;
+    multi[t]= d<=0 ? x[t]
+      : s[t]*Math.exp(-d/TDEC) + SPUR*Math.sin(Wsp*d)*Math.exp(-d/OSPDEC) + gaussian(rr2,0,res);
+  }
+
+  // ── 画曲线 ──
+  if(document.getElementById('t4data').checked){
+    ctx.strokeStyle='#5a6378';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
+    for(let t=0;t<maxStep;t++){const X=px(W,t,mL,mR),Y=py(x[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();ctx.globalAlpha=1;
+  }
+  if(document.getElementById('t4one').checked){
+    ctx.strokeStyle='#4ecf8b';ctx.lineWidth=2.2;ctx.beginPath();
+    for(let t=0;t<maxStep;t++){const X=px(W,t,mL,mR),Y=py(one[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();
+  }
+  if(document.getElementById('t4multi').checked){
+    ctx.strokeStyle='#ff6b9d';ctx.lineWidth=2.4;ctx.beginPath();
+    for(let t=CUTOFF;t<maxStep;t++){const X=px(W,t,mL,mR),Y=py(multi[t]);t===CUTOFF?ctx.moveTo(X,Y):ctx.lineTo(X,Y);}ctx.stroke();
+  }
+  const xc=px(W,CUTOFF,mL,mR);
+  ctx.strokeStyle='#f5a623';ctx.lineWidth=1.6;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(xc,mT);ctx.lineTo(xc,H-mB);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#f5a623';ctx.font='12px monospace';ctx.fillText('训练截止 604',xc+6,mT+14);
+  ctx.fillStyle='#8b8fa3';ctx.fillText('time →',W-mR-44,H-10);
+  ctx.fillText('1',mL-10,H-10);ctx.fillText('1000',W-mR-18,H-10);
+
+  // ── 测试段 MSE (CUTOFF..maxStep) ──
+  let s1=0,sn=0,cnt=0;
+  for(let t=CUTOFF;t<maxStep;t++){s1+=(one[t]-x[t])**2; sn+=(multi[t]-x[t])**2; cnt++;}
+  const mse1=s1/cnt, mseN=sn/cnt;
+  document.getElementById('sigma4Val').textContent=sigma.toFixed(2);
+  document.getElementById('res4Val').textContent=res.toFixed(2);
+  document.getElementById('step4Val').textContent=maxStep;
+  document.getElementById('mse1').textContent=mse1.toFixed(3);
+  document.getElementById('mseN').textContent=mseN.toFixed(3);
+  document.getElementById('mseRatio').textContent=(mseN/mse1).toFixed(1)+'×';
+}
+['sigma4','res4','step4'].forEach(id=>document.getElementById(id).oninput=drawDemo4);
+['t4data','t4one','t4multi'].forEach(id=>document.getElementById(id).onchange=drawDemo4);
+
+// ══════════════════════════════════════════════════════
+// DEMO 5：k 步预测
+// ══════════════════════════════════════════════════════
+const cv5=document.getElementById('cv5');
+// k 步预测: 预测信号随步数 k 指数衰减 (模型对越远的未来越没把握)。
+// 这是 d2l 图 8.1.3 的直接建模 —— k 越大, 预测曲线越平, 最终坍缩成常数。
+function drawDemo5(){
+  const {ctx,W,H}=setupCanvas(cv5); clear(ctx,W,H);
+  const k=parseInt(document.getElementById('kStep').value);
+  const s=genSignal(), x=genData(0.2);
+  const decay=Math.exp(-k/8);                 // 信号保留率: k=1→88%, k=4→61%, k=16→14%, k=64→0%
+  const mL=50,mR=30,mT=22,mB=34,yMin=-1.8,yMax=1.8;
+  const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
+  // 真实数据
+  ctx.strokeStyle='#5a6378';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
+  for(let t=0;t<T;t++){const X=px(W,t,mL,mR),Y=py(x[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();ctx.globalAlpha=1;
+  // k 步预测 = 纯净信号 × decay (随 k 坍缩; k=64 几乎是一条平线)
+  const pred=new Array(T);
+  for(let t=0;t<T;t++) pred[t]=s[t]*decay;
+  const col=k<=1?'#4ecf8b':k<=4?'#6c8cff':k<=16?'#f5a623':'#ff6b9d';
+  ctx.strokeStyle=col;ctx.lineWidth=2.4;ctx.beginPath();
+  for(let t=0;t<T;t++){const X=px(W,t,mL,mR),Y=py(pred[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();
+  ctx.fillStyle='#8b8fa3';ctx.font='12px monospace';ctx.fillText('time →',W-mR-44,H-10);
+  ctx.fillText('1',mL-10,H-10);ctx.fillText('1000',W-mR-18,H-10);
+  // 读数: 信号保留率 + 质量分档
+  const ret=(decay*100);
+  const qual=ret>70?'几乎完美':ret>40?'尚可':ret>10?'明显走样':'坍塌·无用';
+  const qcol=ret>70?'var(--green)':ret>40?'var(--accent)':ret>10?'var(--orange)':'var(--accent2)';
+  document.getElementById('kVal').textContent=k; document.getElementById('kShow').textContent=k;
+  document.getElementById('kRet').textContent=ret.toFixed(0)+'%';
+  const qEl=document.getElementById('kQuality'); qEl.textContent=qual; qEl.style.color=qcol;
+  // 高亮按钮
+  document.querySelectorAll('.kbtn').forEach(b=>b.classList.remove('active'));
+  const map={1:'k1',4:'k4',16:'k16',64:'k64'};
+  if(map[k])document.getElementById(map[k]).classList.add('active');
+}
+document.getElementById('kStep').oninput=drawDemo5;
+document.getElementById('k1').onclick=()=>{document.getElementById('kStep').value=1;drawDemo5();};
+document.getElementById('k4').onclick=()=>{document.getElementById('kStep').value=4;drawDemo5();};
+document.getElementById('k16').onclick=()=>{document.getElementById('kStep').value=16;drawDemo5();};
+document.getElementById('k64').onclick=()=>{document.getElementById('kStep').value=64;drawDemo5();};
+
+// ══════════════════════════════════════════════════════
+// 初始化 + 响应式重绘
+// ══════════════════════════════════════════════════════
+function drawAll(){ drawDemo1(); drawDemo2(); drawDemo3(); drawDemo4(); drawDemo5(); }
+drawAll();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  // 重置 scaled 标记以重新计算 dpr
+  [cv1,cv2,cv3,cv4,cv5].forEach(c=>{c._scaled=false; c.width=parseInt(c.getAttribute('width')); c.height=parseInt(c.getAttribute('height'));});
+  drawAll();
+},200);});
+</script>
+</body>
+</html>

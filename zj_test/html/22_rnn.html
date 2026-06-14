@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>循环神经网络（RNN）- 交互式讲解</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --fg: #e4e6ed; --muted: #8b8fa3;
+    --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
+    --purple: #b07cff; --code-bg: #12141c; --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 920px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header { text-align: center; padding: 60px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .header .tag { display: inline-block; background: rgba(108,140,255,0.12); color: var(--accent);
+    font-size: 13px; padding: 4px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 1px; }
+  .header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 56px; }
+  .section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .section h2 .num { display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .section h3 { font-size: 17px; margin: 20px 0 8px; color: var(--fg); }
+  .section > p, .section > ul, .section > ol { color: var(--muted); margin-bottom: 12px; }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
+  code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
+  .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
+  .num { color: var(--orange); } .cm { color: #5a5f73; font-style: italic; } .op { color: #d2a8ff; }
+  p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px;
+    border-radius: 4px; font-size: 13px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin: 16px 0; }
+  .note { border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0;
+    background: rgba(108,140,255,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .note strong { color: var(--accent); }
+  .warn { border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0;
+    background: rgba(245,166,35,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .warn strong { color: var(--orange); }
+  .tip { border-left: 3px solid var(--green); padding: 16px 20px; margin: 16px 0;
+    background: rgba(78,207,139,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .tip strong { color: var(--green); }
+
+  .formula { text-align: center; padding: 22px; margin: 16px 0; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius); font-size: 18px;
+    letter-spacing: 1px; overflow-x: auto; }
+  .formula .big { font-size: 22px; }
+  .formula em { color: var(--orange); font-style: normal; }
+  .formula sub { font-size: 12px; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: rgba(255,255,255,0.03); padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--border); font-weight: 600; color: var(--fg); }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--muted); }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+  .flow-item { background: var(--card); border: 1px solid var(--border); padding: 10px 18px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .flow-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px 32px; margin: 24px 0 48px; }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; } .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .summary-grid .item { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; text-align: center; }
+  .summary-grid .item .label { font-size: 12px; color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 1px; }
+  .summary-grid .item .value { font-size: 22px; font-weight: 700; }
+
+  /* ── 交互控件 ── */
+  .demo { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin: 20px 0; }
+  .demo .demo-title { font-size: 14px; color: var(--accent); font-weight: 600;
+    margin-bottom: 6px; letter-spacing: 0.5px; }
+  .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden;
+    background: #0c0e14; border: 1px solid var(--border); }
+  canvas { display: block; width: 100%; height: auto; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
+    padding: 14px 4px 0; border-top: 1px dashed var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; min-width: 160px; flex: 1; }
+  .ctrl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .ctrl label .val { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px;
+    background: var(--border); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+
+  input[type=text] { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--fg); padding: 10px 14px; font-size: 14px; font-family: "JetBrains Mono", monospace;
+    width: 100%; outline: none; transition: border-color 0.2s; }
+  input[type=text]:focus { border-color: var(--accent); }
+
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 4px; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    font-size: 13px; color: var(--muted); user-select: none; }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .readouts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .readout { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; flex: 1; min-width: 130px; }
+  .readout .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .readout .v { font-size: 20px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+    margin: 10px 0 2px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { padding: 7px 16px; background: var(--card); color: var(--muted); border: none;
+    cursor: pointer; font-size: 13px; transition: all .15s; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--fg); }
+  .seg button.active { background: var(--accent); color: #fff; }
+
+  /* 生成文本框 */
+  .gentext { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px 18px; font-family: "JetBrains Mono", monospace; font-size: 14px; line-height: 1.8;
+    word-break: break-all; color: var(--fg); min-height: 56px; }
+  .gentext .tok-un { color: var(--orange); }
+  .gentext .tok-pre { color: var(--accent); font-weight: 700; }
+  .gentext .tok-gen { color: var(--green); }
+  .gentext .tok-bad { color: #ff6b6b; }
+
+  .footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="tag">循环神经网络 · §8.4</div>
+  <h1>循环神经网络（Recurrent Neural Networks）</h1>
+  <p>用一个隐状态 H<sub>t</sub> 压缩整段历史，摆脱 n-gram 的离散查表</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 无隐状态（MLP）→ 有隐状态（RNN）的跨越</span></li>
+    <li><a href="#s1">⭐ RNN 展开</a> <span class="desc">— 拖动时间步，看同一组参数如何沿时间复用</span></li>
+    <li><a href="#s2">⭐ 训练困惑度曲线</a> <span class="desc">— 真实数据：从 3197 降到 278 的下降过程</span></li>
+    <li><a href="#s3">⭐ 文本生成对比</a> <span class="desc">— 训练前（乱码）vs 训练后（the time traveller...）</span></li>
+    <li><a href="#s4">⭐ 梯度裁剪</a> <span class="desc">— 2D 向量被缩回单位圆，防爆炸</span></li>
+    <li><a href="#s5">从零 vs 简洁</a> <span class="desc">— 手写 forward 循环 vs torch.nn.RNN</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— 真实结果 + RNN 解决了什么</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：给网络装上"记忆"</h2>
+
+  <p>上一节的语言模型用 n-gram 离散查表，组合爆炸 + 数据稀疏。<strong>循环神经网络</strong>（RNN）的思路是：用一条<strong>隐状态</strong> <code>H<sub>t</sub></code> 把所有历史压缩成一个固定维向量，每一步用它和当前输入一起算下一步。</p>
+
+  <div class="flow">
+    <div class="flow-item">X<sub>t</sub> 当前输入</div>
+    <div class="flow-arrow">+</div>
+    <div class="flow-item" style="border-color:var(--accent2)">H<sub>t−1</sub> 历史记忆</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">H<sub>t</sub> = tanh(X<sub>t</sub>W<sub>xh</sub> + H<sub>t−1</sub>W<sub>hh</sub> + b<sub>h</sub>)</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">O<sub>t</sub> 输出</div>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr><th>对比</th><th>无隐状态（MLP）</th><th>有隐状态（RNN）</th></tr>
+      <tr>
+        <td><strong>输出依赖</strong></td>
+        <td>只看当前输入 <code>X<sub>t</sub></code></td>
+        <td><code>X<sub>t</sub></code> + <code>H<sub>t−1</sub></code>（全部历史）</td>
+      </tr>
+      <tr>
+        <td><strong>记忆能力</strong></td>
+        <td>无 —— 同一输入永远给同一输出</td>
+        <td>有 —— 同一输入在不同历史下给不同输出</td>
+      </tr>
+      <tr>
+        <td><strong>参数</strong></td>
+        <td><code>W<sub>xh</sub></code>, <code>b<sub>h</sub></code></td>
+        <td>多一个 <code>W<sub>hh</sub></code>，<strong>沿时间共享</strong></td>
+      </tr>
+      <tr>
+        <td><strong>适用</strong></td>
+        <td>静态数据（图像分类）</td>
+        <td>序列数据（文本、语音、时序）</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>关键洞察</strong>：RNN 的"循环"不是网络结构在重复，而是<strong>同一组参数 <code>W<sub>xh</sub>, W<sub>hh</sub></code> 在每个时间步被复用</strong>。展开成一条链后，它看起来像一个很深的网络——但所有"层"共享权重。这就是它能处理任意长序列的原因。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. RNN 展开 -->
+<!-- ============================================ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> ⭐ RNN 沿时间展开</h2>
+
+  <p>把循环按时间步 <code>t = 1, 2, ..., T</code> 展开成一条链。每个节点做相同计算：<strong>读取 <code>X<sub>t</sub></code> 和上一步的 <code>H<sub>t−1</sub></code>，更新成新的 <code>H<sub>t</sub></code>，再线性映射成输出 <code>O<sub>t</sub></code></strong>。初始隐状态 <code>H<sub>0</sub> = 0</code>。</p>
+
+  <div class="formula">
+    <span class="big">H<sub>t</sub> = <em>φ</em>(X<sub>t</sub> <em>W</em><sub>xh</sub> + H<sub>t−1</sub> <em>W</em><sub>hh</sub> + b<sub>h</sub>) &nbsp;&nbsp;|&nbsp;&nbsp; O<sub>t</sub> = H<sub>t</sub> <em>W</em><sub>hq</sub> + b<sub>q</sub></span>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 1 · 展开的 RNN（拖动时间步）</div>
+    <div class="demo-sub">拖动滑块切换当前时间步。高亮节点是被激活的那一步——注意每个节点的权重框颜色完全相同，因为它们是同一组共享参数。隐状态沿橙色箭头从左流向右。</div>
+    <div class="canvas-wrap"><canvas id="cv1" width="1700" height="430"></canvas></div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>当前时间步 t <span class="val" id="tVal">3</span></label>
+        <input type="range" id="tSlider" min="1" max="6" value="3" step="1">
+      </div>
+      <div class="ctrl">
+        <label>展开总步数 T <span class="val" id="TVal">6</span></label>
+        <input type="range" id="TSlider" min="3" max="6" value="6" step="1">
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">当前输入</div><div class="v" style="color:var(--accent)">X<sub id="tX">3</sub></div></div>
+      <div class="readout"><div class="k">读入历史</div><div class="v" style="color:var(--accent2)">H<sub id="tHprev">2</sub></div></div>
+      <div class="readout"><div class="k">算出新状态</div><div class="v" style="color:var(--green)">H<sub id="tH">3</sub></div></div>
+      <div class="readout"><div class="k">输出</div><div class="v" style="color:var(--orange)">O<sub id="tO">3</sub></div></div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>为什么是"权重共享"？</strong> 不管序列多长，RNN 的参数量始终是 <code>W<sub>xh</sub> + W<sub>hh</sub> + W<sub>hq</sub></code> 三个矩阵，<strong>不随 T 增长</strong>。对比 n-gram：n 越大组合越爆炸；RNN 把"历史"压缩进固定维的 <code>H<sub>t</sub></code>，从根上规避了维度灾难。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 训练困惑度曲线 -->
+<!-- ============================================ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> ⭐ 训练：困惑度从 3197 一路降</h2>
+
+  <p>RNN 语言模型的训练目标：每步用 <code>X<sub>t</sub></code> 预测下一个 token <code>Y<sub>t</sub></code>，最小化交叉熵。指标<strong>困惑度 perplexity</strong> = 交叉熵的指数，ppl=k 表示"每次在 k 个候选词里犹豫"。训练前 ppl ≈ |V|（瞎猜），训练后越低越好。</p>
+
+  <div class="formula">
+    ppl = exp( <em>1/N</em> <em>Σ</em> −log P(Y<sub>t</sub> | X<sub>≤t</sub>) )
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 2 · 真实训练曲线（《时光机器》，word-level，50 epochs）</div>
+    <div class="demo-sub">两条曲线是 22_rnn.py 真实运行结果。从初始的近 3200（接近词表大小 4581，几乎瞎猜）降到 200~280。勾选/取消单独观察。</div>
+    <div class="canvas-wrap"><canvas id="cv2" width="1700" height="460"></canvas></div>
+    <div class="legend">
+      <label class="toggle"><span class="swatch" style="background:#6c8cff"></span><input type="checkbox" id="showS" checked> 从零实现 RNNModelScratch</label>
+      <label class="toggle"><span class="swatch" style="background:#ff6b9d"></span><input type="checkbox" id="showC" checked> 简洁实现 nn.RNN</label>
+    </div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>纵轴坐标</label>
+        <div class="seg" id="pplSeg">
+          <button class="active" data-scale="log">对数 log</button>
+          <button data-scale="linear">线性</button>
+        </div>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">Scratch 初始 ppl</div><div class="v" style="color:#6c8cff">3198</div></div>
+      <div class="readout"><div class="k">Scratch 最终 ppl</div><div class="v" style="color:#6c8cff">278.8</div></div>
+      <div class="readout"><div class="k">nn.RNN 初始 ppl</div><div class="v" style="color:#ff6b9d">1750</div></div>
+      <div class="readout"><div class="k">nn.RNN 最终 ppl</div><div class="v" style="color:#ff6b9d">197.7</div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>为什么没降到 1.0？</strong> d2l 教程用<strong>字符级</strong>词表（26 个字母），ppl 能到 ~1.0。这里沿用上节的 <strong>word-level</strong> 词表（|V|=4581），预测空间大得多，50 epoch 跑到 ~200 已是显著学习（从瞎猜提升 ~16 倍）。继续训练或换字符级会进一步收敛——本节重点是<strong>下降趋势</strong>而非绝对值。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 文本生成对比 -->
+<!-- ============================================ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> ⭐ 文本生成：训练前 vs 训练后</h2>
+
+  <p>RNN 语言模型训练好就能<strong>生成</strong>文本：给一个前缀，把最后一步输出的 logits 取 argmax 当下一个 token，再喂回去——自回归地一个词一个词往后吐。下面是用前缀 <code>"traveller"</code> 生成 20 个 token 的真实结果。</p>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 3 · 生成文本沙盒</div>
+    <div class="demo-sub">蓝色=前缀，绿色=模型生成。对比训练前（随机词）、从零实现（50 epoch）、nn.RNN（50 epoch）三种。注意训练后开始出现 "the time traveller / the time machine" 这种有意义的短语。</div>
+    <div class="controls" style="border-top:none;padding-top:0;margin-bottom:14px">
+      <div class="ctrl" style="min-width:100%">
+        <label>前缀 prefix</label>
+        <input type="text" id="genPrefix" value="traveller">
+      </div>
+    </div>
+
+    <div style="margin-top:6px"><strong style="color:var(--orange);font-size:13px">① 训练前（随机初始化）</strong></div>
+    <div class="gentext" id="genBefore" style="margin-top:6px"></div>
+
+    <div style="margin-top:14px"><strong style="color:#6c8cff;font-size:13px">② 从零实现 RNNModelScratch（50 epoch）</strong></div>
+    <div class="gentext" id="genScratch" style="margin-top:6px"></div>
+
+    <div style="margin-top:14px"><strong style="color:#ff6b9d;font-size:13px">③ 简洁实现 torch.nn.RNN（50 epoch）</strong></div>
+    <div class="gentext" id="genConcise" style="margin-top:6px"></div>
+
+    <div class="readouts">
+      <div class="readout"><div class="k">有意义短语数</div><div class="v" id="genScore" style="color:var(--green)">—</div></div>
+      <div class="readout"><div class="k">生成 token 数</div><div class="v">20</div></div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>训练后发生了什么？</strong> 模型学会了 "the time traveller"、"the time machine"、"i was a little of" 这些<strong>在《时光机器》原文里高频出现的搭配</strong>。这正是上节 n-gram 统计里排名最高的 trigram！RNN 不靠查表，而是从隐状态里"涌现"出了这些统计规律。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 梯度裁剪 -->
+<!-- ============================================ -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ⭐ 梯度裁剪：防爆炸的"安全阀"</h2>
+
+  <p>RNN 沿时间展开后很深，反向传播时梯度要连乘很多次 <code>W<sub>hh</sub></code>。<strong>若 <code>‖W<sub>hh</sub>‖&gt;1</strong> 梯度指数增长 → <strong>爆炸</strong>；<strong>若 &lt;1</strong> 指数衰减 → <strong>消失</strong>。梯度裁剪只治爆炸：把整个梯度向量的范数强行压到阈值 <code>θ</code> 以内。</p>
+
+  <div class="formula">
+    <span class="big"><em>g</em> ← min(1, <em>θ</em> / ‖<em>g</em>‖) · <em>g</em></span>
+  </div>
+
+  <pre><code><span class="kw">def</span> <span class="fn">grad_clipping</span>(net, theta):
+    params = [p <span class="kw">for</span> p <span class="kw">in</span> net.parameters() <span class="kw">if</span> p.requires_grad]
+    norm = torch.sqrt(<span class="fn">sum</span>(torch.<span class="fn">sum</span>(p.grad ** <span class="num">2</span>) <span class="kw">for</span> p <span class="kw">in</span> params))
+    <span class="kw">if</span> norm > theta:
+        <span class="kw">for</span> p <span class="kw">in</span> params:
+            p.grad[:] *= theta / norm   <span class="cm"># 等比缩放, 不改方向</span></code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 4 · 梯度裁剪 2D 可视化</div>
+    <div class="demo-sub">橙色圆 = 阈值 θ 的范数球。蓝色箭头 = 原始梯度 g，绿色箭头 = 裁剪后 g'。当 ‖g‖&gt;θ 时，g 被沿原方向缩到球面上；‖g‖≤θ 时不动。拖动滑块感受"安全阀"何时触发。</div>
+    <div class="canvas-wrap"><canvas id="cv4" width="1700" height="480"></canvas></div>
+    <div class="controls">
+      <div class="ctrl">
+        <label>梯度 g 的 x 分量 <span class="val" id="gxVal">3.0</span></label>
+        <input type="range" id="gxSlider" min="-6" max="6" value="3" step="0.1">
+      </div>
+      <div class="ctrl">
+        <label>梯度 g 的 y 分量 <span class="val" id="gyVal">4.0</span></label>
+        <input type="range" id="gySlider" min="-6" max="6" value="4" step="0.1">
+      </div>
+      <div class="ctrl">
+        <label>阈值 θ <span class="val" id="thetaVal">2.0</span></label>
+        <input type="range" id="thetaSlider" min="0.5" max="6" value="2" step="0.1">
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">‖g‖ 原范数</div><div class="v" id="gcNorm" style="color:var(--accent)">5.00</div></div>
+      <div class="readout"><div class="k">缩放系数</div><div class="v" id="gcScale" style="color:var(--orange)">0.40</div></div>
+      <div class="readout"><div class="k">‖g'‖ 裁剪后</div><div class="v" id="gcClipped" style="color:var(--green)">2.00</div></div>
+      <div class="readout"><div class="k">是否触发</div><div class="v" id="gcTrigger" style="font-size:15px;color:var(--orange)">触发</div></div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <strong>裁剪只防爆，不防消失。</strong> 梯度消失（<code>‖W<sub>hh</sub>‖&lt;1</code>）时早期时间步的梯度趋零，模型学不到长程依赖——这是 RNN 的固有缺陷，正是后面 <strong>LSTM / GRU</strong> 用门控机制要解决的核心问题。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 从零 vs 简洁 -->
+<!-- ============================================ -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 从零实现 vs torch.nn.RNN</h2>
+
+  <p>d2l 给出两种实现。<strong>从零版</strong>手写 <code>for x in X</code> 的逐时间步循环，把公式逐行翻译成代码；<strong>简洁版</strong>用 <code>torch.nn.RNN</code> 一行搞定循环，再接一个 <code>nn.Linear</code> 把隐状态映射到 vocab 维。</p>
+
+  <div class="card">
+    <p><strong>从零实现 forward（逐时间步循环）</strong></p>
+<pre><code><span class="kw">def</span> <span class="fn">forward</span>(self, X, state):
+    X = F.one_hot(X.T, self.vocab_size).type(torch.float32)  <span class="cm"># (steps, batch, V)</span>
+    H = state
+    outputs = []
+    <span class="kw">for</span> x <span class="kw">in</span> X:                              <span class="cm"># 沿时间步循环</span>
+        H = torch.tanh(x @ self.W_xh + H @ self.W_hh + self.b_h)
+        outputs.append(H @ self.W_hq + self.b_q)
+    <span class="kw">return</span> torch.cat(outputs, dim=<span class="num">0</span>), H</code></pre>
+  </div>
+
+  <div class="card">
+    <p><strong>简洁实现（nn.RNN 内部已封装循环）</strong></p>
+<pre><code>rnn_layer = nn.RNN(vocab_size, num_hiddens)   <span class="cm"># 内含 W_ih, W_hh, b</span>
+
+<span class="kw">class</span> <span class="fn">RNNModel</span>(nn.Module):
+    <span class="kw">def</span> __init__(self, rnn_layer, vocab_size):
+        <span class="fn">super</span>().__init__()
+        self.rnn = rnn_layer
+        self.linear = nn.Linear(rnn_layer.hidden_size, vocab_size)
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, inputs, state):
+        X = F.one_hot(inputs.T, self.vocab_size).type(torch.float32)
+        Y, state = self.rnn(X, state)              <span class="cm"># 一步完成全部时间步</span>
+        <span class="kw">return</span> self.linear(Y.reshape(-<span class="num">1</span>, Y.shape[-<span class="num">1</span>])), state</code></pre>
+  </div>
+
+  <div class="card">
+    <p><strong>两者对比</strong></p>
+    <table>
+      <tr><th>维度</th><th>从零 RNNModelScratch</th><th>简洁 RNNModel(nn.RNN)</th></tr>
+      <tr><td><strong>权重</strong></td><td>手写 <code>W_xh, W_hh, b_h, W_hq, b_q</code></td><td><code>nn.RNN</code> 内含 <code>W_ih, W_hh</code> + 自己加 <code>linear</code></td></tr>
+      <tr><td><strong>循环</strong></td><td><code>for x in X</code> 显式</td><td><code>self.rnn(X, state)</code> 隐式（C++ 实现，更快）</td></tr>
+      <tr><td><strong>50 epoch 后 ppl</strong></td><td>278.8</td><td>197.7</td></tr>
+      <tr><td><strong>用途</strong></td><td>理解原理</td><td>实际工程</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>两者数学等价</strong>。<code>nn.RNN</code> 的 <code>W_ih</code> 就是从零版的 <code>W_xh</code>，只是命名不同（i=input）。简洁版收敛稍快（C++ 优化 + 默认初始化更合理），但学到的语言规律一致。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：真实结果 + RNN 解决了什么</h2>
+
+  <p>下面是 <code>22_rnn.py</code> 实际运行的完整结果（《时光机器》word-level，vocab=4581，num_hiddens=256，num_steps=35，batch_size=32，SGD lr=1.0，50 epoch）：</p>
+
+  <div class="summary-grid">
+    <div class="item"><div class="label">词表 |V|</div><div class="value">4581</div></div>
+    <div class="item"><div class="label">隐状态维度</div><div class="value">256</div></div>
+    <div class="item"><div class="label">初始 ppl</div><div class="value" style="color:var(--orange)">3198</div></div>
+    <div class="item"><div class="label">最终 ppl</div><div class="value" style="color:var(--green)">278.8</div></div>
+    <div class="item"><div class="label">提升倍数</div><div class="value" style="color:var(--accent)">~11×</div></div>
+  </div>
+
+  <div class="card">
+    <p><strong>训练前 vs 训练后生成（前缀 "traveller"）</strong></p>
+    <table>
+      <tr><th>阶段</th><th>生成文本（前缀 traveller 之后 20 个 token）</th></tr>
+      <tr>
+        <td><strong style="color:var(--orange)">训练前</strong></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:#ff6b6b">avoided selfishness margin realities general statue take precious bluish purposes increase awake inner dotted likeness remain amazed cannibal nations unknown</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#6c8cff">从零 50ep</strong></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--green)">and the time traveller and the same of the time machine was the same and i was a little of</td>
+      </tr>
+      <tr>
+        <td><strong style="color:#ff6b9d">nn.RNN 50ep</strong></td>
+        <td style="font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--green)">i was a certain of the time i was to the time of the fire i was a little of</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>四条核心结论</strong></p>
+    <table>
+      <tr><th>结论</th><th>说明</th></tr>
+      <tr>
+        <td><strong>隐状态 = 历史压缩</strong></td>
+        <td><code>H<sub>t</sub></code> 用固定维度向量编码 <code>X<sub>≤t</sub></code> 全部历史，参数量不随序列长度增长。</td>
+      </tr>
+      <tr>
+        <td><strong>权重沿时间共享</strong></td>
+        <td>所有时间步用同一组 <code>W<sub>xh</sub>, W<sub>hh</sub></code>，展开后看似很深但参数极少。</td>
+      </tr>
+      <tr>
+        <td><strong>困惑度统一指标</strong></td>
+        <td>ppl = exp(交叉熵)，从 ~|V| 降到 ~200，意味着模型从瞎猜变成"在 ~200 个候选词里犹豫"。</td>
+      </tr>
+      <tr>
+        <td><strong>梯度裁剪治标</strong></td>
+        <td>只防爆炸不防消失；长程依赖的梯度消失问题留给 LSTM/GRU 的门控。</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步</strong>：RNN 已能学习序列依赖，但遇到长序列仍会"遗忘"早期信息（梯度消失）。§8.6/§8.7 的 <strong>LSTM</strong> 用遗忘门/输入门/输出门精细控制记忆的保留与更新，让信息能跨数百步流动——这是现代序列模型的基石。
+  </div>
+
+  <div class="flow" style="margin-top:28px">
+    <div class="flow-item">§8.3 语言模型</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">§8.4 RNN（本节）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">§8.6/8.7 LSTM/GRU</div>
+  </div>
+</div>
+
+<div class="footer">
+  基于 22_rnn.py 真实运行结果生成 · 动手学深度学习 §8.4 循环神经网络 · 交互式可视化
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 真实训练数据（来自 22_rnn.py 实际运行）
+// ══════════════════════════════════════════════════════
+const HIST_SCRATCH = [3197.7,966.7,777.7,663.2,630.9,616.3,598.8,587.3,574.4,552.7,548.0,532.8,526.0,515.4,502.0,495.1,486.4,478.3,461.4,453.7,438.1,438.1,421.3,412.4,405.4,399.3,389.1,385.8,382.2,371.1,363.4,361.6,354.5,346.0,341.1,341.1,331.8,329.5,321.5,319.5,312.0,307.4,308.2,303.4,297.7,288.1,286.9,287.0,278.4,278.8];
+const HIST_CONCISE  = [1750.4,861.2,724.4,666.5,620.6,599.0,578.3,548.6,527.0,513.3,496.2,475.2,465.1,447.0,446.5,425.7,415.2,403.6,395.7,387.0,373.0,363.3,359.3,361.7,339.6,333.7,325.3,319.7,316.0,306.5,300.0,292.3,291.3,280.8,276.5,268.9,263.5,258.9,252.8,245.7,243.1,235.4,231.3,227.8,217.6,219.5,208.5,208.5,202.8,197.7];
+// 真实生成文本（前缀 traveller，20 个 token）
+const GEN = {
+  before:  'avoided selfishness margin realities general statue take precious bluish purposes increase awake inner dotted likeness remain amazed cannibal nations unknown',
+  scratch: 'and the time traveller and the same of the time machine was the same and i was a little of',
+  concise: 'i was a certain of the time i was to the time of the fire i was a little of'
+};
+
+// ── HiDPI canvas ──
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1; const W=cv.width,H=cv.height; cv.style.width='100%';
+  if(!cv._scaled){ cv.width=W*dpr; cv.height=H*dpr; cv._scaled=true; cv._dpr=dpr; cv._W=W; cv._H=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
+  return {ctx,W:cv._W,H:cv._H};
+}
+function clearBg(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawArrow(ctx,x1,y1,x2,y2,color,w){
+  ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=w||2;
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+  const a=Math.atan2(y2-y1,x2-x1), hl=7;
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-hl*Math.cos(a-0.4),y2-hl*Math.sin(a-0.4));
+  ctx.lineTo(x2-hl*Math.cos(a+0.4),y2-hl*Math.sin(a+0.4)); ctx.closePath(); ctx.fill();
+}
+
+// ══════════════════════════════════════════════════════
+// DEMO 1：RNN 沿时间展开
+// ══════════════════════════════════════════════════════
+const cv1=document.getElementById('cv1');
+let curT=3, totalT=6;
+function drawDemo1(){
+  const {ctx,W,H}=setupCanvas(cv1); clearBg(ctx,W,H);
+  const mL=40,mR=40,mT=70,mB=40;
+  const n=totalT;
+  const nodeW=Math.min(120,(W-mL-mR)/n-30);
+  const gap=(W-mL-mR-nodeW*n)/(n-1);
+  const cx=i=>mL+i*(nodeW+gap)+nodeW/2;
+  const xBoxY=mT, hBoxY=mT+78, oBoxY=mT+156, hRowY=mT+118;
+
+  // 标题
+  ctx.fillStyle='#8b8fa3'; ctx.font='600 13px monospace'; ctx.textAlign='center';
+  ctx.fillText('RNN 沿时间展开（同一组参数 W_xh, W_hh 沿时间共享）', W/2, 28);
+
+  // 图例：x 输入(上)、h 隐状态(中)、o 输出(下)
+  ctx.font='11px monospace'; ctx.textAlign='left';
+  ctx.fillStyle='#6c8cff'; ctx.fillText('X_t 输入', mL, xBoxY-12);
+  ctx.fillStyle='#4ecf8b'; ctx.fillText('H_t 隐状态（沿橙色箭头传递）', mL, hRowY-12);
+  ctx.fillStyle='#f5a623'; ctx.fillText('O_t 输出', mL, oBoxY+62);
+
+  // 先画 H 之间的连接箭头（背景层）
+  for(let i=0;i<n-1;i++){
+    const x1=cx(i), x2=cx(i+1);
+    drawArrow(ctx, x1, hRowY+18, x2, hRowY+18, curT-1===i?'#ff6b9d':'#5a3a4a', curT-1===i?3.4:1.6);
+  }
+
+  for(let i=0;i<n;i++){
+    const active=(i+1)===curT;
+    const x=cx(i);
+    const nodeColor = active ? '#6c8cff' : '#2a2d3a';
+    const alpha = active ? 1.0 : 0.55;
+
+    // X 输入框
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle='#12141c'; ctx.strokeStyle=active?'#6c8cff':'#2a2d3a'; ctx.lineWidth=active?2:1;
+    roundRect(ctx, x-nodeW/2, xBoxY, nodeW, 40, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#6c8cff'; ctx.font='600 14px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText('X'+sub(i+1), x, xBoxY+25);
+
+    // X → H 箭头（带权重标签）
+    drawArrow(ctx, x, xBoxY+40, x, hBoxY-2, active?'#6c8cff':'#3a3d4a', active?2.4:1.2);
+    if(active){ ctx.fillStyle='#b07cff'; ctx.font='700 10px monospace'; ctx.textAlign='left';
+      ctx.fillText('W_xh', x+6, (xBoxY+40+hBoxY)/2+3); }
+
+    // H 隐状态框
+    ctx.fillStyle=active?'rgba(108,140,255,0.15)':'#12141c';
+    ctx.strokeStyle=active?'#6c8cff':'#2a2d3a'; ctx.lineWidth=active?2.4:1;
+    roundRect(ctx, x-nodeW/2, hBoxY, nodeW, 40, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle=active?'#e4e6ed':'#8b8fa3'; ctx.font='700 14px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText('H'+sub(i+1), x, hBoxY+25);
+
+    // H → O 箭头
+    drawArrow(ctx, x, hBoxY+40, x, oBoxY-2, active?'#f5a623':'#3a3d4a', active?2.4:1.2);
+    if(active){ ctx.fillStyle='#b07cff'; ctx.font='700 10px monospace'; ctx.textAlign='left';
+      ctx.fillText('W_hq', x+6, (hBoxY+40+oBoxY)/2+3); }
+
+    // O 输出框
+    ctx.fillStyle='#12141c'; ctx.strokeStyle=active?'#f5a623':'#2a2d3a'; ctx.lineWidth=active?2:1;
+    roundRect(ctx, x-nodeW/2, oBoxY, nodeW, 40, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#f5a623'; ctx.font='600 14px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText('O'+sub(i+1), x, oBoxY+25);
+
+    // H 之间的 W_hh 标签（在激活的那条连接上）
+    if(i<n-1 && active){
+      const mx=(cx(i)+cx(i+1))/2;
+      ctx.fillStyle='#ff6b9d'; ctx.font='700 11px monospace'; ctx.textAlign='center';
+      ctx.fillText('W_hh', mx, hRowY+10);
+    }
+    ctx.globalAlpha=1;
+  }
+
+  // 初始 H_0
+  const x0=cx(0)-nodeW/2-30;
+  ctx.fillStyle='#12141c'; ctx.strokeStyle= active?'#6c8cff':'#2a2d3a';
+  ctx.fillStyle='#5a5f73'; ctx.font='10px monospace'; ctx.textAlign='center';
+  ctx.fillText('H₀=0', x0, hBoxY+25);
+  ctx.strokeStyle='#5a3a4a';
+  drawArrow(ctx, x0, hRowY+18, cx(0)-nodeW/2, hRowY+18, '#5a3a4a', 1.4);
+
+  // 更新 readout
+  document.getElementById('tX').textContent=i_to_sub(curT);
+  document.getElementById('tHprev').textContent=i_to_sub(curT-1);
+  document.getElementById('tH').textContent=i_to_sub(curT);
+  document.getElementById('tO').textContent=i_to_sub(curT);
+}
+function sub(i){ const map={1:'₁',2:'₂',3:'₃',4:'₄',5:'₅',6:'₆',0:'₀'}; return map[i]||i; }
+function i_to_sub(i){ return sub(i); }
+document.getElementById('tSlider').oninput=e=>{curT=+e.target.value;document.getElementById('tVal').textContent=curT;drawDemo1();};
+document.getElementById('TSlider').oninput=e=>{
+  totalT=+e.target.value;document.getElementById('TVal').textContent=totalT;
+  const ts=document.getElementById('tSlider'); ts.max=totalT;
+  if(curT>totalT){curT=totalT;ts.value=curT;document.getElementById('tVal').textContent=curT;}
+  drawDemo1();
+};
+
+// ══════════════════════════════════════════════════════
+// DEMO 2：困惑度训练曲线
+// ══════════════════════════════════════════════════════
+const cv2=document.getElementById('cv2');
+let pplScale='log';
+function drawDemo2(){
+  const {ctx,W,H}=setupCanvas(cv2); clearBg(ctx,W,H);
+  const mL=64,mR=24,mT=24,mB=46;
+  const plotW=W-mL-mR, plotH=H-mT-mB;
+  const isLog=pplScale==='log';
+  const curves=[
+    {data:HIST_SCRATCH,color:'#6c8cff',name:'从零实现',show:document.getElementById('showS').checked},
+    {data:HIST_CONCISE,color:'#ff6b9d',name:'nn.RNN',show:document.getElementById('showC').checked},
+  ];
+  const vis=curves.filter(c=>c.show);
+  if(vis.length===0) return;
+  const n=HIST_SCRATCH.length;
+  let fMin=Infinity,fMax=-Infinity;
+  vis.forEach(c=>{ fMin=Math.min(fMin,Math.min(...c.data)); fMax=Math.max(fMax,Math.max(...c.data)); });
+  if(isLog){ fMin=Math.log10(Math.max(1,fMin*0.9)); fMax=Math.log10(fMax*1.05); }
+  else { fMin=Math.max(0,fMin*0.9); fMax=fMax*1.05; }
+  const tx=e=>mL+(e/(n-1))*plotW;
+  const ty=f=>{ const v=isLog?Math.log10(Math.max(1,f)):f; return mT+(fMax-v)/(fMax-fMin)*plotH; };
+  // 网格
+  ctx.strokeStyle='#222533'; ctx.lineWidth=1; ctx.fillStyle='#5a5f73'; ctx.font='11px monospace';
+  const yTicks=isLog?[10,30,100,300,1000,3000]:[0,500,1000,1500,2000,2500,3000];
+  yTicks.forEach(v=>{
+    if(isLog && (v<Math.pow(10,fMin) || v>Math.pow(10,fMax))) return;
+    if(!isLog && (v<fMin||v>fMax)) return;
+    const yy=ty(v);
+    ctx.beginPath(); ctx.moveTo(mL,yy); ctx.lineTo(W-mR,yy); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(v, mL-8, yy+4);
+  });
+  const xTicks=[1,10,20,30,40,50];
+  xTicks.forEach(e=>{ const xx=tx(e-1);
+    ctx.beginPath(); ctx.setLineDash([2,3]); ctx.moveTo(xx,mT); ctx.lineTo(xx,H-mB); ctx.stroke(); ctx.setLineDash([]);
+    ctx.textAlign='center'; ctx.fillText(e, xx, H-mB+16); });
+  ctx.fillStyle='#8b8fa3'; ctx.font='12px monospace';
+  ctx.textAlign='center'; ctx.fillText('epoch →', W/2, H-mB+34);
+  ctx.save(); ctx.translate(20,mT+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.fillText('困惑度 perplexity', 0,0); ctx.restore();
+  // 曲线
+  vis.forEach(c=>{
+    ctx.strokeStyle=c.color; ctx.lineWidth=2.4; ctx.beginPath();
+    c.data.forEach((f,i)=>{ const X=tx(i),Y=ty(f); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+    ctx.stroke();
+    // 末端点
+    ctx.fillStyle=c.color; ctx.beginPath(); ctx.arc(tx(n-1),ty(c.data[n-1]),4,0,7); ctx.fill();
+    // 末端标签
+    ctx.fillStyle=c.color; ctx.font='700 11px "JetBrains Mono",monospace'; ctx.textAlign='right';
+    ctx.fillText(c.name+' '+c.data[n-1].toFixed(0), tx(n-1)-8, ty(c.data[n-1])-10);
+  });
+}
+document.querySelectorAll('#pplSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#pplSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); pplScale=b.dataset.scale; drawDemo2();
+});
+['showS','showC'].forEach(id=>document.getElementById(id).onchange=drawDemo2);
+
+// ══════════════════════════════════════════════════════
+// DEMO 3：文本生成对比
+// ══════════════════════════════════════════════════════
+function renderGen(elId, prefix, genText, isBad){
+  const el=document.getElementById(elId);
+  const preTok=prefix.split(/\s+/).filter(Boolean);
+  const genTok=genText.split(/\s+/).filter(Boolean);
+  let html='';
+  preTok.forEach(w=> html += `<span class="tok-pre">${esc(w)}</span> `);
+  genTok.forEach(w=>{
+    const cls=isBad?'tok-bad':'tok-gen';
+    const isUn = w==='<unk>';
+    html += `<span class="${isUn?'tok-un':cls}">${esc(w)}</span> `;
+  });
+  el.innerHTML=html || '<span style="color:#5a5f73">（无）</span>';
+}
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function drawDemo3(){
+  const prefix=document.getElementById('genPrefix').value.trim()||'traveller';
+  renderGen('genBefore', prefix, GEN.before, true);
+  renderGen('genScratch', prefix, GEN.scratch, false);
+  renderGen('genConcise', prefix, GEN.concise, false);
+  // 计算有意义短语数（粗略：统计生成文本里出现 "the time" 的次数 + "i was"）
+  let score=0;
+  ['scratch','concise'].forEach(k=>{
+    const t=GEN[k];
+    const m1=t.match(/the time/g); const m2=t.match(/i was/g);
+    score += (m1?m1.length:0) + (m2?m2.length:0);
+  });
+  document.getElementById('genScore').textContent=score;
+}
+document.getElementById('genPrefix').oninput=drawDemo3;
+
+// ══════════════════════════════════════════════════════
+// DEMO 4：梯度裁剪 2D
+// ══════════════════════════════════════════════════════
+const cv4=document.getElementById('cv4');
+let gx=3, gy=4, theta=2;
+function drawDemo4(){
+  const {ctx,W,H}=setupCanvas(cv4); clearBg(ctx,W,H);
+  const cx=W/2, cy=H/2;
+  const scale=Math.min(W,H)/2/8; // 1 单位 = scale 像素, 显示范围 [-8,8]
+  // 阈值圆（橙色）
+  ctx.strokeStyle='#f5a623'; ctx.lineWidth=2; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.arc(cx,cy,theta*scale,0,7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='#f5a623'; ctx.font='11px monospace'; ctx.textAlign='center';
+  ctx.fillText('θ='+theta.toFixed(1), cx+theta*scale+6, cy-6);
+  // 坐标轴
+  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(40,cy); ctx.lineTo(W-40,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,40); ctx.lineTo(cx,H-40); ctx.stroke();
+  // 原始梯度 g（蓝）
+  const ex=cx+gx*scale, ey=cy-gy*scale;
+  drawArrow(ctx, cx,cy, ex,ey, '#6c8cff', 3);
+  ctx.fillStyle='#6c8cff'; ctx.font='700 13px "JetBrains Mono",monospace'; ctx.textAlign='left';
+  ctx.fillText('g=('+gx.toFixed(1)+','+gy.toFixed(1)+')', ex+10, ey-6);
+  // 裁剪
+  const norm=Math.sqrt(gx*gx+gy*gy);
+  const triggered=norm>theta;
+  const s=Math.min(1, theta/Math.max(norm,1e-9));
+  const cgx=gx*s, cgy=gy*s;
+  const cex=cx+cgx*scale, cey=cy-cgy*scale;
+  if(triggered){
+    // 裁剪后（绿）
+    drawArrow(ctx, cx,cy, cex,cey, '#4ecf8b', 3);
+    ctx.fillStyle='#4ecf8b'; ctx.font='700 13px "JetBrains Mono",monospace';
+    ctx.fillText("g'=("+cgx.toFixed(2)+','+cgy.toFixed(2)+')', cex+10, cey+18);
+    // 虚线连接 g → g'
+    ctx.strokeStyle='#4ecf8b55'; ctx.lineWidth=1.4; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(cex,cey); ctx.stroke(); ctx.setLineDash([]);
+  }
+  // 公式标注
+  ctx.fillStyle='#8b8fa3'; ctx.font='13px monospace'; ctx.textAlign='left';
+  ctx.fillText(`‖g‖ = ${norm.toFixed(2)}`, 28, 28);
+  ctx.fillText(`min(1, θ/‖g‖) = min(1, ${theta.toFixed(1)}/${norm.toFixed(2)}) = ${s.toFixed(3)}`, 28, 50);
+  ctx.fillText(triggered?`‖g'‖ = ${Math.sqrt(cgx*cgx+cgy*cgy).toFixed(2)}  (已缩回球面)`:`‖g‖ ≤ θ, 不裁剪`, 28, 72);
+  // readout
+  document.getElementById('gcNorm').textContent=norm.toFixed(2);
+  document.getElementById('gcScale').textContent=s.toFixed(3);
+  document.getElementById('gcClipped').textContent=(triggered?theta:norm).toFixed(2);
+  const trig=document.getElementById('gcTrigger');
+  trig.textContent=triggered?'触发':'未触发';
+  trig.style.color=triggered?'var(--orange)':'var(--green)';
+}
+document.getElementById('gxSlider').oninput=e=>{gx=+e.target.value;document.getElementById('gxVal').textContent=gx.toFixed(1);drawDemo4();};
+document.getElementById('gySlider').oninput=e=>{gy=+e.target.value;document.getElementById('gyVal').textContent=gy.toFixed(1);drawDemo4();};
+document.getElementById('thetaSlider').oninput=e=>{theta=+e.target.value;document.getElementById('thetaVal').textContent=theta.toFixed(1);drawDemo4();};
+
+// ══════════════════════════════════════════════════════
+// 初始化 + 响应式重绘
+// ══════════════════════════════════════════════════════
+function drawAll(){ drawDemo1(); drawDemo2(); drawDemo3(); drawDemo4(); }
+drawAll();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  [cv1,cv2,cv4].forEach(c=>{c._scaled=false; c.width=parseInt(c.getAttribute('width')); c.height=parseInt(c.getAttribute('height'));});
+  drawAll();
+},200);});
+</script>
+</body>
+</html>

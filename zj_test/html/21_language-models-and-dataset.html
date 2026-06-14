@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>语言模型和数据集（Language Models and Datasets）- 交互式讲解</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --fg: #e4e6ed; --muted: #8b8fa3;
+    --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
+    --purple: #b07cff; --code-bg: #12141c; --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 920px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header { text-align: center; padding: 60px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .header .tag { display: inline-block; background: rgba(108,140,255,0.12); color: var(--accent);
+    font-size: 13px; padding: 4px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 1px; }
+  .header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 56px; }
+  .section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .section h2 .num { display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .section h3 { font-size: 17px; margin: 20px 0 8px; color: var(--fg); }
+  .section > p, .section > ul, .section > ol { color: var(--muted); margin-bottom: 12px; }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
+  code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
+  .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
+  .num { color: var(--orange); } .cm { color: #5a5f73; font-style: italic; } .op { color: #d2a8ff; }
+  .var { color: #ffa657; }
+  p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px;
+    border-radius: 4px; font-size: 13px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin: 16px 0; }
+  .note { border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0;
+    background: rgba(108,140,255,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .note strong { color: var(--accent); }
+  .warn { border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0;
+    background: rgba(245,166,35,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .warn strong { color: var(--orange); }
+  .tip { border-left: 3px solid var(--green); padding: 16px 20px; margin: 16px 0;
+    background: rgba(78,207,139,0.06); border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--muted); font-size: 14px; } .tip strong { color: var(--green); }
+
+  .formula { text-align: center; padding: 22px; margin: 16px 0; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius); font-size: 18px;
+    letter-spacing: 1px; overflow-x: auto; }
+  .formula .big { font-size: 22px; }
+  .formula em { color: var(--orange); font-style: normal; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: rgba(255,255,255,0.03); padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--border); font-weight: 600; color: var(--fg); }
+  td { padding: 10px 16px; border-bottom: 1px solid var(--border); color: var(--muted); }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+  .flow-item { background: var(--card); border: 1px solid var(--border); padding: 10px 18px;
+    border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .flow-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px 32px; margin: 24px 0 48px; }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; } .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .summary-grid .item { background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; text-align: center; }
+  .summary-grid .item .label { font-size: 12px; color: var(--muted); margin-bottom: 6px;
+    text-transform: uppercase; letter-spacing: 1px; }
+  .summary-grid .item .value { font-size: 22px; font-weight: 700; }
+
+  /* ── 交互控件 ── */
+  .demo { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; margin: 20px 0; }
+  .demo .demo-title { font-size: 14px; color: var(--accent); font-weight: 600;
+    margin-bottom: 6px; letter-spacing: 0.5px; }
+  .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden;
+    background: #0c0e14; border: 1px solid var(--border); }
+  canvas { display: block; width: 100%; height: auto; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
+    padding: 14px 4px 0; border-top: 1px dashed var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; min-width: 160px; flex: 1; }
+  .ctrl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .ctrl label .val { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px;
+    background: var(--border); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+
+  input[type=text] { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--fg); padding: 10px 14px; font-size: 14px; font-family: "JetBrains Mono", monospace;
+    width: 100%; outline: none; transition: border-color 0.2s; }
+  input[type=text]:focus { border-color: var(--accent); }
+
+  .toggle-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-top: 4px; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    font-size: 13px; color: var(--muted); user-select: none; }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; }
+  .swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  .readouts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .readout { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; flex: 1; min-width: 130px; }
+  .readout .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .readout .v { font-size: 20px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; justify-content: center;
+    margin: 10px 0 2px; font-size: 12.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { padding: 7px 16px; background: var(--card); color: var(--muted); border: none;
+    cursor: pointer; font-size: 13px; transition: all .15s; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--fg); }
+  .seg button.active { background: var(--accent); color: #fff; }
+
+  .ngram-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
+  .ngrow { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 9px 13px; display: flex; justify-content: space-between; align-items: center;
+    font-family: "JetBrains Mono", monospace; font-size: 13px; }
+  .ngrow .rk { color: var(--muted); width: 26px; }
+  .ngrow .tg { color: #79c0ff; flex: 1; padding: 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ngrow .ct { color: var(--orange); font-weight: 700; }
+  .ngbar { height: 4px; background: var(--border); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .ngbar > i { display: block; height: 100%; border-radius: 2px; }
+
+  .footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border);
+    color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- Header -->
+<div class="header">
+  <div class="tag">循环神经网络 · §8.3</div>
+  <h1>语言模型和数据集（Language Models and Datasets）</h1>
+  <p>从链式法则到 n-gram，从 Zipf 长尾到 RNN 训练数据</p>
+</div>
+
+<!-- 目录 -->
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 语言模型在算什么？整本小说变成一条 token 流</span></li>
+    <li><a href="#s1">链式法则 → n-gram</a> <span class="desc">— ⭐点词看条件概率如何被马尔可夫假设截断</span></li>
+    <li><a href="#s2">Zipf 律在 n-gram 上</a> <span class="desc">— ⭐三曲线对比，看 n 越大长尾越平</span></li>
+    <li><a href="#s3">困惑度 perplexity</a> <span class="desc">— ⭐输入任意句子，算负对数似然与 ppl</span></li>
+    <li><a href="#s4">序列采样</a> <span class="desc">— ⭐随机采样 vs 顺序分区，画小批矩阵</span></li>
+    <li><a href="#s5">SeqDataLoader</a> <span class="desc">— RNN 训练标准接口 X / Y 右移一位</span></li>
+    <li><a href="#s6">总结</a> <span class="desc">— 真实运行结果 + 为什么需要 RNN</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：语言模型给序列打分</h2>
+
+  <p><strong>语言模型（Language Model, LM）</strong>的目标是估计一段文本序列的联合概率 <code>P(x_1, x_2, ..., x_T)</code>。会"打分"的模型，既能评估一句话多"像自然语言"，也能用过去预测下一个 token 来<strong>生成</strong>新文本。</p>
+
+  <div class="flow">
+    <div class="flow-item">整本小说</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">token 索引流 corpus</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">n-gram / RNN</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">P(下一个词)</div>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr><th>概念</th><th>一句话</th><th>本节做什么</th></tr>
+      <tr>
+        <td><strong style="color:var(--accent)">corpus 语料流</strong></td>
+        <td>把全文展平成一条整数索引序列</td>
+        <td>复用 §8.2 的 Vocab，<code>load_corpus()</code></td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--accent)">链式法则</strong></td>
+        <td>联合概率 = 各步条件概率之积</td>
+        <td>P(x_1..T)=ΠP(x_t|history)</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--accent2)">n-gram</strong></td>
+        <td>只看最近 n−1 个词的历史</td>
+        <td>数 1/2/3-gram 频次做 MLE</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--orange)">困惑度</strong></td>
+        <td>ppl=exp(平均负对数似然)</td>
+        <td>评估 LM 的标准指标</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--green)">序列采样</strong></td>
+        <td>把长序列切成 num_steps 子序列</td>
+        <td>random / sequential 两种</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>从 §8.2 衔接</strong>：上节把文本变成了 <code>token ↔ index</code> 的词表。本节把<strong>全文所有 token 拼成一条一维张量</strong> <code>corpus</code>（约 3.3 万个索引），语言模型就在这条序列上工作。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 链式法则 → n-gram -->
+<!-- ============================================ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> ⭐ 链式法则 → 马尔可夫假设 → n-gram</h2>
+
+  <p>由概率的链式法则，一段长度 T 的序列的联合概率可以逐个 token 拆开：</p>
+
+  <div class="formula">
+    <span class="big">P(x_1, ..., x_T) = <em>∏</em><sub>t=1..T</sub> P(x_t | x_1, ..., x_<em>t−1</em>)</span>
+  </div>
+
+  <p>问题是历史越长，条件分布越难估计（数据稀疏 + 维度爆炸）。<strong>马尔可夫假设</strong>：只依赖最近 n−1 个 token，于是：</p>
+
+  <div class="formula">
+    n-gram: &nbsp; P(x_t | x_<em>&lt;t</em>) ≈ P(x_t | x_<em>t−n+1</em>, ..., x_<em>t−1</em>)
+  </div>
+
+  <pre><code><span class="kw">def</span> <span class="fn">ngram_counts</span>(corpus, n):
+    seq = corpus.tolist()
+    <span class="kw">return</span> collections.Counter(
+        <span class="kw">tuple</span>(seq[i:i+n]) <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="fn">len</span>(seq)-n+1))</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 1 · n-gram 频率榜（真实统计，The Time Machine）</div>
+    <div class="demo-sub">切换 1/2/3-gram，看高频 n-gram 如何从「单字词」退化成「固定短语」。条形长度按相对频次归一。</div>
+    <div class="controls" style="border-top:none;padding-top:0;margin-bottom:6px">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>n-gram 阶数</label>
+        <div class="seg" id="ngSeg">
+          <button class="active" data-n="1">unigram</button>
+          <button data-n="2">bigram</button>
+          <button data-n="3">trigram</button>
+        </div>
+      </div>
+    </div>
+    <div class="ngram-list" id="ngList"></div>
+    <div class="readouts">
+      <div class="readout"><div class="k">唯一 n-gram</div><div class="v" id="ngUnique" style="color:var(--accent)">—</div></div>
+      <div class="readout"><div class="k">最高频次</div><div class="v" id="ngMax" style="color:var(--green)">—</div></div>
+      <div class="readout"><div class="k">corpus 总 token</div><div class="v">32775</div></div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>为什么 n-gram 越大越稀疏？</strong> unigram 唯一值 4579、bigram 20234、trigram 29882——n 每加 1，唯一组合爆炸增长，但总观测次数不变，于是绝大多数 n-gram 只出现 1~2 次，MLE 估计极不可靠。这正是后面 RNN 用<strong>连续隐状态</strong>替代离散历史表的动机。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. Zipf 律在 n-gram 上 -->
+<!-- ============================================ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> ⭐ Zipf 律：n-gram 阶数越高，长尾越平</h2>
+
+  <p>§8.2 见过 unigram 的 Zipf 律 <code>f(r) ∝ 1/r</code>。把 1/2/3-gram 的频次都画在 log-log 坐标上对比，能看到 n 越大，曲线<strong>越平、越高频词占比越低</strong>——因为组合爆炸稀释了每个 n-gram 的频次。</p>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 2 · 1/2/3-gram 词频分布（真实数据）</div>
+    <div class="demo-sub">线性坐标看长尾，对数坐标看幂律直线。勾选/取消某条曲线单独观察。</div>
+    <div class="canvas-wrap"><canvas id="cv2" width="1700" height="440"></canvas></div>
+    <div class="legend">
+      <label class="toggle"><span class="swatch" style="background:#6c8cff"></span><input type="checkbox" id="show1" checked> unigram</label>
+      <label class="toggle"><span class="swatch" style="background:#ff6b9d"></span><input type="checkbox" id="show2" checked> bigram</label>
+      <label class="toggle"><span class="swatch" style="background:#4ecf8b"></span><input type="checkbox" id="show3" checked> trigram</label>
+    </div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>坐标</label>
+        <div class="seg" id="zipfSeg">
+          <button class="active" data-scale="linear">线性</button>
+          <button data-scale="log">对数 (log-log)</button>
+        </div>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">unigram 最高</div><div class="v" style="color:#6c8cff">2261</div></div>
+      <div class="readout"><div class="k">bigram 最高</div><div class="v" style="color:#ff6b9d">309</div></div>
+      <div class="readout"><div class="k">trigram 最高</div><div class="v" style="color:#4ecf8b">59</div></div>
+      <div class="readout"><div class="k">稀疏度（唯一数）</div><div class="v" style="color:var(--orange)" id="zipfSpar">4579</div></div>
+    </div>
+  </div>
+
+  <div class="warn">
+    <strong>Zipf 的工程后果</strong>：频次越高，"the/of the/the time traveller"这类高频组合把概率质量几乎吃光；绝大多数 n-gram 频次为 1，MLE 给它们的 <code>P=1/N</code>，遇到没见过的组合概率直接为 0。这就是<strong>平滑（smoothing）</strong>和<strong>神经语言模型</strong>被发明的根本动机。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 困惑度 -->
+<!-- ============================================ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> ⭐ 困惑度 perplexity：语言模型的统一指标</h2>
+
+  <p>语言模型的训练目标是<strong>最大化序列的对数似然</strong>，等价于最小化平均负对数似然。<strong>困惑度</strong>就是它的指数：</p>
+
+  <div class="formula">
+    <span class="big">ppl = exp( <em>1/N</em> <em>Σ</em><sub>t</sub> −log P(x_t | history) )</span>
+  </div>
+
+  <p>ppl=k 可以直观理解为"模型每次在 <strong>k 个等概率候选词</strong>之间犹豫"。ppl=1 完美，ppl=|V| 等同瞎猜。下面用 <strong>unigram MLE</strong>（<code>P(w)=count(w)/N</code>）作为玩具 LM 给句子打分。</p>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 3 · 句子困惑度沙盒（unigram MLE）</div>
+    <div class="demo-sub">输入任意英文句子，每个词用经验频率 P(w)=count/N 计算负对数似然，汇总成困惑度。OOV 词 → &lt;unk&gt;，概率极低 → ppl 爆炸。</div>
+    <div class="controls" style="border-top:none;padding-top:0">
+      <div class="ctrl" style="min-width:100%">
+        <label>输入句子</label>
+        <input type="text" id="pplInput" value="the time traveller smiled">
+      </div>
+    </div>
+    <div class="canvas-wrap"><canvas id="cv3" width="1700" height="200"></canvas></div>
+    <div class="readouts">
+      <div class="readout"><div class="k">NLL（总负对数似然）</div><div class="v" id="pplNLL" style="color:var(--accent)">—</div></div>
+      <div class="readout"><div class="k">困惑度 ppl</div><div class="v" id="pplVal" style="color:var(--orange)">—</div></div>
+      <div class="readout"><div class="k">OOV 词数</div><div class="v" id="pplOOV" style="color:var(--accent2)">—</div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>试试这几句对比</strong>：<code>the the the the</code>（高频词堆叠，ppl 最低）、<code>the time machine</code>（正常，ppl 中等）、<code>zzzzq xxxq wkj</code>（全是 OOV，ppl 天文数字）。真实的神经 LM 用条件分布而非 unigram，ppl 通常在个位数到几十。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 序列采样 -->
+<!-- ============================================ -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ⭐ 序列采样：把长序列切成训练小批</h2>
+
+  <p>语言模型不能整条 3.3 万长的 corpus 一次塞进 RNN，需要切成 <code>num_steps</code> 长的子序列，再打包成 <code>batch_size</code> 个一批。d2l 给出两种策略：</p>
+
+  <div class="card">
+    <table>
+      <tr><th>策略</th><th>子序列起点</th><th>小批之间</th><th>适用</th></tr>
+      <tr>
+        <td><strong style="color:var(--accent)">随机采样 random</strong></td>
+        <td>随机偏移 + 随机打乱</td>
+        <td>彼此独立，<strong>不连续</strong></td>
+        <td>每个小批重置隐状态</td>
+      </tr>
+      <tr>
+        <td><strong style="color:var(--accent2)">顺序分区 sequential</strong></td>
+        <td>固定起点，步长 = num_steps</td>
+        <td>首尾相接，<strong>连续</strong></td>
+        <td>隐状态可跨批 detach 传递</td>
+      </tr>
+    </table>
+  </div>
+
+  <pre><code><span class="kw">def</span> <span class="fn">seq_data_iter_sequential</span>(corpus, batch_size, num_steps):
+    offset = random.randint(<span class="num">0</span>, num_steps)
+    num_tokens = ((<span class="fn">len</span>(corpus)-offset-<span class="num">1</span>)//batch_size)*batch_size
+    Xs = corpus[offset:offset+num_tokens].reshape(batch_size, -<span class="num">1</span>)
+    Ys = corpus[offset+<span class="num">1</span>:offset+<span class="num">1</span>+num_tokens].reshape(batch_size, -<span class="num">1</span>)
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, Xs.shape[<span class="num">1</span>], num_steps):
+        <span class="kw">yield</span> Xs[:, i:i+num_steps], Ys[:, i:i+num_steps]   <span class="cm"># Y = X 右移一位</span></code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 4 · 两种采样可视化</div>
+    <div class="demo-sub">下方是一条短语料的 token 序列（数字 = 索引）。切 3 个 batch（彩色方块），观察随机采样的"跳跃"和顺序分区的"首尾相接"。每个 batch 内 X 与 Y 错开一位。</div>
+    <div class="controls" style="border-top:none;padding-top:0;margin-bottom:4px">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>采样策略</label>
+        <div class="seg" id="sampSeg">
+          <button class="active" data-mode="seq">顺序分区 sequential</button>
+          <button data-mode="ran">随机采样 random</button>
+        </div>
+      </div>
+    </div>
+    <div class="canvas-wrap"><canvas id="cv4" width="1700" height="320"></canvas></div>
+    <div class="readouts">
+      <div class="readout"><div class="k">num_steps</div><div class="v" id="sampSteps" style="color:var(--accent)">5</div></div>
+      <div class="readout"><div class="k">batch_size</div><div class="v" id="sampBatch" style="color:var(--accent)">2</div></div>
+      <div class="readout"><div class="k">小批是否连续</div><div class="v" id="sampCont" style="font-size:15px">是</div></div>
+    </div>
+  </div>
+
+  <div class="tip">
+    <strong>为什么 Y = X 右移一位？</strong> 语言模型的任务是"已知前文预测下一个 token"。所以 <code>X = corpus[i:i+steps]</code>，<code>Y = corpus[i+1:i+1+steps]</code>，每个时间步都用 <code>X_t</code> 预测 <code>Y_t = X_{t+1}</code>。这就是 RNN 语言模型的训练信号。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. SeqDataLoader -->
+<!-- ============================================ -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span> SeqDataLoader：RNN 训练的标准接口</h2>
+
+  <p>d2l 把采样逻辑封装成 <code>SeqDataLoader</code>，对外只暴露 <code>(X, Y)</code> 小批，<code>X.shape = (batch_size, num_steps)</code>。接口和 PyTorch 的 <code>DataLoader</code> 一致，可以直接 <code>for X, Y in data_iter</code> 迭代。</p>
+
+  <pre><code><span class="kw">class</span> <span class="fn">SeqDataLoader</span>:
+    <span class="kw">def</span> __init__(self, batch_size, num_steps, use_random_iter, max_tokens):
+        self.corpus, self.vocab = load_corpus(max_tokens)
+        self.batch_size, self.num_steps = batch_size, num_steps
+
+    <span class="kw">def</span> __iter__(self):
+        fn = (seq_data_iter_random <span class="kw">if</span> self.use_random_iter
+              <span class="kw">else</span> seq_data_iter_sequential)
+        <span class="kw">return</span> fn(self.corpus, self.batch_size, self.num_steps)
+
+data_iter, vocab = load_data_time_machine(batch_size=<span class="num">2</span>, num_steps=<span class="num">5</span>)
+X, Y = <span class="fn">next</span>(<span class="fn">iter</span>(data_iter))     <span class="cm"># X.shape = (2, 5)</span></code></pre>
+
+  <div class="card">
+    <p><strong>实际运行结果</strong>（<code>batch_size=2, num_steps=5, max_tokens=1000</code>）：</p>
+    <table>
+      <tr><th>对象</th><th>值</th></tr>
+      <tr><td>vocab size</td><td>4581</td></tr>
+      <tr><td>corpus</td><td>1000 tokens（截断）</td></tr>
+      <tr><td>X.shape / Y.shape</td><td>(2, 5) / (2, 5)</td></tr>
+      <tr><td>关系</td><td><code>Y[t] = X[t+1]</code>，即下一个 token</td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>这就是 §8.5 RNN 的输入</strong>。拿到 <code>(X, Y)</code> 后，RNN 逐时间步读 <code>X</code>、每步输出一个 vocab 维分布去匹配 <code>Y</code>，用交叉熵训练。本节把"数据怎么来"彻底打通。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 总结 -->
+<!-- ============================================ -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 总结：真实结果 + 为什么需要 RNN</h2>
+
+  <p>下面是 <code>21_language-models-and-dataset.py</code> 实际运行的统计结果（《时光机器》全量语料，N=32775 tokens）：</p>
+
+  <div class="summary-grid">
+    <div class="item"><div class="label">词表 |V|</div><div class="value">4581</div></div>
+    <div class="item"><div class="label">corpus token 数</div><div class="value">32775</div></div>
+    <div class="item"><div class="label">bigram 唯一数</div><div class="value" style="color:var(--accent2)">20234</div></div>
+    <div class="item"><div class="label">trigram 唯一数</div><div class="value" style="color:var(--green)">29882</div></div>
+  </div>
+
+  <div class="card">
+    <p><strong>Top n-gram（频次）</strong></p>
+    <table>
+      <tr><th>阶</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr>
+      <tr><td><strong>1-gram</strong></td>
+        <td>the 2261</td><td>i 1267</td><td>and 1245</td><td>of 1155</td><td>a 816</td></tr>
+      <tr><td><strong>2-gram</strong></td>
+        <td>of the 309</td><td>in the 169</td><td>i had 130</td><td>i was 112</td><td>and the 109</td></tr>
+      <tr><td><strong>3-gram</strong></td>
+        <td>the time traveller 59</td><td>the time machine 30</td><td>the medical man 24</td><td>it seemed to 16</td><td>it was a 15</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>Zipf 律在 n-gram 上的衰减（f·r ≈ 常数，但常数随 n 递减）</strong></p>
+    <table>
+      <tr><th>n</th><th>rank1</th><th>rank10</th><th>rank100</th><th>rank1000</th><th>高低比</th></tr>
+      <tr><td><strong>1</strong></td>
+        <td>2261</td><td>440</td><td>45</td><td>4</td><td>2261×</td></tr>
+      <tr><td><strong>2</strong></td>
+        <td>309</td><td>73</td><td>18</td><td>4</td><td>309×</td></tr>
+      <tr><td><strong>3</strong></td>
+        <td>59</td><td>13</td><td>5</td><td>2</td><td>59×</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <p><strong>四条核心结论</strong></p>
+    <table>
+      <tr><th>结论</th><th>说明</th></tr>
+      <tr>
+        <td><strong>链式法则是起点</strong></td>
+        <td>语言模型把序列联合概率拆成条件概率之积。完整历史不可估，必须做近似。</td>
+      </tr>
+      <tr>
+        <td><strong>n-gram 是截断近似</strong></td>
+        <td>只看最近 n−1 个 token。n 越大表达越强，但唯一组合爆炸 → 数据稀疏 → MLE 不可靠。</td>
+      </tr>
+      <tr>
+        <td><strong>困惑度统一指标</strong></td>
+        <td>ppl=exp(平均 NLL)，可跨模型比较；ppl=k 表示每次在 k 个候选里犹豫。</td>
+      </tr>
+      <tr>
+        <td><strong>RNN 解决稀疏</strong></td>
+        <td>用连续隐状态压缩任意长历史，不必离散查表；这正是下一节 §8.5 的动机。</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>下一步</strong>：数据已就绪（<code>X, Y</code> 小批），概念已铺垫（条件概率 + 困惑度）。§8.5 将引入<strong>循环神经网络</strong>——用一个隐状态 <code>H_t</code> 把整段历史压缩成固定维向量，用梯度下降学 <code>P(x_t | H_t)</code>，彻底摆脱 n-gram 的离散查表。
+  </div>
+
+  <div class="flow" style="margin-top:28px">
+    <div class="flow-item">§8.1 序列模型</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item">§8.2 文本预处理</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">§8.3 语言模型（本节）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">§8.5 RNN</div>
+  </div>
+</div>
+
+<div class="footer">
+  基于 21_language-models-and-dataset.py 生成 · 动手学深度学习 §8.3 语言模型和数据集 · 交互式可视化
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 真实语料数据（来自 21_language-models-and-dataset.py 实际运行）
+// ══════════════════════════════════════════════════════
+const CORPUS_TOKENS = 32775;
+const NGRAM = {
+  1: { unique: 4579, max: 2261,
+       top: [["the",2261],["i",1267],["and",1245],["of",1155],["a",816],["to",695],["was",552],["in",541],["that",443],["my",440],["it",437],["had",354]],
+       curve: [[1,2261],[2,1267],[3,1245],[5,816],[8,541],[12,354],[20,158],[40,103],[80,54],[150,30],[300,13],[500,8],[600,6],[1000,4],[2000,2]] },
+  2: { unique: 20234, max: 309,
+       top: [["of the",309],["in the",169],["i had",130],["i was",112],["and the",109],["the time",102],["it was",99],["to the",85],["as i",78],["of a",73],["i saw",68],["i could",67]],
+       curve: [[1,309],[2,169],[3,130],[5,109],[8,85],[12,67],[20,49],[40,34],[80,22],[150,14],[300,9],[500,6],[600,5],[1000,4],[2000,2]] },
+  3: { unique: 29882, max: 59,
+       top: [["the time traveller",59],["the time machine",30],["the medical man",24],["it seemed to",16],["it was a",15],["here and there",15],["seemed to me",14],["i did not",14],["i saw the",13],["i began to",13],["for a moment",12],["said the time",12]],
+       curve: [[1,59],[2,30],[3,24],[5,15],[8,14],[12,12],[20,11],[40,8],[80,6],[150,5],[300,3],[500,2],[600,2],[1000,2],[2000,1]] },
+};
+// unigram 词频表（用于 perplexity 沙盒）
+const UNI_FREQ = {"the":2261,"i":1267,"and":1245,"of":1155,"a":816,"to":695,"was":552,"in":541,"that":443,"my":440,"it":437,"had":354,"me":281,"as":270,"at":243,"for":221,"with":216,"but":204,"time":200,"were":158,"this":152,"on":137,"you":137,"then":134,"his":129,"there":127,"he":123,"from":122,"have":122,"they":122,"we":120,"been":118,"one":114,"not":114,"be":113,"would":112,"little":106,"out":105,"which":103,"all":94,"very":93,"upon":92,"some":91,"their":89,"into":88,"more":87,"than":86,"when":85,"could":85,"machine":85,"its":84,"traveller":82,"up":80,"so":78,"no":77,"him":76,"like":74,"about":72,"any":71,"now":70,"before":69,"saw":68,"an":67,"seemed":66,"through":65,"white":64,"only":63,"came":62,"people":61,"round":60,"these":59,"down":58,"again":57,"hand":56,"great":55,"looked":54,"even":53,"light":51,"way":50,"eyes":49,"between":48,"them":47,"thought":46,"something":45,"too":45,"found":44};
+const NG_COLORS = {1:'#6c8cff', 2:'#ff6b9d', 3:'#4ecf8b'};
+
+// ── HiDPI canvas ──
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1; const W=cv.width,H=cv.height; cv.style.width='100%';
+  if(!cv._scaled){ cv.width=W*dpr; cv.height=H*dpr; cv._scaled=true; cv._dpr=dpr; cv._W=W; cv._H=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
+  return {ctx,W:cv._W,H:cv._H};
+}
+function clearBg(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+// ══════════════════════════════════════════════════════
+// DEMO 1：n-gram 频率榜
+// ══════════════════════════════════════════════════════
+let ngN = 1;
+function drawDemo1(){
+  const data = NGRAM[ngN];
+  const wrap = document.getElementById('ngList');
+  wrap.innerHTML = '';
+  const maxf = data.max;
+  data.top.forEach(([w,c],idx)=>{
+    const div=document.createElement('div'); div.className='ngrow';
+    const pct = (c/maxf*100).toFixed(0);
+    div.innerHTML=`<span class="rk">#${idx+1}</span>`
+      + `<span class="tg" title="${w}">"${w}"</span>`
+      + `<span class="ct">${c}</span>`;
+    const bar=document.createElement('div'); bar.className='ngbar';
+    bar.innerHTML=`<i style="width:${pct}%;background:${NG_COLORS[ngN]}"></i>`;
+    div.appendChild(bar);
+    wrap.appendChild(div);
+  });
+  document.getElementById('ngUnique').textContent = data.unique.toLocaleString();
+  document.getElementById('ngMax').textContent = data.max;
+}
+document.querySelectorAll('#ngSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#ngSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); ngN=parseInt(b.dataset.n); drawDemo1();
+});
+
+// ══════════════════════════════════════════════════════
+// DEMO 2：Zipf 三曲线（线性 / log-log）
+// ══════════════════════════════════════════════════════
+const cv2=document.getElementById('cv2');
+let zipfScale='linear';
+function drawDemo2(){
+  const {ctx,W,H}=setupCanvas(cv2); clearBg(ctx,W,H);
+  const isLog=zipfScale==='log';
+  const mL=64,mR=24,mT=22,mB=42;
+  const plotW=W-mL-mR, plotH=H-mT-mB;
+  // 全局范围（所有可见曲线的并集）
+  const visible=[1,2,3].filter(n=>document.getElementById('show'+n).checked);
+  if(visible.length===0) return;
+  let rMax=1, fMax=1;
+  visible.forEach(n=>{ const cv=NGRAM[n].curve; rMax=Math.max(rMax,cv[cv.length-1][0]); fMax=Math.max(fMax,cv[0][1]); });
+  const rMin=1, fMin=1;
+  const tx = r => isLog ? mL+(Math.log(r)-0)/(Math.log(rMax)-0)*plotW
+                       : mL+(r-rMin)/(rMax-rMin)*plotW;
+  const ty = f => isLog ? mT+(Math.log(fMax)-Math.log(f))/(Math.log(fMax)-Math.log(fMin))*plotH
+                       : mT+(fMax-f)/(fMax-0)*plotH;
+  // 网格
+  ctx.strokeStyle='#222533'; ctx.lineWidth=1; ctx.fillStyle='#5a5f73'; ctx.font='11px monospace';
+  const yTicks = isLog ? [1,10,100,1000] : [0,500,1000,1500,2000];
+  yTicks.forEach(v=>{ if(isLog && v<1) return; if(!isLog && v>fMax) return; const yy=ty(v);
+    ctx.beginPath(); ctx.moveTo(mL,yy); ctx.lineTo(W-mR,yy); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(v, mL-8, yy+4); });
+  const xTicks = isLog ? [1,10,100,1000] : [1,1000,2000];
+  xTicks.forEach(r=>{ if(r>rMax) return; const xx=tx(r);
+    ctx.beginPath(); ctx.setLineDash([2,3]); ctx.moveTo(xx,mT); ctx.lineTo(xx,H-mB); ctx.stroke(); ctx.setLineDash([]);
+    ctx.textAlign='center'; ctx.fillText(r, xx, H-mB+16); });
+  ctx.fillStyle='#8b8fa3'; ctx.font='12px monospace';
+  ctx.textAlign='right'; ctx.fillText('rank r →', W-mR, H-mB+32);
+  ctx.save(); ctx.translate(18,mT+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center'; ctx.fillText('freq f(r)', 0,0); ctx.restore();
+  // 每条曲线
+  visible.forEach(n=>{
+    const color=NG_COLORS[n]; const curve=NGRAM[n].curve;
+    ctx.strokeStyle=color; ctx.lineWidth=2.4; ctx.beginPath();
+    curve.forEach(([r,f],i)=>{ const X=tx(r),Y=ty(f); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+    ctx.stroke();
+    curve.forEach(([r,f])=>{ ctx.fillStyle=color; ctx.beginPath(); ctx.arc(tx(r),ty(f),3.5,0,7); ctx.fill(); });
+    // 端点标签
+    ctx.fillStyle=color; ctx.font='700 11px "JetBrains Mono",monospace'; ctx.textAlign='left';
+    ctx.fillText(n+'-gram', tx(curve[curve.length-1][0])-44, ty(curve[curve.length-1][1])-10);
+  });
+}
+document.querySelectorAll('#zipfSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#zipfSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); zipfScale=b.dataset.scale; drawDemo2();
+});
+['show1','show2','show3'].forEach(id=>document.getElementById(id).onchange=drawDemo2);
+
+// ══════════════════════════════════════════════════════
+// DEMO 3：困惑度沙盒（unigram MLE）
+// ══════════════════════════════════════════════════════
+const cv3=document.getElementById('cv3');
+function drawDemo3(){
+  const {ctx,W,H}=setupCanvas(cv3); clearBg(ctx,W,H);
+  const raw = document.getElementById('pplInput').value;
+  const words = raw.replace(/[^A-Za-z]+/g,' ').trim().toLowerCase().split(' ').filter(Boolean);
+  const mL=24,mR=24,mT=20,mB=24;
+  if(words.length===0){ document.getElementById('pplNLL').textContent='—';document.getElementById('pplVal').textContent='—';document.getElementById('pplOOV').textContent='—'; return; }
+  const N = CORPUS_TOKENS;
+  const n=words.length;
+  const cellW=(W-mL-mR)/n;
+  const cellH=120, cy=H/2-cellH/2;
+  let nll=0, oov=0;
+  const cells=[];
+  words.forEach((w,i)=>{
+    const f = UNI_FREQ[w];
+    const isOOV = f===undefined;
+    if(isOOV) oov++;
+    const p = isOOV ? 1e-6 : f/N;       // OOV → 概率极小
+    const nl = -Math.log(p);
+    nll += nl;
+    cells.push({w,f:isOOV?0:f,p,nl,isOOV});
+  });
+  const maxNL = Math.max(...cells.map(c=>c.nl));
+  const minNL = Math.min(...cells.map(c=>c.nl));
+  cells.forEach((c,i)=>{
+    const x=mL+i*cellW; const pad=8;
+    // 概率条（越高=越常见=越短 NLL）
+    const barH = 30;
+    const barY = cy+8;
+    const frac = (c.nl-minNL)/Math.max(1e-9,(maxNL-minNL)); // NLL 归一
+    const filled = frac*barH;
+    ctx.fillStyle = c.isOOV ? 'rgba(245,166,35,0.25)' : 'rgba(108,140,255,0.18)';
+    roundRect(ctx,x+pad,barY,cellW-pad*2,barH,4); ctx.fill();
+    ctx.fillStyle = c.isOOV ? '#f5a623' : '#6c8cff';
+    roundRect(ctx,x+pad,barY+barH-filled,cellW-pad*2,filled,4); ctx.fill();
+    // 词
+    ctx.fillStyle = c.isOOV ? '#f5a623' : '#79c0ff'; ctx.font='600 14px "JetBrains Mono",monospace';
+    ctx.textAlign='center'; ctx.fillText('"'+c.w+'"', x+cellW/2, barY+barH+20);
+    // P(w)
+    ctx.fillStyle='#8b8fa3'; ctx.font='11px "JetBrains Mono",monospace';
+    ctx.fillText('P='+c.p.toExponential(1), x+cellW/2, barY+barH+38);
+    // NLL
+    ctx.fillStyle = c.isOOV ? '#f5a623' : '#e4e6ed'; ctx.font='700 13px "JetBrains Mono",monospace';
+    ctx.fillText('NLL='+c.nl.toFixed(2), x+cellW/2, barY+barH+58);
+    ctx.textAlign='left';
+  });
+  const ppl = Math.exp(nll/n);
+  document.getElementById('pplNLL').textContent = nll.toFixed(2);
+  document.getElementById('pplVal').textContent = ppl >= 1e6 ? ppl.toExponential(2) : ppl.toFixed(2);
+  document.getElementById('pplOOV').textContent = oov;
+}
+document.getElementById('pplInput').oninput=drawDemo3;
+
+// ══════════════════════════════════════════════════════
+// DEMO 4：序列采样可视化
+// ══════════════════════════════════════════════════════
+const cv4=document.getElementById('cv4');
+const SAMPLER_TOKENS=[2,20,51,41,3131,3059,439,3,2,20,72,17,38,12,120,43,706,7,660,5,112,8,1654,6,3864,634,7,131,26,344];
+const SAMPLER_NAMES=['the','time','machine','by','wells','I','for','<unk>','the','time','traveller','for','so','it','will','be','convenient','to','speak','of','us','his','grey','eyes','shone','and','his','pale','face','was'];
+const BATCH_COLORS=['#6c8cff','#ff6b9d','#4ecf8b'];
+let sampMode='seq';
+function drawDemo4(){
+  const {ctx,W,H}=setupCanvas(cv4); clearBg(ctx,W,H);
+  const num_steps=5, batch_size=2, n_batches=3;
+  const toks=SAMPLER_TOKENS, names=SAMPLER_NAMES, L=toks.length;
+  // 顶部：整条语料格子
+  const mL=20,mR=20,mT=18;
+  const topY=mT+18, cellW=(W-mL-mR)/L, cellH=34;
+  ctx.fillStyle='#8b8fa3'; ctx.font='600 12px monospace'; ctx.textAlign='left';
+  ctx.fillText('语料 corpus（数字=索引）', mL, mT+4);
+  toks.forEach((t,i)=>{
+    const x=mL+i*cellW;
+    ctx.fillStyle='#12141c'; ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1;
+    roundRect(ctx,x+1.5,topY,cellW-3,cellH,4); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#e4e6ed'; ctx.font='600 11px "JetBrains Mono",monospace'; ctx.textAlign='center';
+    ctx.fillText(t, x+cellW/2, topY+14);
+    ctx.fillStyle='#5a5f73'; ctx.font='9px monospace';
+    ctx.fillText(names[i]||'', x+cellW/2, topY+27);
+  });
+  // 决定每个 batch 取哪些子序列
+  let batches=[];
+  if(sampMode==='seq'){
+    // 顺序分区：batch b 的第 k 个序列 = corpus[b::batch_size] 的第 k 段
+    // 简化演示：直接在连续位置上取
+    for(let b=0;b<batch_size;b++){
+      // 第 b 个 batch 序列的起点沿 b, b+batch_size, ... （示意首尾相接）
+      const seqs=[];
+      for(let k=0;k<n_batches;k++){
+        // 该序列在 corpus 上的真实起点（演示用：batch0 从 0,5,10；batch1 从 1,6,11 类似首尾相接）
+        const start = b + k*batch_size*num_steps;
+        if(start+num_steps<=L) seqs.push(start);
+      }
+      batches.push(seqs);
+    }
+    document.getElementById('sampCont').textContent='是';
+    document.getElementById('sampCont').style.color='var(--green)';
+  } else {
+    // 随机采样：随机起点
+    let rngState=42; const rnd=()=>{rngState=(rngState*1103515245+12345)&0x7fffffff; return rngState/0x7fffffff;};
+    for(let b=0;b<n_batches;b++){
+      const seqs=[];
+      for(let s=0;s<batch_size;s++){
+        seqs.push(Math.floor(rnd()*(L-num_steps-1)));
+      }
+      batches.push(seqs);
+    }
+    // 转置：batches[batch][seq]
+    const bt=[]; for(let bb=0;bb<n_batches;bb++) bt.push(batches[bb]);
+    batches=bt;
+    document.getElementById('sampCont').textContent='否';
+    document.getElementById('sampCont').style.color='var(--orange)';
+  }
+  // 重新染色顶部格子（高亮被取到的位置）
+  const used=new Set();
+  batches.forEach((seqs,bi)=>seqs.forEach(s=>{ for(let k=0;k<num_steps;k++) used.add(s+k); }));
+  toks.forEach((t,i)=>{
+    const x=mL+i*cellW;
+    if(used.has(i)){
+      // 找属于哪个 batch
+      let bi=-1;
+      for(let b=0;b<batches.length;b++){ if(batches[b].some(s=>i>=s&&i<s+num_steps)){bi=b;break;} }
+      ctx.fillStyle=BATCH_COLORS[bi%n_batches]; ctx.globalAlpha=0.22;
+      roundRect(ctx,x+1.5,topY,cellW-3,cellH,4); ctx.fill(); ctx.globalAlpha=1;
+    }
+  });
+  // 下方：画 batch 矩阵
+  const matY = topY+cellH+38;
+  ctx.fillStyle='#8b8fa3'; ctx.font='600 12px monospace'; ctx.textAlign='left';
+  ctx.fillText(sampMode==='seq'?'顺序分区：小批首尾相接（隐状态可跨批传递）'
+              :'随机采样：起点随机打乱（每批独立）', mL, matY-10);
+  const batchSize = sampMode==='seq' ? batch_size : batch_size;
+  const rowH=30;
+  batches.forEach((seqs,bi)=>{
+    const y0 = matY + bi*(batchSize*rowH + 18);
+    ctx.fillStyle=BATCH_COLORS[bi%n_batches]; ctx.font='700 12px monospace';
+    ctx.fillText('batch '+bi, mL, y0-3);
+    seqs.forEach((start,si)=>{
+      const y=y0+si*rowH;
+      ctx.fillStyle='#5a5f73'; ctx.font='10px monospace'; ctx.textAlign='right';
+      ctx.fillText('X'+si+'→Y'+si, mL+40, y+rowH-10);
+      for(let k=0;k<num_steps;k++){
+        const idx=start+k;
+        const x=mL+60+k*40;
+        // X
+        ctx.fillStyle=BATCH_COLORS[bi%n_batches]; ctx.globalAlpha=0.25;
+        roundRect(ctx,x,y,36,rowH-6,4); ctx.fill(); ctx.globalAlpha=1;
+        ctx.strokeStyle=BATCH_COLORS[bi%n_batches]; ctx.lineWidth=1.2;
+        roundRect(ctx,x,y,36,rowH-6,4); ctx.stroke();
+        ctx.fillStyle='#e4e6ed'; ctx.font='600 11px "JetBrains Mono",monospace'; ctx.textAlign='center';
+        ctx.fillText(toks[idx]!==undefined?toks[idx]:'?', x+18, y+rowH-12);
+      }
+      // Y 提示（右移一位）
+      ctx.fillStyle=BATCH_COLORS[bi%n_batches]; ctx.font='11px monospace';
+      ctx.textAlign='left'; ctx.fillText('→ Y=X右移一位', mL+60+num_steps*40+8, y+rowH-12);
+    });
+  });
+}
+document.querySelectorAll('#sampSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#sampSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); sampMode=b.dataset.mode; drawDemo4();
+});
+
+// ══════════════════════════════════════════════════════
+// 初始化 + 响应式重绘
+// ══════════════════════════════════════════════════════
+function drawAll(){ drawDemo1(); drawDemo2(); drawDemo3(); drawDemo4(); }
+drawAll();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  [cv2,cv3,cv4].forEach(c=>{c._scaled=false; c.width=parseInt(c.getAttribute('width')); c.height=parseInt(c.getAttribute('height'));});
+  drawAll();
+},200);});
+</script>
+</body>
+</html>

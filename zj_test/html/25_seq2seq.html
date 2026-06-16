@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>序列到序列（Seq2Seq）- 交互式讲解</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --fg: #e4e6ed; --muted: #8b8fa3;
+    --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
+    --purple: #b07cff; --code-bg: #12141c; --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 940px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header { text-align: center; padding: 60px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .header .tag { display: inline-block; background: rgba(108,140,255,0.12); color: var(--accent);
+    font-size: 13px; padding: 4px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 1px; }
+  .header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 56px; }
+  .section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .section h2 .num { display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .section h3 { font-size: 17px; margin: 20px 0 8px; color: var(--fg); }
+  .section > p, .section > ul, .section > ol { color: var(--muted); margin-bottom: 12px; }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
+  code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
+  .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
+  .num { color: var(--orange); } .cm { color: #5a5f73; font-style: italic; }
+  p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 16px 0; }
+  .note { border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0;
+    background: rgba(108,140,255,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .note strong { color: var(--accent); }
+  .warn { border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0;
+    background: rgba(245,166,35,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .warn strong { color: var(--orange); }
+  .tip { border-left: 3px solid var(--green); padding: 16px 20px; margin: 16px 0;
+    background: rgba(78,207,139,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .tip strong { color: var(--green); }
+
+  .formula { text-align: center; padding: 18px; margin: 16px 0; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius); font-size: 17px; overflow-x: auto; }
+  .formula em { color: var(--orange); font-style: normal; }
+  .formula sup { color: var(--accent2); }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: rgba(255,255,255,0.03); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--fg); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--muted); }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+  .flow-item { background: var(--card); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; text-align:center; }
+  .flow-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 32px; margin: 24px 0 48px; }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; } .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .summary-grid .item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; text-align: center; }
+  .summary-grid .item .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .summary-grid .item .value { font-size: 22px; font-weight: 700; }
+
+  .demo { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 20px 0; }
+  .demo .demo-title { font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: #0c0e14; border: 1px solid var(--border); }
+  canvas { display: block; width: 100%; height: auto; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px; padding: 14px 4px 0; border-top: 1px dashed var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; min-width: 160px; flex: 1; }
+  .ctrl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .ctrl label .val { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--border); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  input[type=text] { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; color: var(--fg); padding: 10px 14px; font-size: 14px; font-family: "JetBrains Mono", monospace; width: 100%; outline: none; transition: border-color 0.2s; }
+  input[type=text]:focus { border-color: var(--accent); }
+
+  .readouts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .readout { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; flex: 1; min-width: 120px; }
+  .readout .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .readout .v { font-size: 20px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { padding: 7px 16px; background: var(--card); color: var(--muted); border: none; cursor: pointer; font-size: 13px; transition: all .15s; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--fg); }
+  .seg button.active { background: var(--accent); color: #fff; }
+
+  /* ── seq2seq 舞台 ── */
+  .s2s { display:flex; flex-direction:column; gap:12px; background: var(--code-bg); border:1px solid var(--border); border-radius:12px; padding:18px; margin-top:4px; }
+  .lane { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .lane-label { font-size:11px; color:var(--muted); min-width:120px; text-transform:uppercase; letter-spacing:.5px; }
+  .toks,.states { display:flex; align-items:center; gap:5px; flex-wrap:wrap; }
+  .chip { display:inline-block; padding:5px 11px; border-radius:7px; font:600 14px/1 "JetBrains Mono",monospace; border:1px solid var(--border); background:#1a1d27; color:#8b8fa3; transition:all .25s; }
+  .chip.zh { font-family:"PingFang SC",sans-serif; }
+  .chip.st-bos { color:var(--purple); border-color:#b07cff5c; background:rgba(176,124,255,.1); }
+  .chip.st-eos { color:var(--accent2); border-color:#ff6b9d5c; background:rgba(255,107,157,.1); }
+  .chip.st-unk { color:var(--orange); border-color:#f5a6235c; background:rgba(245,166,35,.1); }
+  .chip.lit { color:#0f1117 !important; background:var(--accent) !important; border-color:var(--accent) !important; box-shadow:0 0 0 3px rgba(108,140,255,.22); transform:translateY(-3px); }
+  .chip.lit.tgt { background:var(--green) !important; border-color:var(--green) !important; box-shadow:0 0 0 3px rgba(78,207,139,.22); }
+  .node { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; border:1px solid var(--border); background:#1a1d27; font:600 13px "JetBrains Mono",monospace; color:#8b8fa3; transition:all .25s; }
+  .node.active { color:#0f1117; background:var(--accent); border-color:var(--accent); box-shadow:0 0 0 3px rgba(108,140,255,.22); transform:scale(1.08); }
+  .node.ctx.active { background:var(--accent2); border-color:var(--accent2); box-shadow:0 0 0 3px rgba(255,107,157,.25); }
+  .arr { color:var(--border); font-weight:700; font-size:16px; transition:color .25s; }
+  .arr.active { color:var(--accent); }
+  .ctx-bar { background:rgba(255,107,157,.06); border:1px dashed var(--accent2); border-radius:10px; padding:8px 14px; color:var(--accent2); font-size:13px; text-align:center; opacity:.32; transition:opacity .3s; }
+  .ctx-bar.on { opacity:1; }
+  .action { background:#0f1117; border-left:3px solid var(--accent); padding:11px 16px; border-radius:8px; font-size:14px; min-height:22px; }
+  .action b { color:var(--accent); }
+  .play-btn { border:1px solid var(--accent); background:rgba(108,140,255,.1); color:var(--accent); border-radius:999px; padding:7px 18px; cursor:pointer; font-size:13px; font-weight:600; }
+  .play-btn:hover { background:var(--accent); color:#0f1117; }
+
+  /* ── teacher forcing / mask 网格 ── */
+  .pair-grid { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .pg-label { font-size:12px; color:var(--muted); min-width:96px; }
+  .cell { min-width:38px; height:34px; padding:0 6px; display:grid; place-items:center; border-radius:7px; font:600 14px "JetBrains Mono",monospace; border:1px solid var(--border); background:#1a1d27; color:#cfe1ff; }
+  .cell.zh { font-family:"PingFang SC",sans-serif; }
+  .cell.muted { color:#8b8fa3; }
+  .cell.pad { color:var(--accent); border-color:#6c8cff5c; background:rgba(108,140,255,.1); }
+  .cell.masked { opacity:.3; text-decoration:line-through; }
+  .cell.bos { color:var(--purple); border-color:#b07cff5c; background:rgba(176,124,255,.1); }
+  .cell.eos { color:var(--accent2); border-color:#ff6b9d5c; background:rgba(255,107,157,.1); }
+  .link-arr { color:var(--green); font-size:13px; align-self:center; }
+
+  .bleu-row { display:flex; align-items:center; gap:6px; margin:8px 0; flex-wrap:wrap; }
+  .bleu-row .bk { font-size:12px; color:var(--muted); min-width:96px; }
+
+  .footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="header">
+  <div class="tag">现代循环神经网络 · §9.7</div>
+  <h1>序列到序列（Seq2Seq）</h1>
+  <p>编码器把变长源序列压成上下文，解码器逐 token 生成目标序列</p>
+</div>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 编码器-解码器：变长进、变长出</span></li>
+    <li><a href="#s1">编码器</a> <span class="desc">— GRU 把源序列编码成最终隐状态</span></li>
+    <li><a href="#s2">解码器 + 数据流</a> <span class="desc">— ⭐拖动时间步，看编码→上下文→逐词生成的全过程</span></li>
+    <li><a href="#s3">强制教学</a> <span class="desc">— ⭐训练喂标签、推理喂预测，为何不同</span></li>
+    <li><a href="#s4">掩蔽损失</a> <span class="desc">— ⭐sequence_mask 让 padding 不计入损失</span></li>
+    <li><a href="#s5">预测与 BLEU</a> <span class="desc">— ⭐贪心解码 + BLEU 实时拆解</span></li>
+    <li><a href="#s6">真实训练结果</a> <span class="desc">— loss 曲线 + 英→中翻译预测（真实跑出）</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：编码器-解码器</h2>
+  <p>机器翻译的输入和输出都是<strong>变长</strong>序列，且长度不等。Seq2Seq 用两个 RNN 解决：编码器读完整个源序列，把信息压缩进一个<strong>固定形状的上下文变量 c</strong>（取编码器最终隐状态）；解码器以 c 为起点，<strong>一个 token 接一个 token</strong>地生成目标序列，直到吐出 <code>&lt;eos&gt;</code>。</p>
+
+  <div class="flow">
+    <div class="flow-item">源序列<br><code>i won !</code></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">编码器 GRU<br>逐词读入</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">上下文 c<br>= 最终隐状态</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">解码器 GRU<br>逐词生成</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item">目标序列<br><code>我赢了。</code></div>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr><th>组件</th><th>输入</th><th>输出</th><th>关键设计</th></tr>
+      <tr><td><strong style="color:var(--accent)">编码器</strong></td><td>源序列 (变长)</td><td>每步隐状态 + 最终隐状态</td><td>嵌入层 + 多层 GRU</td></tr>
+      <tr><td><strong style="color:var(--accent2)">上下文 c</strong></td><td>编码器最终隐状态</td><td>定长向量</td><td>每个解码步都与输入拼接</td></tr>
+      <tr><td><strong style="color:var(--green)">解码器</strong></td><td>c + 上一输出</td><td>目标 token 分布</td><td>初始状态 = c；首输入 <code>&lt;bos&gt;</code></td></tr>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>为什么是两个 RNN？</strong> 一个负责「理解」（编码），一个负责「表达」（解码）。二者层数和隐藏单元数必须相同，这样编码器的最终隐状态才能直接拿来初始化解码器。
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 编码器 -->
+<!-- ============================================ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 编码器：GRU 读完整条源序列</h2>
+  <p>嵌入层把每个源 token 变成向量，转置成「时间步在前」，喂给多层 GRU。返回每步输出和最终隐状态（后者即上下文 c）。</p>
+  <pre><code><span class="kw">class</span> <span class="fn">Seq2SeqEncoder</span>(nn.Module):
+    <span class="kw">def</span> __init__(self, vocab_size, embed_size, num_hiddens, num_layers, dropout=<span class="num">0</span>):
+        <span class="fn">super</span>().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.rnn = nn.GRU(embed_size, num_hiddens, num_layers, dropout=dropout)
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X, *args):
+        <span class="cm"># X: (batch, num_steps) → 嵌入 → (num_steps, batch, embed)</span>
+        <span class="kw">return</span> self.rnn(self.embedding(X).permute(<span class="num">1</span>, <span class="num">0</span>, <span class="num">2</span>))</code></pre>
+  <div class="tip"><strong>形状记忆</strong>：输入 <code>(B, T)</code> → 嵌入 <code>(B, T, E)</code> → permute <code>(T, B, E)</code>（GRU 要时间步在前）→ 输出 <code>output (T, B, H)</code>、<code>state (layers, B, H)</code>。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 解码器 + 数据流 -->
+<!-- ============================================ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> ⭐ 解码器与完整数据流</h2>
+  <p>解码器的初始隐状态 = 编码器最终隐状态（<code>init_state</code>）。每个时间步，把<strong>上下文 c 与当前输入嵌入拼接</strong>后送入 GRU，再用线性层映射到词表维度。拖动下方时间步，完整体验「编码 → 上下文 → 逐词生成」。</p>
+  <pre><code><span class="kw">class</span> <span class="fn">Seq2SeqDecoder</span>(nn.Module):
+    <span class="kw">def</span> __init__(self, vocab_size, embed_size, num_hiddens, num_layers, dropout=<span class="num">0</span>):
+        <span class="fn">super</span>().__init__()
+        self.embedding = nn.Embedding(vocab_size, embed_size)
+        self.rnn = nn.GRU(embed_size + num_hiddens, num_hiddens, num_layers, dropout=dropout)
+        self.dense = nn.Linear(num_hiddens, vocab_size)
+    <span class="kw">def</span> <span class="fn">init_state</span>(self, enc_outputs, *args):
+        <span class="kw">return</span> enc_outputs[<span class="num">1</span>]            <span class="cm"># 编码器最终隐状态 = c</span>
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X, state):
+        X = self.embedding(X).permute(<span class="num">1</span>, <span class="num">0</span>, <span class="num">2</span>)
+        context = state[-<span class="num">1</span>].repeat(X.shape[<span class="num">0</span>], <span class="num">1</span>, <span class="num">1</span>)   <span class="cm"># 每步都拼接 c</span>
+        output, state = self.rnn(torch.cat((X, context), <span class="num">2</span>), state)
+        <span class="kw">return</span> self.dense(output).permute(<span class="num">1</span>, <span class="num">0</span>, <span class="num">2</span>), state</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 1 · 编码器-解码器时序动画（源: "i won !" → 目标: 我赢了。）</div>
+    <div class="demo-sub">蓝=源 token / 编码器隐状态，粉=上下文 c，绿=解码器新生成的 token。按 ▶ 自动播放或拖动时间步。</div>
+    <div class="s2s" id="s2sStage">
+      <div class="lane"><div class="lane-label">① 源（编码器输入）</div><div class="toks" id="srcToks"></div></div>
+      <div class="lane"><div class="lane-label">② 编码器隐状态</div><div class="states" id="encStates"></div></div>
+      <div class="ctx-bar" id="ctxBar">上下文 c = 编码器最终隐状态 h₃　→　初始化解码器隐状态</div>
+      <div class="lane"><div class="lane-label">③ 解码器（输入→输出）</div><div class="toks" id="decToks"></div></div>
+      <div class="action" id="action"><b>时刻 0</b>：尚未开始。拖动滑块或按播放。</div>
+    </div>
+    <div class="controls" style="border-top:none;padding-top:14px">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto"><button class="play-btn" id="playBtn">▶ 播放</button></div>
+      <div class="ctrl"><label>时间步 <span class="val" id="stepVal">0 / 8</span></label><input type="range" id="stepSlider" min="0" max="8" step="1" value="0"></div>
+    </div>
+  </div>
+
+  <div class="warn"><strong>上下文是瓶颈</strong>：整条源序列被压进一个定长 c。源序列越长，信息丢失越严重——这正是 §9.8「注意力机制」要解决的问题（让解码器每步动态关注源序列的不同位置）。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 强制教学 -->
+<!-- ============================================ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> ⭐ 强制教学（Teacher Forcing）</h2>
+  <p>解码器在<strong>训练</strong>时，每个时间步的输入不是模型自己的预测，而是<strong>真实的标签</strong>（右移一位、前补 <code>&lt;bos&gt;</code>、丢掉末尾 <code>&lt;eos&gt;</code>）。这叫强制教学，能让训练又快又稳。而<strong>推理</strong>时没有标签，只能把上一步的预测喂回去。</p>
+  <pre><code>bos = torch.full((Y.shape[<span class="num">0</span>], <span class="num">1</span>), tgt_vocab[<span class="str">'&lt;bos&gt;'</span>])
+dec_input = torch.cat([bos, Y[:, :-<span class="num">1</span>], <span class="num">1</span>])   <span class="cm"># 强制教学：标签右移</span>
+Y_hat, _ = net(X, dec_input, X_valid_len)</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 2 · 强制教学 vs 自回归</div>
+    <div class="demo-sub">切换两种模式，看解码器输入 dec_input 是怎么来的。</div>
+    <div class="controls" style="border-top:none;padding-top:0">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>模式</label>
+        <div class="seg" id="tfSeg">
+          <button class="active" data-m="train">训练 · 强制教学</button>
+          <button data-m="infer">推理 · 自回归</button>
+        </div>
+      </div>
+    </div>
+    <div id="tfBox" style="margin-top:14px"></div>
+    <div class="note" id="tfNote" style="margin-top:14px"></div>
+  </div>
+
+  <div class="tip"><strong>训练-推理差异（exposure bias）</strong>：训练时总喂正确标签，模型没机会「纠正」自己的错误；推理时一旦某步预测错，后续步步受影响。这是 seq2seq 的经典痛点。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 掩蔽损失 -->
+<!-- ============================================ -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ⭐ 掩蔽损失：让 padding 不参与训练</h2>
+  <p>同一个小批里句子长短不一，短的用 <code>&lt;pad&gt;</code> 补齐。但 <code>&lt;pad&gt;</code> 是「假」的，不该计入损失。<code>sequence_mask</code> 用 <code>valid_len</code> 把超出有效长度的位置清零。</p>
+  <pre><code><span class="kw">def</span> <span class="fn">sequence_mask</span>(X, valid_len, value=<span class="num">0</span>):
+    maxlen = X.size(<span class="num">1</span>)
+    mask = torch.arange(maxlen)[<span class="kw">None</span>, :] &lt; valid_len[:, <span class="kw">None</span>]
+    X[~mask] = value
+    <span class="kw">return</span> X
+
+<span class="kw">class</span> <span class="fn">MaskedSoftmaxCELoss</span>(nn.CrossEntropyLoss):
+    <span class="kw">def</span> <span class="fn">forward</span>(self, pred, label, valid_len):
+        weights = sequence_mask(torch.ones_like(label), valid_len)
+        unweighted = <span class="fn">super</span>().forward(pred.permute(<span class="num">0</span>, <span class="num">2</span>, <span class="num">1</span>), label)
+        <span class="kw">return</span> (unweighted * weights).mean(dim=<span class="num">1</span>)</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 3 · sequence_mask 可视化</div>
+    <div class="demo-sub">两个样本的目标序列（含 padding）。拖动 valid_len，超出部分被掩蔽（划掉）；勾选「应用掩蔽」看 weights 矩阵变化。</div>
+    <div id="maskBox" style="margin-top:6px"></div>
+    <div class="controls">
+      <div class="ctrl"><label>样本0 有效长度 <span class="val" id="vl0">5</span></label><input type="range" id="vl0S" min="1" max="7" step="1" value="5"></div>
+      <div class="ctrl"><label>样本1 有效长度 <span class="val" id="vl1">4</span></label><input type="range" id="vl1S" min="1" max="7" step="1" value="4"></div>
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto;justify-content:flex-end">
+        <label style="cursor:pointer"><input type="checkbox" id="applyMask" checked style="accent-color:var(--accent);width:15px;height:15px"> 应用掩蔽</label>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">mask 公式</div><div class="v" style="font-size:13px">arange &lt; valid_len</div></div>
+      <div class="readout"><div class="k">样本0 计入损失</div><div class="v" id="cnt0" style="color:var(--green)">5</div></div>
+      <div class="readout"><div class="k">样本1 计入损失</div><div class="v" id="cnt1" style="color:var(--green)">4</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 预测与 BLEU -->
+<!-- ============================================ -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span> ⭐ 预测（贪心解码）与 BLEU</h2>
+  <p><strong>贪心解码</strong>：从 <code>&lt;bos&gt;</code> 开始，每步取概率最高的 token，喂回下一步，遇到 <code>&lt;eos&gt;</code> 停止。<strong>BLEU</strong> 用 n-gram 精确度（越长权重越大）+ 简短惩罚评估翻译质量，1.0 为完美。</p>
+  <div class="formula">BLEU = exp(min(0, 1 − <em>len_label / len_pred</em>)) · ∏<sub>n=1..k</sub> p<sub>n</sub><sup>1/2<sup>n</sup></sup></div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 4 · BLEU 实时拆解（默认: 真实预测 "我试试试吧。" vs 标签 "我试试。"）</div>
+    <div class="demo-sub">编辑预测 / 标签，实时看 n-gram 匹配、各阶精确度 p<sub>n</sub>、简短惩罚 BP 与最终 BLEU。中文按字切分。</div>
+    <div class="controls" style="border-top:none;padding-top:0">
+      <div class="ctrl" style="min-width:48%"><label>预测序列</label><input type="text" id="predIn" value="我试试试吧。"></div>
+      <div class="ctrl" style="min-width:48%"><label>标签序列（参考）</label><input type="text" id="labelIn" value="我试试。"></div>
+    </div>
+    <div class="controls" style="border-top:none;padding-top:0">
+      <div class="ctrl" style="min-width:200px"><label>最大 n-gram k <span class="val" id="kVal">2</span></label><input type="range" id="kS" min="1" max="4" step="1" value="2"></div>
+    </div>
+    <div id="bleuBox" style="margin-top:8px"></div>
+    <div class="readouts">
+      <div class="readout"><div class="k">len_pred / len_label</div><div class="v" id="blen" style="font-size:15px">—</div></div>
+      <div class="readout"><div class="k">简短惩罚 BP</div><div class="v" id="bbp" style="color:var(--orange)">—</div></div>
+      <div class="readout"><div class="k">BLEU</div><div class="v" id="bbleu" style="color:var(--green)">—</div></div>
+    </div>
+  </div>
+
+  <div class="note"><strong>BLEU 的直觉</strong>：n-gram 精确度衡量「预测里的片段有多少在参考里出现过」。仅看 1-gram 会鼓励短输出，所以乘上简短惩罚 BP，并对更长 n-gram 给更大权重（<code>1/2<sup>n</sup></code>）。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 6. 真实训练结果 -->
+<!-- ============================================ -->
+<div class="section" id="s6">
+  <h2><span class="num">6</span> 真实训练结果（25_seq2seq.py 在 cmn-eng 上跑出）</h2>
+  <p>前 600 句对，CPU 约 13 秒训完 300 轮。loss 从 0.115 降到 0.016；6 句测试里 <code>hello !</code> 和 <code>i won !</code> 完美翻译（BLEU 1.000）。</p>
+
+  <div class="summary-grid">
+    <div class="item"><div class="label">句对数</div><div class="value">600</div></div>
+    <div class="item"><div class="label">源词表</div><div class="value" style="color:var(--accent)">215</div></div>
+    <div class="item"><div class="label">目标词表</div><div class="value" style="color:var(--accent2)">286</div></div>
+    <div class="item"><div class="label">最终 loss</div><div class="value" style="color:var(--green)">0.016</div></div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 5 · 训练 loss 曲线</div>
+    <div class="demo-sub">切换线性 / 对数坐标。对数坐标下 loss 近似线性下降——典型的健康训练曲线。</div>
+    <div class="canvas-wrap"><canvas id="cv5" width="1700" height="380"></canvas></div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>坐标</label>
+        <div class="seg" id="lossSeg">
+          <button class="active" data-s="linear">线性</button>
+          <button data-s="log">对数</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <p><strong>翻译预测（English ⇒ 模型输出 / 标签，BLEU）</strong></p>
+    <table>
+      <tr><th>English</th><th>模型输出</th><th>标签</th><th>BLEU</th></tr>
+      <tr><td><code>hello !</code></td><td style="color:var(--green)">你好。</td><td>你好。</td><td><b style="color:var(--green)">1.000</b></td></tr>
+      <tr><td><code>i won !</code></td><td style="color:var(--green)">我赢了。</td><td>我赢了。</td><td><b style="color:var(--green)">1.000</b></td></tr>
+      <tr><td><code>i try .</code></td><td>我试试试吧。</td><td>我试试。</td><td><b style="color:var(--orange)">0.649</b></td></tr>
+      <tr><td><code>wait !</code></td><td>等一下！</td><td>等等！</td><td><b style="color:var(--muted)">0.000</b></td></tr>
+      <tr><td><code>fire !</code></td><td>火啊！</td><td>火！</td><td><b style="color:var(--muted)">0.000</b></td></tr>
+      <tr><td><code>hi .</code></td><td>你<span style="color:var(--orange)">&lt;unk&gt;</span>。</td><td>嗨。</td><td><b style="color:var(--muted)">0.000</b></td></tr>
+    </table>
+  </div>
+
+  <div class="tip"><strong>怎么读这表</strong>：BLEU=0 不等于翻译错。<code>wait !</code>→「等一下！」、<code>fire !</code>→「火啊！」语义都对，只是与标签用词不同。<code>hi .</code> 里的「嗨」在前 600 句出现不足 2 次，被 <code>&lt;unk&gt;</code> 替换——数据太少所致。</div>
+
+  <div class="flow" style="margin-top:28px">
+    <div class="flow-item">§9.5 翻译数据集</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item">§9.6 编码器-解码器</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">§9.7 Seq2Seq（本节）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">§9.8 注意力 / Transformer</div>
+  </div>
+</div>
+
+<div class="footer">
+  基于 25_seq2seq.py 生成 · 动手学深度学习 §9.7 序列到序列学习 · 交互式可视化
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 真实训练数据
+// ══════════════════════════════════════════════════════
+const LOSS=[[50,0.115],[100,0.053],[150,0.032],[200,0.024],[250,0.019],[300,0.016]];
+
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1; const W=cv.width,H=cv.height; cv.style.width='100%';
+  if(!cv._scaled){ cv.width=W*dpr; cv.height=H*dpr; cv._scaled=true; cv._dpr=dpr; cv._W=W; cv._H=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
+  return {ctx,W:cv._W,H:cv._H};
+}
+function clearBg(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function esc(s){return String(s).replace(/</g,'&lt;');}
+function chipClass(t){return {'<bos>':'st-bos','<eos>':'st-eos','<unk>':'st-unk'}[t]||'';}
+
+// ══════════════════════════════════════════════════════
+// DEMO 1：编码器-解码器时序动画
+// ══════════════════════════════════════════════════════
+const SRC=['i','won','!'];
+const ST=['h₁','h₂','h₃'];
+const DEC=['<bos>','我','赢','了','。','<eos>']; // 6 个，5 个解码步
+const STEP_MAX=8; // 1..3 编码, 4..8 解码
+
+function renderStage(m){
+  // 源 token
+  document.getElementById('srcToks').innerHTML=SRC.map((t,i)=>{
+    const lit = (m>=1 && i < (m<=3?m:3));
+    return `<span class="chip ${lit?'lit':''}">${esc(t)}</span>` + (i<SRC.length-1?'<span class="arr"></span>':'');
+  }).join('');
+  // 编码器隐状态
+  document.getElementById('encStates').innerHTML=ST.map((s,i)=>{
+    const idx=i+1;
+    const isEnc = m>=1 && m<=3;
+    const lit = isEnc && idx<=m;
+    const isCtx = (idx===3);
+    return `<span class="node ${lit?'active':''} ${isCtx?'ctx':''}">${s}</span>` + (i<ST.length-1?'<span class="arr '+(lit&&idx<m?'active':'')+'">→</span>':'');
+  }).join('');
+  // 上下文条
+  const ctxOn = m>=3;
+  document.getElementById('ctxBar').classList.toggle('on', ctxOn);
+  // 解码器
+  let decHtml='';
+  DEC.forEach((t,i)=>{
+    const cls = t.startsWith('<')?chipClass(t):'zh';
+    let lit=false, tgt=false;
+    if(m>=4){
+      const d=m-4; // 当前解码步 0..4
+      if(i===d) lit=true;            // 输入
+      if(i===d+1){ lit=true; tgt=true; } // 输出
+      if(i<=d) lit=true;             // 已生成的也都点亮
+    }
+    decHtml += `<span class="chip ${cls} ${lit?'lit':''} ${tgt?'tgt':''}">${esc(t)}</span>`;
+    if(i<DEC.length-1) decHtml += `<span class="arr ${(m>=4 && i<m-4)?'active':''}">→</span>`;
+  });
+  document.getElementById('decToks').innerHTML=decHtml;
+  // 动作说明
+  const captions={
+    0:'<b>时刻 0</b>：尚未开始。编码器和解码器都待命。',
+    1:'<b>编码 · 时刻 1</b>：编码器读入 <b>"i"</b>，更新隐状态 <b>h₁</b>。',
+    2:'<b>编码 · 时刻 2</b>：读入 <b>"won"</b>，h₁ → <b>h₂</b>。',
+    3:'<b>编码 · 时刻 3</b>：读入 <b>"!"</b>，h₂ → <b>h₃</b>。<b>h₃ 即上下文 c</b>，开始初始化解码器。',
+    4:'<b>解码 · 时刻 1</b>：输入 <b>&lt;bos&gt;</b> + c，预测第 1 个 token → <b style="color:var(--green)">我</b>。',
+    5:'<b>解码 · 时刻 2</b>：输入 <b>我</b> + c，预测 → <b style="color:var(--green)">赢</b>。',
+    6:'<b>解码 · 时刻 3</b>：输入 <b>赢</b> + c，预测 → <b style="color:var(--green)">了</b>。',
+    7:'<b>解码 · 时刻 4</b>：输入 <b>了</b> + c，预测 → <b style="color:var(--green)">。</b>。',
+    8:'<b>解码 · 时刻 5</b>：输入 <b>。</b> + c，预测 → <b style="color:var(--accent2)">&lt;eos&gt;</b>，停止生成。译文：<b style="color:var(--green)">我赢了。</b>',
+  };
+  document.getElementById('action').innerHTML=captions[m]||captions[0];
+  document.getElementById('stepVal').textContent=m+' / '+STEP_MAX;
+}
+const stepSlider=document.getElementById('stepSlider');
+stepSlider.oninput=()=>renderStage(+stepSlider.value);
+let playing=false,timer=null;
+document.getElementById('playBtn').onclick=()=>{
+  if(playing){playing=false;clearInterval(timer);document.getElementById('playBtn').textContent='▶ 播放';return;}
+  playing=true;document.getElementById('playBtn').textContent='⏸ 暂停';
+  let m=+stepSlider.value; if(m>=STEP_MAX)m=-1;
+  timer=setInterval(()=>{
+    m++; if(m>STEP_MAX){m=0;playing=false;clearInterval(timer);document.getElementById('playBtn').textContent='▶ 播放';}
+    stepSlider.value=m; renderStage(m);
+  },700);
+};
+
+// ══════════════════════════════════════════════════════
+// DEMO 2：强制教学 vs 自回归
+// ══════════════════════════════════════════════════════
+const YLBL=['我','赢','了','。','<eos>'];
+let tfMode='train';
+function renderTF(){
+  const box=document.getElementById('tfBox');
+  const note=document.getElementById('tfNote');
+  if(tfMode==='train'){
+    let rows='<div class="pair-grid"><div class="pg-label">标签 Y</div>';
+    YLBL.forEach((t,i)=>{ const c=t.startsWith('<')?(t==='<eos>'?'eos':''):'zh'; rows+=`<div class="cell ${c}">${esc(t)}</div>`; });
+    rows+='</div>';
+    // dec_input = [<bos>] + Y[:-1]
+    const decIn=['<bos>','我','赢','了','。'];
+    rows+='<div class="pair-grid" style="margin-top:10px"><div class="pg-label">dec_input</div>';
+    decIn.forEach((t,i)=>{
+      const c=t.startsWith('<')?'bos':'zh';
+      rows+=`<div class="cell ${c}">${esc(t)}</div>`;
+    });
+    rows+='<span style="color:var(--muted);font-size:12px;align-self:center">　= [bos] + Y[:-1]</span></div>';
+    box.innerHTML=rows;
+    note.innerHTML='<strong>训练（强制教学）</strong>：dec_input 把标签 <b>右移一位</b>，前面补 <code>&lt;bos&gt;</code>，丢掉末尾 <code>&lt;eos&gt;</code>。解码器每步都看到「正确答案」，梯度信号干净、收敛快。';
+  } else {
+    let rows='<div class="pair-grid"><div class="pg-label">解码步</div>';
+    for(let i=0;i<5;i++) rows+=`<div class="cell muted">${i+1}</div>`;
+    rows+='</div><div class="pair-grid" style="margin-top:10px"><div class="pg-label">输入(上步输出)</div>';
+    const ins=['<bos>','我','赢','了','。'];
+    ins.forEach((t,i)=>{ const c=t.startsWith('<')?'bos':'zh'; rows+=`<div class="cell ${c}">${esc(t)}</div>`; });
+    rows+='</div><div class="pair-grid" style="margin-top:6px"><div class="pg-label"></div>';
+    for(let i=0;i<5;i++) rows+=`<div class="link-arr" style="min-width:38px;text-align:center">↓ 预测</div>`;
+    rows+='</div><div class="pair-grid"><div class="pg-label">输出</div>';
+    ['我','赢','了','。','<eos>'].forEach((t,i)=>{ const c=t.startsWith('<')?'eos':'zh'; rows+=`<div class="cell ${c}" style="border-color:var(--green);color:var(--green)">${esc(t)}</div>`; });
+    rows+='</div>';
+    box.innerHTML=rows;
+    note.innerHTML='<strong>推理（自回归）</strong>：没有标签，解码器每步把<b>自己的预测</b>喂给下一步。一旦某步出错，错误会沿「输出→输入」环路累积——这就是 exposure bias。';
+  }
+}
+document.querySelectorAll('#tfSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#tfSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); tfMode=b.dataset.m; renderTF();
+});
+
+// ══════════════════════════════════════════════════════
+// DEMO 3：sequence_mask
+// ══════════════════════════════════════════════════════
+const MASK_ROWS=[
+  ['我','赢','了','。','<eos>','<pad>','<pad>'],
+  ['你','好','。','<eos>','<pad>','<pad>','<pad>'],
+];
+function renderMask(){
+  const apply=document.getElementById('applyMask').checked;
+  const v0=+document.getElementById('vl0S').value;
+  const v1=+document.getElementById('vl1S').value;
+  document.getElementById('vl0').textContent=v0;
+  document.getElementById('vl1').textContent=v1;
+  let html='';
+  MASK_ROWS.forEach((row,r)=>{
+    const vl=r===0?v0:v1;
+    html+=`<div class="pair-grid" style="margin-top:${r===0?0:10}px"><div class="pg-label">样本${r} (valid=${vl})</div>`;
+    row.forEach((t,c)=>{
+      const isPad=t==='<pad>'; const isSpecial=t.startsWith('<');
+      let cls=isPad?'pad':(t==='<eos>'?'eos':(t==='<bos>'?'bos':'zh'));
+      let masked = apply && c>=vl;
+      if(masked) cls+=' masked';
+      html+=`<div class="cell ${cls}">${esc(t)}</div>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('maskBox').innerHTML=html;
+  document.getElementById('cnt0').textContent=v0;
+  document.getElementById('cnt1').textContent=v1;
+}
+['vl0S','vl1S'].forEach(id=>document.getElementById(id).oninput=renderMask);
+document.getElementById('applyMask').onchange=renderMask;
+
+// ══════════════════════════════════════════════════════
+// DEMO 4：BLEU
+// ══════════════════════════════════════════════════════
+function computeBleu(pred,label,k){
+  const P=[...pred], L=[...label];
+  const bp=Math.exp(Math.min(0, 1 - L.length/P.length));
+  let score=bp; const prec=[];
+  for(let n=1;n<=k;n++){
+    let num=0; const subs={};
+    for(let i=0;i<=L.length-n;i++){const g=L.slice(i,i+n).join('|'); subs[g]=(subs[g]||0)+1;}
+    for(let i=0;i<=P.length-n;i++){const g=P.slice(i,i+n).join('|'); if((subs[g]||0)>0){num++; subs[g]--;}}
+    const den=Math.max(1,P.length-n+1);
+    const pn=num/den;
+    prec.push({n,num,den:Math.min(num,den)===num?P.length-n+1:P.length-n+1,pn});
+    score*=Math.pow(pn, Math.pow(0.5,n));
+  }
+  return {score,bp,lenP:P.length,lenL:L.length,prec};
+}
+function renderBleu(){
+  const pred=document.getElementById('predIn').value;
+  const label=document.getElementById('labelIn').value;
+  const k=+document.getElementById('kS').value;
+  document.getElementById('kVal').textContent=k;
+  const r=computeBleu(pred,label,k);
+  let html='';
+  r.prec.forEach(p=>{
+    html+=`<div class="bleu-row"><div class="bk">${p.n}-gram 精确度 p${p.n}</div>
+      <div class="cell" style="min-width:auto;padding:0 10px">${p.num}</div>
+      <span style="color:var(--muted)">/</span>
+      <div class="cell" style="min-width:auto;padding:0 10px;color:var(--accent)">${p.den}</div>
+      <span class="link-arr" style="color:var(--accent)">=</span>
+      <div class="cell" style="min-width:auto;padding:0 10px;color:var(--green)">${p.pn.toFixed(3)}</div>
+      <span style="color:var(--muted);font-size:12px">权重 1/2^${p.n} = ${(Math.pow(0.5,p.n)).toFixed(3)}</span></div>`;
+  });
+  document.getElementById('bleuBox').innerHTML=html;
+  document.getElementById('blen').textContent=r.lenP+' / '+r.lenL;
+  document.getElementById('bbp').textContent=r.bp.toFixed(3);
+  document.getElementById('bbleu').textContent=r.score.toFixed(3);
+}
+document.getElementById('predIn').oninput=renderBleu;
+document.getElementById('labelIn').oninput=renderBleu;
+document.getElementById('kS').oninput=renderBleu;
+
+// ══════════════════════════════════════════════════════
+// DEMO 5：loss 曲线
+// ══════════════════════════════════════════════════════
+const cv5=document.getElementById('cv5');
+let lossScale='linear';
+function drawLoss(){
+  const {ctx,W,H}=setupCanvas(cv5); clearBg(ctx,W,H);
+  const isLog=lossScale==='log';
+  const mL=54,mR=24,mT=20,mB=40;
+  const plotW=W-mL-mR, plotH=H-mT-mB;
+  const xMin=0,xMax=300;
+  const ls=LOSS.map(d=>Math.log(d[1]+1e-6));
+  const yMin=isLog?Math.min(...ls)-0.2:0, yMax=isLog?Math.max(...ls)+0.2:0.13;
+  const tx=x=>mL+(x-xMin)/(xMax-xMin)*plotW;
+  const ty=y=>{ const v=isLog?Math.log(y+1e-6):y; return mT+(yMax-v)/(yMax-yMin)*plotH; };
+  // 网格
+  ctx.strokeStyle='#222533'; ctx.fillStyle='#5a5f73'; ctx.font='11px monospace';
+  const yticks=isLog?[0.02,0.05,0.1]:[0,0.03,0.06,0.09,0.12];
+  yticks.forEach(v=>{ if(isLog&&v<=0)return; const y=ty(v);
+    ctx.beginPath(); ctx.moveTo(mL,y); ctx.lineTo(W-mR,y); ctx.stroke();
+    ctx.textAlign='right'; ctx.fillText(v.toFixed(2), mL-6, y+4); });
+  [0,50,100,150,200,250,300].forEach(x=>{ const xx=tx(x);
+    ctx.setLineDash([2,3]); ctx.beginPath(); ctx.moveTo(xx,mT); ctx.lineTo(xx,H-mB); ctx.stroke(); ctx.setLineDash([]);
+    ctx.textAlign='center'; ctx.fillText(x, xx, H-mB+16); });
+  ctx.fillStyle='#8b8fa3'; ctx.font='12px monospace';
+  ctx.textAlign='center'; ctx.fillText('epoch →', mL+plotW/2, H-mB+32);
+  ctx.save(); ctx.translate(16,mT+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('loss', 0,0); ctx.restore();
+  // 曲线
+  ctx.strokeStyle='#6c8cff'; ctx.lineWidth=2.4; ctx.beginPath();
+  LOSS.forEach((d,i)=>{ const X=tx(d[0]),Y=ty(d[1]); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y); });
+  ctx.stroke();
+  LOSS.forEach(d=>{ ctx.fillStyle='#6c8cff'; ctx.beginPath(); ctx.arc(tx(d[0]),ty(d[1]),4,0,7); ctx.fill();
+    ctx.fillStyle='#cfe1ff'; ctx.font='600 11px "JetBrains Mono",monospace'; ctx.textAlign='left';
+    ctx.fillText(d[1].toFixed(3), tx(d[0])+7, ty(d[1])-7); });
+}
+document.querySelectorAll('#lossSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#lossSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); lossScale=b.dataset.s; drawLoss();
+});
+
+// ══════════════════════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════════════════════
+function drawAll(){ renderStage(0); renderTF(); renderMask(); renderBleu(); drawLoss(); }
+drawAll();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  cv5._scaled=false; cv5.width=parseInt(cv5.getAttribute('width')); cv5.height=parseInt(cv5.getAttribute('height'));
+  drawLoss();
+},200);});
+</script>
+</body>
+</html>

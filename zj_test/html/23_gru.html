@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GRU 交互演示</title>
+<style>
+:root{--bg:#08111f;--card:#101d31;--line:#243551;--text:#edf4ff;--muted:#9eb0ca;--blue:#63a7ff;--pink:#ff70a6;--green:#48d6a5}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 20% 0,#152a49 0,var(--bg) 42%);color:var(--text);font:16px/1.6 system-ui,-apple-system,"PingFang SC",sans-serif}.wrap{max-width:1050px;margin:auto;padding:48px 22px 80px}header{margin-bottom:32px}h1{font-size:clamp(34px,6vw,68px);line-height:1;margin:12px 0;background:linear-gradient(90deg,var(--blue),var(--pink));color:transparent;background-clip:text}.tag{color:var(--green);letter-spacing:.15em;font-weight:700}p{color:var(--muted)}.grid{display:grid;grid-template-columns:1fr 1.2fr;gap:18px}.card{background:#101d31dd;border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 20px 60px #0005}.controls{display:grid;gap:18px}.control label{display:flex;justify-content:space-between}.control b{color:var(--blue)}input[type=range]{width:100%;accent-color:var(--pink)}.formula{font:20px ui-monospace,SFMono-Regular,monospace;background:#091322;border-radius:12px;padding:14px;margin-top:16px;color:#cfe1ff}.bars{display:grid;gap:13px;margin:20px 0}.bar{height:44px;background:#091322;border-radius:10px;overflow:hidden;position:relative}.fill{height:100%;width:50%;transition:width .25s;background:linear-gradient(90deg,var(--blue),var(--pink))}.bar span{position:absolute;inset:0;display:grid;place-items:center;font-weight:700}.buttons{display:flex;gap:10px;flex-wrap:wrap}button{border:1px solid var(--line);background:#172943;color:var(--text);border-radius:999px;padding:9px 15px;cursor:pointer}button:hover{border-color:var(--blue)}canvas{width:100%;height:300px;background:#091322;border-radius:12px}.legend{display:flex;gap:18px;font-size:13px;color:var(--muted);margin-top:10px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px}.note strong{display:block;color:var(--green);font-size:18px}.code{white-space:pre-wrap;font:14px/1.7 ui-monospace,SFMono-Regular,monospace;color:#cfe1ff}.wide{grid-column:1/-1}@media(max-width:760px){.grid,.notes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+<div class="tag">D2L · GRU</div>
+<h1>让记忆有选择地流动</h1>
+<p>拖动重置门与更新门，观察候选状态和最终隐状态如何变化。</p>
+</header>
+<section class="grid">
+<div class="card controls">
+<div class="control"><label>重置门 R <b id="rv"></b></label><input id="r" type="range" min="0" max="1" step=".01" value=".35"></div>
+<div class="control"><label>更新门 Z <b id="zv"></b></label><input id="z" type="range" min="0" max="1" step=".01" value=".72"></div>
+<div class="control"><label>上一隐状态 Hₜ₋₁ <b id="hv"></b></label><input id="h" type="range" min="-1" max="1" step=".01" value=".8"></div>
+<div class="control"><label>当前输入 Xₜ <b id="xv"></b></label><input id="x" type="range" min="-1" max="1" step=".01" value="-.4"></div>
+<div class="buttons">
+<button data-preset="long">长期记忆</button>
+<button data-preset="short">短期响应</button>
+<button data-preset="reset">丢弃过去</button>
+</div>
+<div class="formula">H̃ₜ = tanh(Xₜ + Rₜ × Hₜ₋₁)<br>Hₜ = Zₜ × Hₜ₋₁ + (1-Zₜ) × H̃ₜ</div>
+</div>
+<div class="card">
+<div class="bars">
+<div class="bar"><div class="fill" id="old"></div><span id="oldt"></span></div>
+<div class="bar"><div class="fill" id="candidate"></div><span id="ct"></span></div>
+<div class="bar"><div class="fill" id="next"></div><span id="nt"></span></div>
+</div>
+<canvas id="chart"></canvas>
+<div class="legend"><span><i class="dot" style="background:#63a7ff"></i>输入</span><span><i class="dot" style="background:#ff70a6"></i>隐状态</span></div>
+</div>
+<div class="wide notes">
+<div class="card note"><strong>R 接近 0</strong><span>候选状态忽略过去，更关注当前输入。</span></div>
+<div class="card note"><strong>Z 接近 1</strong><span>旧隐状态直接保留，适合长期依赖。</span></div>
+<div class="card note"><strong>Z 接近 0</strong><span>快速采用候选状态，适合短期变化。</span></div>
+</div>
+<div class="card wide">
+<div class="tag">PYTORCH 极简实现</div>
+<div class="code">self.gru = nn.GRU(vocab_size, 128, batch_first=True)
+y, state = self.gru(F.one_hot(x, vocab_size).float(), state)
+logits = self.out(y)</div>
+</div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id),inputs=["r","z","h","x"].map($),canvas=$("chart"),ctx=canvas.getContext("2d")
+const color=(v,a,b)=>`linear-gradient(90deg,${v<0?a:b},${v<0?"#172943":a})`
+function draw(r,z,h,x){
+const dpr=devicePixelRatio||1,w=canvas.clientWidth,hh=300
+canvas.width=w*dpr;canvas.height=hh*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,hh)
+ctx.strokeStyle="#243551";ctx.beginPath();ctx.moveTo(0,hh/2);ctx.lineTo(w,hh/2);ctx.stroke()
+let state=h,points=[],signal=[]
+for(let i=0;i<24;i++){let input=Math.sin(i*.72)*.72+(i==8?x:0);let candidate=Math.tanh(input+r*state);state=z*state+(1-z)*candidate;signal.push(input);points.push(state)}
+for(const [arr,c] of [[signal,"#63a7ff"],[points,"#ff70a6"]]){ctx.strokeStyle=c;ctx.lineWidth=3;ctx.beginPath();arr.forEach((v,i)=>{let px=i*w/23,py=hh/2-v*105;i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke()}
+}
+function update(){
+const [r,z,h,x]=inputs.map(e=>+e.value),c=Math.tanh(x+r*h),n=z*h+(1-z)*c
+$("rv").textContent=r.toFixed(2);$("zv").textContent=z.toFixed(2);$("hv").textContent=h.toFixed(2);$("xv").textContent=x.toFixed(2)
+for(const [id,v,label] of [["old",h,"旧状态"],["candidate",c,"候选状态"],["next",n,"新状态"]]){let el=$(id);el.style.width=`${Math.abs(v)*50+50}%`;el.style.background=color(v,"#63a7ff","#ff70a6");$(id=="old"?"oldt":id=="candidate"?"ct":"nt").textContent=`${label} ${v.toFixed(3)}`}
+draw(r,z,h,x)
+}
+inputs.forEach(e=>e.oninput=update)
+document.querySelectorAll("button").forEach(b=>b.onclick=()=>{let p={long:[.8,.95,.8,-.4],short:[.8,.08,.8,-.4],reset:[.02,.15,.8,-.8]}[b.dataset.preset];inputs.forEach((e,i)=>e.value=p[i]);update()})
+addEventListener("resize",update);update()
+</script>
+</body>
+</html>

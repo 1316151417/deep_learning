@@ -6,9 +6,9 @@
 <title>机器翻译与数据集（Machine Translation and Dataset）- 交互式讲解</title>
 <style>
   :root {
-    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --fg: #e4e6ed; --muted: #8b8fa3;
+    --bg: #0f1117; --card: rgba(255,255,255,.82); --border: #dedbd2; --fg: #172033; --muted: #687083;
     --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
-    --purple: #b07cff; --code-bg: #12141c; --radius: 12px;
+    --purple: #b07cff; --code-bg: rgba(255,255,255,.82); --radius: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
@@ -38,7 +38,7 @@
     padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
   code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
   .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
-  .num { color: var(--orange); } .cm { color: #5a5f73; font-style: italic; } .op { color: #d2a8ff; }
+  .num { color: var(--orange); } .cm { color: #687083; font-style: italic; } .op { color: #d2a8ff; }
   p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px;
     border-radius: 4px; font-size: 13px; }
 
@@ -92,7 +92,7 @@
     margin-bottom: 6px; letter-spacing: 0.5px; }
   .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden;
-    background: #0c0e14; border: 1px solid var(--border); }
+    background: rgba(255,255,255,.82); border: 1px solid var(--border); }
   canvas { display: block; width: 100%; height: auto; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
@@ -147,13 +147,13 @@
   .chips { display: flex; flex-wrap: wrap; align-items: center; gap: 0; padding: 8px 2px; min-height: 38px; }
   .chip { display: inline-block; padding: 4px 10px; margin: 3px 4px 3px 0; border-radius: 7px;
     font: 600 13px/1 "JetBrains Mono", monospace; border: 1px solid var(--border);
-    background: var(--code-bg); color: #cfe1ff; }
+    background: var(--code-bg); color: #172033; }
   .chip.zh { color: #79c0ff; }
   .chip.st-unk { color: var(--orange); border-color: #f5a6235c; background: rgba(245,166,35,.12); }
   .chip.st-pad { color: var(--accent); border-color: #6c8cff5c; background: rgba(108,140,255,.12); }
   .chip.st-bos { color: var(--purple); border-color: #b07cff5c; background: rgba(176,124,255,.12); }
   .chip.st-eos { color: var(--accent2); border-color: #ff6b9d5c; background: rgba(255,107,157,.12); }
-  .chip.warn { color: #1a1d27; border-color: var(--orange); background: var(--orange); font-weight: 800; }
+  .chip.warn { color: rgba(255,255,255,.82); border-color: var(--orange); background: var(--orange); font-weight: 800; }
 
   .sidebyside { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .sidebyside .panel { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
@@ -166,7 +166,7 @@
   .mb-label { font-size: 12px; color: var(--muted); min-width: 92px; }
   .mb-cells { display: flex; gap: 4px; flex-wrap: wrap; }
   .cell { width: 34px; height: 30px; display: grid; place-items: center; border-radius: 6px;
-    font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--code-bg); color: #cfe1ff; }
+    font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: var(--code-bg); color: #172033; }
   .cell.c-unk { color: var(--orange); border-color: #f5a6235c; background: rgba(245,166,35,.12); }
   .cell.c-pad { color: var(--accent); border-color: #6c8cff5c; background: rgba(108,140,255,.12); opacity:.7; }
   .cell.c-bos { color: var(--purple); border-color: #b07cff5c; background: rgba(176,124,255,.12); }
@@ -180,6 +180,7 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 <link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
 </head>
 <body>
 <div class="container lab-page">
@@ -505,9 +506,9 @@ tgt_vocab = Vocab(target, min_freq=<span class="num">2</span>, reserved_tokens=[
       <div class="mb-label" style="min-width:auto;color:var(--green)">valid_len=6</div>
     </div>
     <div style="border-top:1px dashed var(--border);margin-top:14px;padding-top:12px">
-      <div class="mb-row"><div class="mb-label" style="color:var(--accent)">回译 src0</div><div style="font-family:'JetBrains Mono',monospace;color:#cfe1ff">i overslept . &lt;eos&gt;</div></div>
+      <div class="mb-row"><div class="mb-label" style="color:var(--accent)">回译 src0</div><div style="font-family:'JetBrains Mono',monospace;color:#172033">i overslept . &lt;eos&gt;</div></div>
       <div class="mb-row"><div class="mb-label" style="color:var(--accent2)">回译 tgt0</div><div style="font-family:'JetBrains Mono',monospace;color:#79c0ff">我睡過<span style="color:var(--orange)">&lt;unk&gt;</span>了。&lt;eos&gt;</div></div>
-      <div class="mb-row"><div class="mb-label" style="color:var(--accent)">回译 src1</div><div style="font-family:'JetBrains Mono',monospace;color:#cfe1ff">i can cook . &lt;eos&gt;</div></div>
+      <div class="mb-row"><div class="mb-label" style="color:var(--accent)">回译 src1</div><div style="font-family:'JetBrains Mono',monospace;color:#172033">i can cook . &lt;eos&gt;</div></div>
       <div class="mb-row"><div class="mb-label" style="color:var(--accent2)">回译 tgt1</div><div style="font-family:'JetBrains Mono',monospace;color:#79c0ff">我会做饭。&lt;eos&gt;</div></div>
     </div>
   </div>
@@ -585,7 +586,7 @@ function setupCanvas(cv){
   const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
   return {ctx,W:cv._W,H:cv._H};
 }
-function clearBg(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function clearBg(ctx,W,H){ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(0,0,W,H);}
 
 // ══════════════════════════════════════════════════════
 // DEMO 1：读取去署名
@@ -679,13 +680,13 @@ function drawDemo3(){
     grad.addColorStop(0,c1); grad.addColorStop(1,c2);
     ctx.fillStyle=grad; ctx.fillRect(mL,y,bw,barH);
     // token 标签
-    ctx.fillStyle='#e4e6ed'; ctx.font='600 13px "JetBrains Mono",monospace';
+    ctx.fillStyle='#172033'; ctx.font='600 13px "JetBrains Mono",monospace';
     ctx.textAlign='right'; ctx.fillText(tok, mL-8, y+barH-2); ctx.textAlign='left';
     // 频次
-    ctx.fillStyle='#8b8fa3'; ctx.font='11px "JetBrains Mono",monospace';
+    ctx.fillStyle='#687083'; ctx.font='11px "JetBrains Mono",monospace';
     ctx.fillText(f, mL+bw+6, y+barH-2);
     // rank
-    ctx.fillStyle='#5a5f73'; ctx.font='10px monospace';
+    ctx.fillStyle='#687083'; ctx.font='10px monospace';
     ctx.fillText('#'+(idx+1), mL-52, y+barH-2);
   });
   document.getElementById('topNVal').textContent=topN;
@@ -711,7 +712,7 @@ function drawDemo4(){
   const bw=plotW/nB;
   const ty=c=>mT+plotH*(1-c/maxC);
   // 网格 + y 刻度
-  ctx.strokeStyle='#222533'; ctx.fillStyle='#5a5f73'; ctx.font='11px monospace';
+  ctx.strokeStyle='#dedbd2'; ctx.fillStyle='#687083'; ctx.font='11px monospace';
   const yticks=[0,2000,4000,6000];
   yticks.forEach(v=>{ const y=ty(v);
     ctx.beginPath(); ctx.moveTo(mL,y); ctx.lineTo(W-mR,y); ctx.stroke();
@@ -735,11 +736,11 @@ function drawDemo4(){
     }
   });
   // x 轴刻度
-  ctx.fillStyle='#5a5f73'; ctx.font='11px monospace'; ctx.textAlign='center';
+  ctx.fillStyle='#687083'; ctx.font='11px monospace'; ctx.textAlign='center';
   [1,5,10,15,20,25,30].forEach(l=>{ const idx=l-1; const x=mL+(idx+0.5)*bw;
     ctx.fillText(l===30?'30+':l, x, H-mB+16); });
   // 轴标题
-  ctx.fillStyle='#8b8fa3'; ctx.font='12px monospace';
+  ctx.fillStyle='#687083'; ctx.font='12px monospace';
   ctx.textAlign='center'; ctx.fillText('每句 token 数 →', mL+plotW/2, H-mB+32);
   ctx.save(); ctx.translate(16,mT+plotH/2); ctx.rotate(-Math.PI/2);
   ctx.fillText('句对数', 0,0); ctx.restore();

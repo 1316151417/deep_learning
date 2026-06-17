@@ -6,9 +6,9 @@
 <title>文本预处理（Text Preprocessing）- 交互式讲解</title>
 <style>
   :root {
-    --bg: #0f1117; --card: #1a1d27; --border: #2a2d3a; --fg: #e4e6ed; --muted: #8b8fa3;
+    --bg: #0f1117; --card: rgba(255,255,255,.82); --border: #dedbd2; --fg: #172033; --muted: #687083;
     --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
-    --purple: #b07cff; --code-bg: #12141c; --radius: 12px;
+    --purple: #b07cff; --code-bg: rgba(255,255,255,.82); --radius: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
@@ -38,7 +38,7 @@
     padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
   code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
   .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
-  .num { color: var(--orange); } .cm { color: #5a5f73; font-style: italic; } .op { color: #d2a8ff; }
+  .num { color: var(--orange); } .cm { color: #687083; font-style: italic; } .op { color: #d2a8ff; }
   .var { color: #ffa657; }
   p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px;
     border-radius: 4px; font-size: 13px; }
@@ -93,7 +93,7 @@
     margin-bottom: 6px; letter-spacing: 0.5px; }
   .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden;
-    background: #0c0e14; border: 1px solid var(--border); }
+    background: rgba(255,255,255,.82); border: 1px solid var(--border); }
   canvas { display: block; width: 100%; height: auto; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
@@ -152,6 +152,7 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 <link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
 </head>
 <body>
 <div class="container lab-page">
@@ -581,7 +582,7 @@ function setupCanvas(cv){
   const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
   return {ctx,W:cv._W,H:cv._H};
 }
-function clearBg(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function clearBg(ctx,W,H){ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(0,0,W,H);}
 
 // ══════════════════════════════════════════════════════
 // DEMO 1：读取语料（原始 vs 清洗）
@@ -595,16 +596,16 @@ function drawDemo1(){
   // 左列：原始
   ctx.fillStyle='#6c8cff'; ctx.font='600 13px monospace';
   ctx.fillText('RAW（原始）', mL+6, mT+2);
-  ctx.fillStyle='#5a6378'; ctx.font='13px "JetBrains Mono",monospace';
+  ctx.fillStyle='#687083'; ctx.font='13px "JetBrains Mono",monospace';
   wrapText(ctx, RAW_LINES[i]||'(空行)', mL+6, mT+24, colW, 20);
   // 右列：清洗后
   const col2X=mL+colW+22;
   ctx.fillStyle='#4ecf8b'; ctx.font='600 13px monospace';
   ctx.fillText('CLEAN（re.sub + lower）', col2X, mT+2);
-  ctx.fillStyle='#5a6378'; ctx.font='13px "JetBrains Mono",monospace';
+  ctx.fillStyle='#687083'; ctx.font='13px "JetBrains Mono",monospace';
   wrapText(ctx, CLEAN_LINES[i]||'(空行)', col2X, mT+24, colW, 20);
   // 分隔线
-  ctx.strokeStyle='#2a2d3a'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
+  ctx.strokeStyle='#dedbd2'; ctx.lineWidth=1; ctx.setLineDash([4,4]);
   ctx.beginPath(); ctx.moveTo(mL+colW+11,mT+10); ctx.lineTo(mL+colW+11,H-mB); ctx.stroke(); ctx.setLineDash([]);
   // 标注正则
   ctx.fillStyle='#f5a623'; ctx.font='12px monospace';
@@ -637,7 +638,7 @@ function drawDemo2(){
   ];
   stages.forEach((s,idx)=>{
     const div=document.createElement('div'); div.className='pipe-stage';
-    div.innerHTML=`<div class="pname">${s.name}</div><div class="pval">${s.val||'<span style="color:#5a5f73">(空)</span>'}</div>`;
+    div.innerHTML=`<div class="pname">${s.name}</div><div class="pval">${s.val||'<span style="color:#687083">(空)</span>'}</div>`;
     pipe.appendChild(div);
     if(idx<stages.length-1){ const a=document.createElement('div'); a.className='pipe-arrow'; a.textContent='→'; pipe.appendChild(a); }
   });
@@ -676,13 +677,13 @@ function drawDemo3(){
     grad.addColorStop(0,'#6c8cff'); grad.addColorStop(1,'#b07cff');
     ctx.fillStyle=grad; ctx.fillRect(mL,y,bw,barH);
     // 词标签
-    ctx.fillStyle='#e4e6ed'; ctx.font='600 12px "JetBrains Mono",monospace';
+    ctx.fillStyle='#172033'; ctx.font='600 12px "JetBrains Mono",monospace';
     ctx.textAlign='right'; ctx.fillText(w, mL-8, y+barH-1); ctx.textAlign='left';
     // 频次数字
-    ctx.fillStyle='#8b8fa3'; ctx.font='11px "JetBrains Mono",monospace';
+    ctx.fillStyle='#687083'; ctx.font='11px "JetBrains Mono",monospace';
     ctx.fillText(f, mL+bw+5, y+barH-1);
     // rank 标注
-    ctx.fillStyle='#5a5f73'; ctx.font='10px monospace';
+    ctx.fillStyle='#687083'; ctx.font='10px monospace';
     ctx.fillText('#'+(idx+1), mL-70, y+barH-1);
   });
   // 读数
@@ -727,9 +728,9 @@ function drawDemo4(){
     ctx.fillStyle=isOOV?'#f5a623':'#79c0ff'; ctx.font='600 15px "JetBrains Mono",monospace';
     ctx.textAlign='center'; ctx.fillText('"'+w+'"', x+cellW/2, cy+24);
     // 箭头
-    ctx.fillStyle='#5a5f73'; ctx.font='16px monospace'; ctx.fillText('↓', x+cellW/2, cy+48);
+    ctx.fillStyle='#687083'; ctx.font='16px monospace'; ctx.fillText('↓', x+cellW/2, cy+48);
     // 索引
-    ctx.fillStyle=isOOV?'#f5a623':'#e4e6ed'; ctx.font='700 20px "JetBrains Mono",monospace';
+    ctx.fillStyle=isOOV?'#f5a623':'#172033'; ctx.font='700 20px "JetBrains Mono",monospace';
     ctx.fillText(realIdx, x+cellW/2, cy+74);
     ctx.textAlign='left';
   });
@@ -759,7 +760,7 @@ function drawDemo5(){
   const ty = f => isLog ? mT+(Math.log(fMax)-Math.log(f))/(Math.log(fMax)-Math.log(fMin))*plotH
                        : mT+(fMax-f)/(fMax-0)*plotH;
   // 网格 + 轴标签
-  ctx.strokeStyle='#222533'; ctx.lineWidth=1; ctx.fillStyle='#5a5f73'; ctx.font='11px monospace';
+  ctx.strokeStyle='#dedbd2'; ctx.lineWidth=1; ctx.fillStyle='#687083'; ctx.font='11px monospace';
   // y 轴刻度
   const yTicks = isLog ? [1,10,100,1000] : [0,500,1000,1500,2000];
   yTicks.forEach(v=>{
@@ -773,7 +774,7 @@ function drawDemo5(){
     ctx.beginPath(); ctx.setLineDash([2,3]); ctx.moveTo(xx,mT); ctx.lineTo(xx,H-mB); ctx.stroke(); ctx.setLineDash([]);
     ctx.textAlign='center'; ctx.fillText(r, xx, H-mB+16); });
   // 轴标题
-  ctx.fillStyle='#8b8fa3'; ctx.font='12px monospace';
+  ctx.fillStyle='#687083'; ctx.font='12px monospace';
   ctx.textAlign='right'; ctx.fillText('rank r →', W-mR, H-mB+30);
   ctx.save(); ctx.translate(16,mT+plotH/2); ctx.rotate(-Math.PI/2);
   ctx.textAlign='center'; ctx.fillText('freq f(r)', 0,0); ctx.restore();
@@ -803,7 +804,7 @@ function drawDemo5(){
   labels.forEach(([r,w,f])=>{
     if(r>rMax) return;
     const X=tx(r),Y=ty(f);
-    ctx.fillStyle='#e4e6ed'; ctx.textAlign='left';
+    ctx.fillStyle='#172033'; ctx.textAlign='left';
     ctx.fillText(w, X+6, Y-6);
   });
 }

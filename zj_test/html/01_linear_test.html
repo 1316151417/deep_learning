@@ -7,15 +7,15 @@
 <style>
   :root {
     --bg: #0f1117;
-    --card: #1a1d27;
-    --border: #2a2d3a;
-    --fg: #e4e6ed;
-    --muted: #8b8fa3;
+    --card: rgba(255,255,255,.82);
+    --border: #dedbd2;
+    --fg: #172033;
+    --muted: #687083;
     --accent: #6c8cff;
     --accent2: #ff6b9d;
     --green: #4ecf8b;
     --orange: #f5a623;
-    --code-bg: #12141c;
+    --code-bg: rgba(255,255,255,.82);
     --radius: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -195,6 +195,7 @@
   }
 </style>
 <link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
 </head>
 <body>
 <div class="container lab-page">
@@ -397,19 +398,19 @@ b 的估计误差: tensor([0.0009])
         <defs>
           <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6c8cff"/></marker>
         </defs>
-        <rect x="220" y="10" width="140" height="44" rx="8" fill="#1a1d27" stroke="#6c8cff" stroke-width="1.5"/>
+        <rect x="220" y="10" width="140" height="44" rx="8" fill="rgba(255,255,255,.82)" stroke="#6c8cff" stroke-width="1.5"/>
         <text x="290" y="37" text-anchor="middle" fill="#6c8cff" font-size="14" font-weight="600">张量 Tensor</text>
 
-        <rect x="60" y="110" width="140" height="44" rx="8" fill="#1a1d27" stroke="#ff6b9d" stroke-width="1.5"/>
+        <rect x="60" y="110" width="140" height="44" rx="8" fill="rgba(255,255,255,.82)" stroke="#ff6b9d" stroke-width="1.5"/>
         <text x="130" y="137" text-anchor="middle" fill="#ff6b9d" font-size="14" font-weight="600">自动微分 Autograd</text>
 
-        <rect x="380" y="110" width="140" height="44" rx="8" fill="#1a1d27" stroke="#4ecf8b" stroke-width="1.5"/>
+        <rect x="380" y="110" width="140" height="44" rx="8" fill="rgba(255,255,255,.82)" stroke="#4ecf8b" stroke-width="1.5"/>
         <text x="450" y="137" text-anchor="middle" fill="#4ecf8b" font-size="14" font-weight="600">模型 Model</text>
 
-        <rect x="60" y="220" width="140" height="44" rx="8" fill="#1a1d27" stroke="#f5a623" stroke-width="1.5"/>
+        <rect x="60" y="220" width="140" height="44" rx="8" fill="rgba(255,255,255,.82)" stroke="#f5a623" stroke-width="1.5"/>
         <text x="130" y="247" text-anchor="middle" fill="#f5a623" font-size="14" font-weight="600">损失函数 Loss</text>
 
-        <rect x="380" y="220" width="140" height="44" rx="8" fill="#1a1d27" stroke="#89ddff" stroke-width="1.5"/>
+        <rect x="380" y="220" width="140" height="44" rx="8" fill="rgba(255,255,255,.82)" stroke="#89ddff" stroke-width="1.5"/>
         <text x="450" y="247" text-anchor="middle" fill="#89ddff" font-size="14" font-weight="600">优化器 SGD</text>
 
         <line x1="258" y1="54" x2="160" y2="110" stroke="#6c8cff" stroke-width="1.2" marker-end="url(#ah)"/>
@@ -418,7 +419,7 @@ b 的估计误差: tensor([0.0009])
         <line x1="450" y1="154" x2="450" y2="220" stroke="#4ecf8b" stroke-width="1.2" marker-end="url(#ah)"/>
         <line x1="200" y1="242" x2="380" y2="242" stroke="#f5a623" stroke-width="1.2" stroke-dasharray="6,4" marker-end="url(#ah)"/>
 
-        <text x="290" y="260" text-anchor="middle" fill="#8b8fa3" font-size="11">梯度回传</text>
+        <text x="290" y="260" text-anchor="middle" fill="#687083" font-size="11">梯度回传</text>
       </svg>
     </div>
   </div>

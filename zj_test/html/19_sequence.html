@@ -7,16 +7,16 @@
 <style>
   :root {
     --bg: #0f1117;
-    --card: #1a1d27;
-    --border: #2a2d3a;
-    --fg: #e4e6ed;
-    --muted: #8b8fa3;
+    --card: rgba(255,255,255,.82);
+    --border: #dedbd2;
+    --fg: #172033;
+    --muted: #687083;
     --accent: #6c8cff;
     --accent2: #ff6b9d;
     --green: #4ecf8b;
     --orange: #f5a623;
     --purple: #b07cff;
-    --code-bg: #12141c;
+    --code-bg: rgba(255,255,255,.82);
     --radius: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,7 +92,7 @@
   .fn { color: #79c0ff; }
   .str { color: var(--green); }
   .num { color: var(--orange); }
-  .cm { color: #5a5f73; font-style: italic; }
+  .cm { color: #687083; font-style: italic; }
   .op { color: #d2a8ff; }
   .var { color: #ffa657; }
   p code, li code {
@@ -175,7 +175,7 @@
   }
   .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
   .canvas-wrap { position: relative; width: 100%; border-radius: 8px;
-    overflow: hidden; background: #0c0e14; border: 1px solid var(--border); }
+    overflow: hidden; background: rgba(255,255,255,.82); border: 1px solid var(--border); }
   canvas { display: block; width: 100%; height: auto; }
 
   .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px;
@@ -217,6 +217,7 @@
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
 <link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
 </head>
 <body>
 <div class="container lab-page">
@@ -310,7 +311,7 @@ x = torch.sin(<span class="num">0.01</span> * time) + torch.normal(<span class="
       </div>
       <div class="toggle-row" style="margin-top:2px">
         <label class="toggle"><span class="swatch" style="background:#6c8cff"></span><input type="checkbox" id="showSig" checked> 纯净信号 sin</label>
-        <label class="toggle"><span class="swatch" style="background:#5a6378"></span><input type="checkbox" id="showNoisy" checked> 带噪观测 x</label>
+        <label class="toggle"><span class="swatch" style="background:#687083"></span><input type="checkbox" id="showNoisy" checked> 带噪观测 x</label>
       </div>
     </div>
     <div class="readouts">
@@ -471,7 +472,7 @@ optimizer = torch.optim.Adam(net.parameters(), lr=<span class="num">0.01</span>)
     <div class="demo-sub">训练截止线（红虚线）右侧：绿线（单步）依然准，红线（多步）急剧发散。下方两行 MSE 量化对比。</div>
     <div class="canvas-wrap"><canvas id="cv4" width="1700" height="460"></canvas></div>
     <div class="legend">
-      <span><span class="swatch" style="background:#5a6378"></span>真实数据</span>
+      <span><span class="swatch" style="background:#687083"></span>真实数据</span>
       <span><span class="swatch" style="background:#4ecf8b"></span>单步预测</span>
       <span><span class="swatch" style="background:#ff6b9d"></span>多步预测</span>
       <span><span class="swatch" style="background:#f5a623"></span>训练截止 (604)</span>
@@ -490,7 +491,7 @@ optimizer = torch.optim.Adam(net.parameters(), lr=<span class="num">0.01</span>)
         <input type="range" id="step4" min="650" max="1000" step="10" value="1000">
       </div>
       <div class="toggle-row" style="flex-basis:100%;margin-top:0">
-        <label class="toggle"><span class="swatch" style="background:#5a6378"></span><input type="checkbox" id="t4data" checked> 真实数据</label>
+        <label class="toggle"><span class="swatch" style="background:#687083"></span><input type="checkbox" id="t4data" checked> 真实数据</label>
         <label class="toggle"><span class="swatch" style="background:#4ecf8b"></span><input type="checkbox" id="t4one" checked> 单步预测</label>
         <label class="toggle"><span class="swatch" style="background:#ff6b9d"></span><input type="checkbox" id="t4multi" checked> 多步预测</label>
       </div>
@@ -674,7 +675,7 @@ function setupCanvas(cv){
   const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
   return {ctx,W:cv._W,H:cv._H};
 }
-function clear(ctx,W,H){ctx.fillStyle='#0c0e14';ctx.fillRect(0,0,W,H);}
+function clear(ctx,W,H){ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(0,0,W,H);}
 // 数据坐标 → 画布坐标
 function px(W, i, marginL, marginR){ return marginL + i/(T-1)*(W-marginL-marginR); }
 
@@ -693,7 +694,7 @@ function drawDemo1(){
   const mL=50,mR=30,mT=24,mB=32, yMin=-1.6,yMax=1.6;
   const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
   // 网格
-  ctx.strokeStyle='#222533';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#5a5f73';
+  ctx.strokeStyle='#dedbd2';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#687083';
   for(const v of [-1,0,1]){ const yy=py(v); ctx.beginPath();ctx.moveTo(mL,yy);ctx.lineTo(W-mR,yy);ctx.stroke();
     ctx.fillText(v,mL-26,yy+4); }
   // 纯净信号
@@ -703,12 +704,12 @@ function drawDemo1(){
   }
   // 带噪观测
   if(document.getElementById('showNoisy').checked){
-    ctx.strokeStyle='#5a6378';ctx.lineWidth=1;ctx.globalAlpha=0.65;ctx.beginPath();
+    ctx.strokeStyle='#687083';ctx.lineWidth=1;ctx.globalAlpha=0.65;ctx.beginPath();
     for(let i=0;i<T;i++){ const X=px(W,i,mL,mR),Y=py(x[i]); i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);} ctx.stroke();
     ctx.globalAlpha=1;
   }
   // 坐标轴标签
-  ctx.fillStyle='#8b8fa3';ctx.fillText('x',6,py(0)+4);ctx.fillText('time →',W-mR-40,H-8);
+  ctx.fillStyle='#687083';ctx.fillText('x',6,py(0)+4);ctx.fillText('time →',W-mR-40,H-8);
   ctx.fillText('1',mL-14,mT+4);ctx.fillText('1000',W-mR-14,H-8);
   // 读数
   document.getElementById('sigmaVal').textContent=sigma.toFixed(2);
@@ -734,10 +735,10 @@ function drawDemo2(){
   const all=dataForWin.slice(lo,hi+1), yMin=Math.min(...all)-0.4,yMax=Math.max(...all)+0.4;
   const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
   // 数据点连线
-  ctx.strokeStyle='#5a6378';ctx.lineWidth=1.5;ctx.beginPath();
+  ctx.strokeStyle='#687083';ctx.lineWidth=1.5;ctx.beginPath();
   for(let i=lo;i<=hi;i++){const X=PX(i),Y=py(dataForWin[i]); (i===lo)?ctx.moveTo(X,Y):ctx.lineTo(X,Y);}ctx.stroke();
   // 数据点
-  for(let i=lo;i<=hi;i++){ctx.fillStyle='#8b8fa3';ctx.beginPath();ctx.arc(PX(i),py(dataForWin[i]),3,0,7);ctx.fill();}
+  for(let i=lo;i<=hi;i++){ctx.fillStyle='#687083';ctx.beginPath();ctx.arc(PX(i),py(dataForWin[i]),3,0,7);ctx.fill();}
   // 窗口高亮 (特征: start..start+TAU-1)
   const w0=start, w1=start+TAU-1;
   ctx.fillStyle='rgba(255,107,157,0.13)';ctx.fillRect(PX(w0)-6,mT,PX(w1)-PX(w0)+12,H-mT-mB);
@@ -752,7 +753,7 @@ function drawDemo2(){
   ctx.font='13px monospace';
   for(let i=w0;i<=w1;i++){ctx.fillStyle='#ff6b9d';ctx.fillText('x'+(i),PX(i)-6,py(dataForWin[i])-10);}
   if(lb<=hi){ctx.fillStyle='#f5a623';ctx.fillText('y=x'+(lb),PX(lb)-6,py(dataForWin[lb])-12);}
-  ctx.fillStyle='#8b8fa3';ctx.fillText('特征窗口 (4个历史值)',PX(w0),H-8);
+  ctx.fillStyle='#687083';ctx.fillText('特征窗口 (4个历史值)',PX(w0),H-8);
   // 读数
   const feat=dataForWin.slice(w0,w1+1);
   document.getElementById('winVal').textContent=start;
@@ -781,7 +782,7 @@ function drawDemo3(){
   const pxs=e=>mL+(e-1)/(realLosses.length-1)*(W-mL-mR);
   const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
   // 网格 + y 轴
-  ctx.strokeStyle='#222533';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#5a5f73';
+  ctx.strokeStyle='#dedbd2';ctx.lineWidth=1;ctx.font='12px monospace';ctx.fillStyle='#687083';
   for(const v of [0.04,0.06,0.08,0.10,0.12]){const yy=py(v);ctx.beginPath();ctx.moveTo(mL,yy);ctx.lineTo(W-mR,yy);ctx.stroke();ctx.fillText(v.toFixed(2),12,yy+4);}
   // 噪声方差参考线 σ²=0.04
   ctx.strokeStyle='#f5a623';ctx.lineWidth=1.5;ctx.setLineDash([6,4]);
@@ -793,9 +794,9 @@ function drawDemo3(){
   // 点 + 标签
   realLosses.forEach((v,e)=>{const X=pxs(e),Y=py(v);
     ctx.fillStyle='#6c8cff';ctx.beginPath();ctx.arc(X,Y,5,0,7);ctx.fill();
-    ctx.fillStyle='#e4e6ed';ctx.font='12px monospace';ctx.fillText(v.toFixed(3),X-14,Y-10);
-    ctx.fillStyle='#8b8fa3';ctx.fillText('e'+(e+1),X-8,H-12);});
-  ctx.fillStyle='#8b8fa3';ctx.fillText('epoch →',W-mR-50,H-12);
+    ctx.fillStyle='#172033';ctx.font='12px monospace';ctx.fillText(v.toFixed(3),X-14,Y-10);
+    ctx.fillStyle='#687083';ctx.fillText('e'+(e+1),X-8,H-12);});
+  ctx.fillStyle='#687083';ctx.fillText('epoch →',W-mR-50,H-12);
 }
 
 // ══════════════════════════════════════════════════════
@@ -829,7 +830,7 @@ function drawDemo4(){
 
   // ── 画曲线 ──
   if(document.getElementById('t4data').checked){
-    ctx.strokeStyle='#5a6378';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
+    ctx.strokeStyle='#687083';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
     for(let t=0;t<maxStep;t++){const X=px(W,t,mL,mR),Y=py(x[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();ctx.globalAlpha=1;
   }
   if(document.getElementById('t4one').checked){
@@ -844,7 +845,7 @@ function drawDemo4(){
   ctx.strokeStyle='#f5a623';ctx.lineWidth=1.6;ctx.setLineDash([5,4]);
   ctx.beginPath();ctx.moveTo(xc,mT);ctx.lineTo(xc,H-mB);ctx.stroke();ctx.setLineDash([]);
   ctx.fillStyle='#f5a623';ctx.font='12px monospace';ctx.fillText('训练截止 604',xc+6,mT+14);
-  ctx.fillStyle='#8b8fa3';ctx.fillText('time →',W-mR-44,H-10);
+  ctx.fillStyle='#687083';ctx.fillText('time →',W-mR-44,H-10);
   ctx.fillText('1',mL-10,H-10);ctx.fillText('1000',W-mR-18,H-10);
 
   // ── 测试段 MSE (CUTOFF..maxStep) ──
@@ -875,7 +876,7 @@ function drawDemo5(){
   const mL=50,mR=30,mT=22,mB=34,yMin=-1.8,yMax=1.8;
   const py=v=>mT+(yMax-v)/(yMax-yMin)*(H-mT-mB);
   // 真实数据
-  ctx.strokeStyle='#5a6378';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
+  ctx.strokeStyle='#687083';ctx.lineWidth=1.1;ctx.globalAlpha=0.7;ctx.beginPath();
   for(let t=0;t<T;t++){const X=px(W,t,mL,mR),Y=py(x[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();ctx.globalAlpha=1;
   // k 步预测 = 纯净信号 × decay (随 k 坍缩; k=64 几乎是一条平线)
   const pred=new Array(T);
@@ -883,7 +884,7 @@ function drawDemo5(){
   const col=k<=1?'#4ecf8b':k<=4?'#6c8cff':k<=16?'#f5a623':'#ff6b9d';
   ctx.strokeStyle=col;ctx.lineWidth=2.4;ctx.beginPath();
   for(let t=0;t<T;t++){const X=px(W,t,mL,mR),Y=py(pred[t]);t?ctx.lineTo(X,Y):ctx.moveTo(X,Y);}ctx.stroke();
-  ctx.fillStyle='#8b8fa3';ctx.font='12px monospace';ctx.fillText('time →',W-mR-44,H-10);
+  ctx.fillStyle='#687083';ctx.font='12px monospace';ctx.fillText('time →',W-mR-44,H-10);
   ctx.fillText('1',mL-10,H-10);ctx.fillText('1000',W-mR-18,H-10);
   // 读数: 信号保留率 + 质量分档
   const ret=(decay*100);

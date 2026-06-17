@@ -151,9 +151,10 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 </style>
+<link rel="stylesheet" href="_attention_theme.css">
 </head>
 <body>
-<div class="container">
+<div class="container lab-page">
 
 <!-- Header -->
 <div class="header">
@@ -630,7 +631,7 @@ function drawDemo1(){
 
   // 初始 H_0
   const x0=cx(0)-nodeW/2-30;
-  ctx.fillStyle='#12141c'; ctx.strokeStyle= active?'#6c8cff':'#2a2d3a';
+  ctx.fillStyle='#12141c'; ctx.strokeStyle='#2a2d3a';
   ctx.fillStyle='#5a5f73'; ctx.font='10px monospace'; ctx.textAlign='center';
   ctx.fillText('H₀=0', x0, hBoxY+25);
   ctx.strokeStyle='#5a3a4a';

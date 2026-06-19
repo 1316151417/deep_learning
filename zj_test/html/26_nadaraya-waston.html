@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>注意力汇聚：Nadaraya-Watson 核回归 - 交互式讲解</title>
+<style>
+  :root {
+    --bg: #0f1117; --card: rgba(255,255,255,.82); --border: #dedbd2; --fg: #172033; --muted: #687083;
+    --accent: #6c8cff; --accent2: #ff6b9d; --green: #4ecf8b; --orange: #f5a623;
+    --purple: #b07cff; --code-bg: rgba(255,255,255,.82); --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+    background: var(--bg); color: var(--fg); line-height: 1.75; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 940px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  .header { text-align: center; padding: 60px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 48px; }
+  .header .tag { display: inline-block; background: rgba(108,140,255,0.12); color: var(--accent);
+    font-size: 13px; padding: 4px 14px; border-radius: 20px; margin-bottom: 20px; letter-spacing: 1px; }
+  .header h1 { font-size: 36px; font-weight: 700; margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .header p { color: var(--muted); font-size: 16px; }
+
+  .section { margin-bottom: 56px; }
+  .section h2 { font-size: 22px; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
+  .section h2 .num { display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff;
+    font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .section h3 { font-size: 17px; margin: 20px 0 8px; color: var(--fg); }
+  .section > p, .section > ul, .section > ol { color: var(--muted); margin-bottom: 12px; }
+  .section > p { font-size: 15px; }
+  .section ul, .section ol { padding-left: 24px; }
+  .section li { margin-bottom: 4px; }
+
+  pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px; overflow-x: auto; margin: 16px 0; font-size: 13.5px; line-height: 1.65; tab-size: 4; }
+  code { font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", monospace; color: var(--fg); }
+  .kw { color: var(--purple); } .fn { color: #79c0ff; } .str { color: var(--green); }
+  .num { color: var(--orange); } .cm { color: #687083; font-style: italic; }
+  p code, li code { background: rgba(108,140,255,0.1); color: var(--accent); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 16px 0; }
+  .note { border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0;
+    background: rgba(108,140,255,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .note strong { color: var(--accent); }
+  .warn { border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0;
+    background: rgba(245,166,35,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .warn strong { color: var(--orange); }
+  .tip { border-left: 3px solid var(--green); padding: 16px 20px; margin: 16px 0;
+    background: rgba(78,207,139,0.06); border-radius: 0 var(--radius) var(--radius) 0; color: var(--muted); font-size: 14px; } .tip strong { color: var(--green); }
+
+  .formula { text-align: center; padding: 18px; margin: 16px 0; background: var(--card);
+    border: 1px solid var(--border); border-radius: var(--radius); font-size: 17px; overflow-x: auto; }
+  .formula em { color: var(--orange); font-style: normal; }
+  .formula sup { color: var(--accent2); }
+  .formula sub { color: var(--muted); }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+  th { background: rgba(255,255,255,0.03); padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; color: var(--fg); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--muted); }
+
+  .flow { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+  .flow-item { background: var(--card); border: 1px solid var(--border); padding: 10px 18px; border-radius: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; text-align:center; }
+  .flow-arrow { color: var(--accent); font-size: 18px; font-weight: 700; }
+
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 32px; margin: 24px 0 48px; }
+  .toc h3 { font-size: 14px; color: var(--muted); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase; }
+  .toc ol { padding-left: 20px; } .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--fg); text-decoration: none; font-size: 15px; transition: color 0.2s; }
+  .toc a:hover { color: var(--accent); }
+  .toc .desc { color: var(--muted); font-size: 13px; margin-left: 8px; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .summary-grid .item { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; text-align: center; }
+  .summary-grid .item .label { font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
+  .summary-grid .item .value { font-size: 22px; font-weight: 700; }
+
+  .demo { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin: 20px 0; }
+  .demo .demo-title { font-size: 14px; color: var(--accent); font-weight: 600; margin-bottom: 6px; letter-spacing: 0.5px; }
+  .demo .demo-sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .canvas-wrap { position: relative; width: 100%; border-radius: 8px; overflow: hidden; background: rgba(255,255,255,.82); border: 1px solid var(--border); }
+  canvas { display: block; width: 100%; height: auto; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 20px; margin: 16px 0 4px; padding: 14px 4px 0; border-top: 1px dashed var(--border); }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; min-width: 160px; flex: 1; }
+  .ctrl label { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .ctrl label .val { color: var(--accent); font-family: "JetBrains Mono", monospace; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; border-radius: 3px; background: var(--border); outline: none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+
+  .readouts { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .readout { background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 16px; flex: 1; min-width: 120px; }
+  .readout .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .readout .v { font-size: 20px; font-weight: 700; font-family: "JetBrains Mono", monospace; }
+
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .seg button { padding: 7px 16px; background: var(--card); color: var(--muted); border: none; cursor: pointer; font-size: 13px; transition: all .15s; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--fg); }
+  .seg button.active { background: var(--accent); color: #fff; }
+
+  .chk-row { display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-top:14px; }
+  .chk-row label { display:flex; align-items:center; gap:7px; font-size:13px; color:var(--fg); cursor:pointer; }
+  .chk-row input { accent-color: var(--accent); width:15px; height:15px; }
+  .swatch { width:14px; height:14px; border-radius:4px; display:inline-block; border:1px solid var(--border); }
+
+  .mse-bars { display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+  .mse-bar { display:flex; align-items:center; gap:10px; }
+  .mse-bar .ml { font-size:13px; min-width:120px; color:var(--fg); }
+  .mse-bar .mt { flex:1; height:22px; background:rgba(255,255,255,.5); border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .mse-bar .mf { height:100%; border-radius:5px; transition:width .4s; }
+  .mse-bar .mv { font-size:13px; font-family:"JetBrains Mono",monospace; min-width:54px; text-align:right; }
+
+  .footer { text-align: center; padding: 40px 0 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 13px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+</head>
+<body>
+<div class="container lab-page">
+
+<div class="header">
+  <div class="tag">注意力机制 · §10.2</div>
+  <h1>注意力汇聚：Nadaraya-Watson 核回归</h1>
+  <p>用一个 1964 年的核回归模型，从零理解「查询-键-值」注意力是怎么加权求和的</p>
+</div>
+
+<div class="toc">
+  <h3>目录</h3>
+  <ol>
+    <li><a href="#s0">核心思想</a> <span class="desc">— 注意力汇聚 = 对值做加权平均，权重由查询和键决定</span></li>
+    <li><a href="#s1">合成数据集</a> <span class="desc">— y = 2sin(x) + x⁰·⁸ + 噪声</span></li>
+    <li><a href="#s2">平均汇聚（基线）</a> <span class="desc">— 无视输入 x，直接取 y 的均值</span></li>
+    <li><a href="#s3">非参数注意力汇聚</a> <span class="desc">— ⭐拖动查询 x，看高斯核如何给近邻加权</span></li>
+    <li><a href="#s4">带参数注意力汇聚</a> <span class="desc">— ⭐学一个 w 让权重更尖锐 + 注意力热力图</span></li>
+    <li><a href="#s5">真实结果对比</a> <span class="desc">— 三条预测曲线 + 测试 MSE + 训练 loss</span></li>
+  </ol>
+</div>
+
+<!-- ============================================ -->
+<!-- 0. 核心思想 -->
+<!-- ============================================ -->
+<div class="section" id="s0">
+  <h2><span class="num">0</span> 核心思想：注意力汇聚</h2>
+  <p>给定训练数据 <code>{(x₁,y₁), …, (xₙ,yₙ)}</code>，要预测新输入 <code>x</code> 的输出 <code>ŷ=f(x)</code>。注意力的视角是：把 <code>x</code> 当作<strong>查询</strong>（query），把训练输入 <code>xᵢ</code> 当作<strong>键</strong>（key）、<code>yᵢ</code> 当作<strong>值</strong>（value）。输出是所有值的<strong>加权平均</strong>，权重由查询与键的关系决定：</p>
+  <div class="formula">f(x) = Σᵢ α(x, xᵢ) · yᵢ</div>
+  <div class="formula" style="font-size:15px">α(x, xᵢ) = softmax<sub>i</sub>( −½(x − xᵢ)² ) &nbsp;&nbsp;<span style="color:var(--muted)">（高斯核，权重非负且和为 1）</span></div>
+
+  <div class="flow">
+    <div class="flow-item">查询 x<br><span style="color:var(--accent2);font-size:12px">要预测的位置</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">键 xᵢ<br><span style="color:var(--muted);font-size:12px">训练输入</span></div>
+    <div class="flow-arrow">+</div>
+    <div class="flow-item" style="border-color:var(--green)">注意力权重 α<br><span style="color:var(--muted);font-size:12px">越近权重越大</span></div>
+    <div class="flow-arrow">×</div>
+    <div class="flow-item">值 yᵢ<br><span style="color:var(--muted);font-size:12px">训练输出</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent2)">ŷ = Σα·yᵢ</div>
+  </div>
+
+  <div class="note"><strong>关键直觉</strong>：高斯核 <code>exp(−½(x−xᵢ)²)</code> 让<strong>离查询越近的键获得越大的注意力</strong>。所以预测值主要由查询附近的训练点决定——这正是「注意力」的含义。Nadaraya-Watson 核回归（1964）因此被视为「带注意力机制的机器学习」的最早范例。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 1. 合成数据集 -->
+<!-- ============================================ -->
+<div class="section" id="s1">
+  <h2><span class="num">1</span> 合成数据集</h2>
+  <p>用一条非线性函数加噪声生成 50 个训练样本，另取 50 个测试点（无噪声）评估。训练点按 <code>x</code> 排序，方便后面观察注意力热力图的对角带状结构。</p>
+  <div class="formula">yᵢ = 2·sin(xᵢ) + xᵢ<sup>0.8</sup> + ε,&nbsp;&nbsp; ε ~ 𝒩(0, 0.5²)</div>
+  <pre><code>n_train = <span class="num">50</span>
+x_train, _ = torch.sort(torch.rand(n_train) * <span class="num">5</span>)   <span class="cm"># 排序后的训练输入</span>
+<span class="kw">def</span> <span class="fn">f</span>(x):
+    <span class="kw">return</span> <span class="num">2</span> * torch.sin(x) + x ** <span class="num">0.8</span>
+y_train = f(x_train) + torch.normal(<span class="num">0.0</span>, <span class="num">0.5</span>, (n_train,))
+x_test  = torch.arange(<span class="num">0</span>, <span class="num">5</span>, <span class="num">0.1</span>)            <span class="cm"># 50 个测试点</span>
+y_truth = f(x_test)</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 1 · 数据集：真值曲线 + 50 个带噪训练点</div>
+    <div class="demo-sub">灰色实线是无噪声真值 f(x)，橙色圆点是带噪声的训练样本。后面所有模型都试图从这些圆点还原灰色曲线。</div>
+    <div class="canvas-wrap"><canvas id="cvData" width="1700" height="460"></canvas></div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- 2. 平均汇聚 -->
+<!-- ============================================ -->
+<div class="section" id="s2">
+  <h2><span class="num">2</span> 平均汇聚（最朴素的基线）</h2>
+  <p>最简单的估计器：无视输入 <code>x</code>，把所有训练输出的均值当作任意查询的预测。它「不动脑子」——预测是一条水平线。</p>
+  <div class="formula">f(x) = (1/n) · Σᵢ yᵢ</div>
+  <pre><code>y_hat = torch.repeat_interleave(y_train.mean(), n_test)   <span class="cm"># 一条水平线</span></code></pre>
+  <div class="warn"><strong>为什么差</strong>：平均汇聚完全丢弃了输入信息 <code>x</code>。无论查询在哪，预测都是同一个常数 ≈ <code>y_train</code> 的均值。测试 MSE 高达 <b>0.897</b>。改进的方向显而易见——让预测<strong>依赖查询位置</strong>。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 3. 非参数注意力汇聚 -->
+<!-- ============================================ -->
+<div class="section" id="s3">
+  <h2><span class="num">3</span> ⭐ 非参数注意力汇聚（Nadaraya-Watson）</h2>
+  <p>把高斯核代入注意力汇聚公式，得到非参数模型：把每个查询和所有键算高斯距离，softmax 成权重，再加权求值。<strong>没有任何可学习参数</strong>，全靠核函数本身。</p>
+  <div class="formula">f(x) = Σᵢ softmax<sub>i</sub>( −½(x − xᵢ)² ) · yᵢ</div>
+  <pre><code><span class="cm"># 每个测试点（查询）和所有训练点（键）算高斯核</span>
+X_repeat = x_test.repeat_interleave(n_train).reshape((-<span class="num">1</span>, n_train))
+attention_weights = F.softmax(-(X_repeat - x_train)**<span class="num">2</span> / <span class="num">2</span>, dim=<span class="num">1</span>)
+y_hat = attention_weights @ y_train</code></pre>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 2 · 交互式注意力汇聚（拖动查询 x，看近邻如何被点亮）</div>
+    <div class="demo-sub">蓝实线 = 非参数注意力预测曲线（w=1 标准高斯核）。拖动「查询 x」滑块：竖虚线移到查询位置，下方条形显示每个训练点获得的注意力权重 α，蓝色大点是预测值 ŷ——它总是落在高权重邻居附近。</div>
+    <div class="canvas-wrap"><canvas id="cvInter" width="1700" height="560"></canvas></div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:60%"><label>查询 x <span class="val" id="qVal">1.50</span></label><input type="range" id="qSlider" min="0" max="5" step="0.05" value="1.5"></div>
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto;justify-content:flex-end"><button class="seg" id="scanBtn" style="cursor:pointer;border:1px solid var(--accent);background:rgba(108,140,255,.1);color:var(--accent);border-radius:999px;padding:7px 18px;font-weight:600">▶ 扫描</button></div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">查询 x</div><div class="v" id="rqx">1.50</div></div>
+      <div class="readout"><div class="k">预测 ŷ</div><div class="v" id="rqp" style="color:var(--accent)">—</div></div>
+      <div class="readout"><div class="k">真值 f(x)</div><div class="v" id="rqf" style="color:var(--muted)">—</div></div>
+      <div class="readout"><div class="k">最大权重 α</div><div class="v" id="rqa" style="color:var(--accent2)">—</div></div>
+    </div>
+  </div>
+
+  <div class="tip"><strong>观察</strong>：查询点滑过整条曲线时，高权重的训练点（下方高条形）始终是查询<strong>附近的几个邻居</strong>，预测 ŷ 因此平滑地跟随真值。相比平均汇聚的水平线，测试 MSE 降到 <b>0.512</b>。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 4. 带参数注意力汇聚 -->
+<!-- ============================================ -->
+<div class="section" id="s4">
+  <h2><span class="num">4</span> ⭐ 带参数注意力汇聚（可学习的 w）</h2>
+  <p>非参数版有一致性的优点（数据足够多时收敛到最优），但我们也能轻松塞进一个可学习参数 <code>w</code>：在查询-键距离上乘 <code>w</code>。<code>w</code> 越大，高斯核越窄、权重越集中在最近邻——注意力越「尖锐」。</p>
+  <div class="formula">f(x) = Σᵢ softmax<sub>i</sub>( −½((x − xᵢ)<em>w</em>)² ) · yᵢ</div>
+  <pre><code><span class="kw">class</span> <span class="fn">NWKernelRegression</span>(nn.Module):
+    <span class="kw">def</span> __init__(self):
+        <span class="fn">super</span>().__init__()
+        self.w = nn.Parameter(torch.rand(<span class="num">1</span>))          <span class="cm"># 唯一可学习参数</span>
+    <span class="kw">def</span> <span class="fn">forward</span>(self, queries, keys, values):
+        queries = queries.repeat_interleave(keys.shape[<span class="num">1</span>]).reshape(-<span class="num">1</span>, keys.shape[<span class="num">1</span>])
+        self.attention_weights = F.softmax(-((queries - keys) * self.w)**<span class="num">2</span> / <span class="num">2</span>, dim=<span class="num">1</span>)
+        <span class="kw">return</span> torch.bmm(self.attention_weights.unsqueeze(<span class="num">1</span>), values.unsqueeze(-<span class="num">1</span>)).reshape(-<span class="num">1</span>)</code></pre>
+  <p>训练时每个样本的输入与其余所有样本的「键-值」对计算（留一法），用 MSE + SGD。5 轮后学得 <code>w ≈ 17.65</code>。</p>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 3 · 预测曲线如何随 w 变化（平滑 → 尖锐 → 过拟合）</div>
+    <div class="demo-sub">拖动 w：w=1 是非参数高斯核（平滑）；w=17.65 是训练学到的值（尖锐，贴近训练点）；w 太大则过拟合噪声。两个预设按钮快速跳转。</div>
+    <div class="canvas-wrap"><canvas id="cvParam" width="1700" height="460"></canvas></div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:50%"><label>参数 w <span class="val" id="wVal">17.65</span></label><input type="range" id="wSlider" min="0.3" max="30" step="0.05" value="17.6458"></div>
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto;justify-content:flex-end">
+        <label>预设</label>
+        <div class="seg" id="wSeg">
+          <button data-w="1">非参数 w=1</button>
+          <button data-w="17.6458" class="active">已学 w=17.65</button>
+        </div>
+      </div>
+    </div>
+    <div class="readouts">
+      <div class="readout"><div class="k">当前 w</div><div class="v" id="rwn" style="color:var(--accent)">17.65</div></div>
+      <div class="readout"><div class="k">核「宽度」1/w</div><div class="v" id="rwk" style="color:var(--accent2)">—</div></div>
+      <div class="readout"><div class="k">测试 MSE</div><div class="v" id="rwm" style="color:var(--green)">—</div></div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 4 · 注意力权重热力图（查询 × 键）</div>
+    <div class="demo-sub">行=排序后的测试查询，列=排序后的训练键，颜色=注意力权重 α。w=1 时是宽宽的对角带（平滑）；切到已学的 w=17.65，对角带变得极细——每个查询几乎只盯最近的一个键，这正是预测变「尖」的原因。</div>
+    <div class="canvas-wrap" style="max-width:560px;margin:0 auto"><canvas id="cvHeat" width="640" height="640"></canvas></div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:50%"><label>参数 w <span class="val" id="whVal">17.65</span></label><input type="range" id="whSlider" min="0.3" max="30" step="0.05" value="17.6458"></div>
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto;justify-content:flex-end">
+        <label>预设</label>
+        <div class="seg" id="whSeg">
+          <button data-w="1">非参数</button>
+          <button data-w="17.6458" class="active">已学</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 5 · 训练 loss 曲线（带参数模型，5 个 epoch）</div>
+    <div class="demo-sub">留一法训练，MSE 损失。切换线性 / 对数坐标。loss 第 1 轮后迅速收敛——只有一个参数 w 要学。</div>
+    <div class="canvas-wrap"><canvas id="cvLoss" width="1700" height="380"></canvas></div>
+    <div class="controls">
+      <div class="ctrl" style="min-width:auto;flex:0 0 auto">
+        <label>坐标</label>
+        <div class="seg" id="lossSeg">
+          <button class="active" data-s="linear">线性</button>
+          <button data-s="log">对数</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><strong>为什么更不平滑</strong>：学到的 <code>w=17.65</code> 让注意力极度集中在最近邻，预测几乎「抄」最近训练点的 <code>y</code>——于是曲线更贴近带噪训练点，反而不如非参数版平滑。这是「精确拟合训练点」与「平滑泛化」的权衡，MSE 仍降到最低的 <b>0.127</b>。</div>
+</div>
+
+<!-- ============================================ -->
+<!-- 5. 真实结果对比 -->
+<!-- ============================================ -->
+<div class="section" id="s5">
+  <h2><span class="num">5</span> 真实结果对比（26_nadaraya-waston.py 跑出）</h2>
+  <p>把三种汇聚的预测曲线叠在一起：平均汇聚是水平线，非参数是平滑曲线，带参数是贴着训练点的尖曲线。带参数注意力测试 MSE 最低。</p>
+
+  <div class="summary-grid">
+    <div class="item"><div class="label">训练/测试样本</div><div class="value">50 / 50</div></div>
+    <div class="item"><div class="label">学到的 w</div><div class="value" style="color:var(--accent)">17.65</div></div>
+    <div class="item"><div class="label">非参数核</div><div class="value" style="color:var(--accent2)">高斯 w=1</div></div>
+    <div class="item"><div class="label">最佳 MSE</div><div class="value" style="color:var(--green)">0.127</div></div>
+  </div>
+
+  <div class="demo">
+    <div class="demo-title">DEMO 6 · 三种汇聚预测曲线对比</div>
+    <div class="demo-sub">勾选/取消下方复选框切换曲线。注意带参数曲线（绿）如何紧贴训练点，非参数曲线（蓝）更平滑，平均汇聚（粉）是水平线。</div>
+    <div class="canvas-wrap"><canvas id="cvCmp" width="1700" height="480"></canvas></div>
+    <div class="chk-row" id="cmpChk">
+      <label><input type="checkbox" data-k="avg" checked><span class="swatch" style="background:#ff6b9d"></span>平均汇聚</label>
+      <label><input type="checkbox" data-k="np" checked><span class="swatch" style="background:#6c8cff"></span>非参数注意力</label>
+      <label><input type="checkbox" data-k="pm" checked><span class="swatch" style="background:#1c9aa8"></span>带参数注意力</label>
+      <label><input type="checkbox" data-k="truth" checked><span class="swatch" style="background:#b8b3a6"></span>真值 f(x)</label>
+    </div>
+    <div class="mse-bars" id="mseBars"></div>
+  </div>
+
+  <div class="card">
+    <table>
+      <tr><th>方法</th><th>是否用输入 x</th><th>可学习参数</th><th>测试 MSE</th></tr>
+      <tr><td><strong style="color:#ff6b9d">平均汇聚</strong></td><td>否（无视 x）</td><td>无</td><td><b style="color:var(--muted)">0.897</b></td></tr>
+      <tr><td><strong style="color:#6c8cff">非参数注意力</strong></td><td>是（高斯核加权）</td><td>无</td><td><b style="color:var(--orange)">0.512</b></td></tr>
+      <tr><td><strong style="color:#1c9aa8">带参数注意力</strong></td><td>是（核宽度可学）</td><td>w = 17.65</td><td><b style="color:var(--green)">0.127</b></td></tr>
+    </table>
+  </div>
+
+  <div class="tip"><strong>从核回归到 Transformer</strong>：Nadaraya-Watson 用 <code>softmax(−(x−xᵢ)²)</code> 算注意力——本质是「负距离」做打分。下一节 §10.3 会把打分函数换成可学习的<strong>加性模型 / 缩放点积</strong>，再叠上多头、掩码，就走到了 Transformer 的注意力。</div>
+
+  <div class="flow" style="margin-top:28px">
+    <div class="flow-item">§10.1 注意力提示</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--accent)">§10.2 核回归（本节）</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item" style="border-color:var(--green)">§10.3 注意力评分函数</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-item">Transformer</div>
+  </div>
+</div>
+
+<div class="footer">
+  基于 26_nadaraya-waston.py 生成 · 动手学深度学习 §10.2 注意力汇聚：Nadaraya-Watson 核回归 · 交互式可视化
+</div>
+
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// 真实数据（torch.manual_seed(42) 跑出，与 py 输出一致）
+// ══════════════════════════════════════════════════════
+const XTRAIN=[0.031,0.376,0.527,0.666,0.976,0.997,1.283,1.333,1.347,1.348,1.407,1.485,1.688,1.712,1.794,1.822,1.914,1.952,2.147,2.207,2.736,2.773,2.839,2.87,2.89,2.916,2.947,2.968,3.004,3.137,3.172,3.552,3.705,3.77,3.943,3.945,3.968,4.045,4.158,4.347,4.411,4.427,4.43,4.52,4.575,4.673,4.704,4.732,4.758,4.797];
+const YTRAIN=[0.162,1.455,1.36,2.554,2.231,2.309,2.72,2.741,3.188,3.558,3.239,4.287,2.914,4.209,2.945,3.907,4.673,3.826,3.693,3.394,2.499,3.621,2.973,2.977,2.864,3.015,3.048,2.412,1.581,2.129,3.865,2.138,1.112,1.423,1.88,1.85,2.074,1.263,1.087,1.659,1.462,1.19,1.501,2.016,1.394,1.283,0.958,1.53,1.66,1.821];
+const XTEST=Array.from({length:50},(_,i)=>i*0.1);
+const LOSS=[[1,0.848],[2,0.457],[3,0.456],[4,0.454],[5,0.453]];
+const W_LEARNED=17.6458;
+
+const f=x=>2*Math.sin(x)+Math.pow(x,0.8);
+const YTRUTH=XTEST.map(f);
+const AVG=YTRAIN.reduce((s,v)=>s+v,0)/YTRAIN.length;
+
+function softmax(a){const m=Math.max(...a);const e=a.map(v=>Math.exp((v-m)));const s=e.reduce((x,y)=>x+y,0);return e.map(v=>v/s);}
+function attn(q,w){return softmax(XTRAIN.map(k=>-Math.pow((q-k)*w,2)/2));}
+function predict(q,w){const A=attn(q,w);return A.reduce((s,a,i)=>s+a*YTRAIN[i],0);}
+function predCurve(w){return XTEST.map(q=>predict(q,w));}
+function mse(arr){return arr.reduce((s,v,i)=>s+(v-YTRUTH[i])**2,0)/arr.length;}
+
+const CURVES={
+  avg:Array(50).fill(AVG),
+  np:predCurve(1),
+  pm:predCurve(W_LEARNED),
+};
+const MSE={avg:mse(CURVES.avg),np:mse(CURVES.np),pm:mse(CURVES.pm)};
+
+const COL={ink:'#172033',muted:'#687083',border:'#dedbd2',truth:'#b8b3a6',
+  train:'#e66a3c',accent:'#6c8cff',accent2:'#ff6b9d',green:'#1c9aa8',grid:'#ece9e0'};
+
+function setupCanvas(cv){
+  const dpr=window.devicePixelRatio||1; const W=cv.width,H=cv.height; cv.style.width='100%';
+  if(!cv._scaled){ cv.width=W*dpr; cv.height=H*dpr; cv._scaled=true; cv._dpr=dpr; cv._W=W; cv._H=H; }
+  const ctx=cv.getContext('2d'); ctx.setTransform(cv._dpr,0,0,cv._dpr,0,0);
+  return {ctx,W:cv._W,H:cv._H};
+}
+function clearBg(ctx,W,H){ctx.fillStyle='rgba(255,255,255,.82)';ctx.fillRect(0,0,W,H);}
+function makeMap(W,H,xmin,xmax,ymin,ymax,padL=48,padR=24,padT=18,padB=34){
+  const pW=W-padL-padR, pH=H-padT-padB;
+  return {padL,padR,padT,padB,pW,pH,
+    tx:x=>padL+(x-xmin)/(xmax-xmin)*pW,
+    ty:y=>padT+(ymax-y)/(ymax-ymin)*pH};
+}
+function drawAxes(ctx,m,W,H,xlabel,ylabel,xticks,yticks){
+  ctx.strokeStyle=COL.grid; ctx.fillStyle=COL.muted; ctx.font='12px "JetBrains Mono",monospace';
+  ctx.lineWidth=1;
+  yticks.forEach(v=>{const y=m.ty(v);ctx.beginPath();ctx.moveTo(m.padL,y);ctx.lineTo(W-m.padR,y);ctx.stroke();ctx.textAlign='right';ctx.fillText(v.toFixed(1),m.padL-6,y+4);});
+  ctx.setLineDash([2,3]);
+  xticks.forEach(v=>{const x=m.tx(v);ctx.beginPath();ctx.moveTo(x,m.padT);ctx.lineTo(x,H-m.padB);ctx.stroke();ctx.textAlign='center';ctx.fillText(v.toFixed(1),x,H-m.padB+16);});
+  ctx.setLineDash([]);
+  ctx.fillStyle=COL.muted; ctx.font='12px "JetBrains Mono",monospace';
+  if(xlabel){ctx.textAlign='center'; ctx.fillText(xlabel, m.padL+m.pW/2, H-m.padB+34);}
+  ctx.save(); ctx.translate(14,m.padT+m.pH/2); ctx.rotate(-Math.PI/2); ctx.fillText(ylabel,0,0); ctx.restore();
+}
+function plotCurve(ctx,m,arr,color,lw=2.4,dash=null){
+  ctx.strokeStyle=color; ctx.lineWidth=lw; ctx.setLineDash(dash||[]);
+  ctx.beginPath();
+  arr.forEach((v,i)=>{const X=m.tx(XTEST[i]),Y=m.ty(v);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+  ctx.stroke(); ctx.setLineDash([]);
+}
+function plotTrain(ctx,m){
+  XTRAIN.forEach((x,i)=>{const X=m.tx(x),Y=m.ty(YTRAIN[i]);
+    ctx.fillStyle='rgba(230,106,60,.85)'; ctx.beginPath(); ctx.arc(X,Y,4.5,0,7); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=1; ctx.stroke();});
+}
+
+// ══════════════════════════════════════════════════════
+// DEMO 1：数据集
+// ══════════════════════════════════════════════════════
+const cvData=document.getElementById('cvData');
+function drawData(){
+  const {ctx,W,H}=setupCanvas(cvData); clearBg(ctx,W,H);
+  const m=makeMap(W,H,0,5,-1,5);
+  drawAxes(ctx,m,W,H,'x','y',[0,1,2,3,4,5],[-1,0,1,2,3,4,5]);
+  plotCurve(ctx,m,YTRUTH,COL.truth,2.6);
+  plotTrain(ctx,m);
+  ctx.fillStyle=COL.muted; ctx.font='12px sans-serif'; ctx.textAlign='left';
+  ctx.fillStyle=COL.truth; ctx.fillText('● 真值 f(x)', W-m.padR-110, m.padT+16);
+  ctx.fillStyle=COL.train; ctx.fillText('● 训练样本', W-m.padR-110, m.padT+34);
+}
+
+// ══════════════════════════════════════════════════════
+// DEMO 2：交互式注意力汇聚（非参数 w=1）
+// ══════════════════════════════════════════════════════
+const cvInter=document.getElementById('cvInter');
+let curQ=1.5;
+function drawInter(){
+  const {ctx,W,H}=setupCanvas(cvInter); clearBg(ctx,W,H);
+  const stripH=84;
+  const m=makeMap(W,H,0,5,-1,5,48,24,18,34+stripH);
+  drawAxes(ctx,m,W,H,'','y', [0,1,2,3,4,5],[-1,0,1,2,3,4,5]);
+  plotCurve(ctx,m,YTRUTH,COL.truth,2.4,[6,4]);
+  plotCurve(ctx,m,CURVES.np,COL.accent,2.8);
+  plotTrain(ctx,m);
+  const w=1;
+  const A=attn(curQ,w); const yhat=predict(curQ,w); const amax=Math.max(...A);
+  // 高亮高权重训练点
+  XTRAIN.forEach((x,i)=>{const X=m.tx(x),Y=m.ty(YTRAIN[i]);const t=A[i]/amax;
+    if(t>0.12){ctx.fillStyle=`rgba(108,140,255,${0.25+0.75*t})`;ctx.beginPath();ctx.arc(X,Y,4+5*t,0,7);ctx.fill();}});
+  // 查询竖线 + 预测点
+  const qx=m.tx(curQ);
+  ctx.strokeStyle='rgba(176,124,255,.7)'; ctx.lineWidth=1.6; ctx.setLineDash([5,4]);
+  ctx.beginPath(); ctx.moveTo(qx,m.padT); ctx.lineTo(qx,H-m.padB); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle=COL.accent; ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(qx,m.ty(yhat),8,0,7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle=COL.accent2; ctx.beginPath(); ctx.arc(qx,m.ty(f(curQ)),5,0,7); ctx.fill();
+  // 下方权重条形带（位于 x 轴刻度之下）
+  const baseY=H-10;
+  ctx.fillStyle=COL.muted; ctx.font='11px sans-serif'; ctx.textAlign='left';
+  ctx.fillText('注意力权重 α(x, xᵢ)（按最大值归一化）', m.padL, H-m.padB+38);
+  XTRAIN.forEach((x,i)=>{const X=m.tx(x);const h=(A[i]/amax)*52;
+    ctx.fillStyle=`rgba(108,140,255,${0.3+0.7*(A[i]/amax)})`;
+    ctx.fillRect(X-3, baseY-h, 6, h);});
+  // 读数
+  document.getElementById('rqx').textContent=curQ.toFixed(2);
+  document.getElementById('rqp').textContent=yhat.toFixed(2);
+  document.getElementById('rqf').textContent=f(curQ).toFixed(2);
+  document.getElementById('rqa').textContent=amax.toFixed(3);
+}
+const qSlider=document.getElementById('qSlider');
+qSlider.oninput=()=>{curQ=+qSlider.value;document.getElementById('qVal').textContent=curQ.toFixed(2);drawInter();};
+let scanning=false,scanTimer=null;
+document.getElementById('scanBtn').onclick=()=>{
+  const b=document.getElementById('scanBtn');
+  if(scanning){scanning=false;clearInterval(scanTimer);b.textContent='▶ 扫描';return;}
+  scanning=true;b.textContent='⏸ 停止';let dir=curQ>=5?-0.05:0.05;
+  scanTimer=setInterval(()=>{
+    curQ+=dir; if(curQ<=0||curQ>=5)dir=-dir; curQ=Math.max(0,Math.min(5,curQ));
+    qSlider.value=curQ; document.getElementById('qVal').textContent=curQ.toFixed(2); drawInter();
+  },40);
+};
+
+// ══════════════════════════════════════════════════════
+// DEMO 3：带参数预测曲线（w 滑块）
+// ══════════════════════════════════════════════════════
+const cvParam=document.getElementById('cvParam');
+let curW=17.6458;
+function drawParam(){
+  const {ctx,W,H}=setupCanvas(cvParam); clearBg(ctx,W,H);
+  const m=makeMap(W,H,0,5,-1,5);
+  drawAxes(ctx,m,W,H,'x','y',[0,1,2,3,4,5],[-1,0,1,2,3,4,5]);
+  plotCurve(ctx,m,YTRUTH,COL.truth,2.4,[6,4]);
+  plotCurve(ctx,m,predCurve(curW),COL.green,2.8);
+  plotTrain(ctx,m);
+  document.getElementById('rwn').textContent=curW.toFixed(2);
+  document.getElementById('rwk').textContent=(1/curW).toFixed(3);
+  document.getElementById('rwm').textContent=mse(predCurve(curW)).toFixed(3);
+}
+const wSlider=document.getElementById('wSlider');
+wSlider.oninput=()=>{curW=+wSlider.value;document.getElementById('wVal').textContent=curW.toFixed(2);
+  syncWSeg();drawParam();};
+function syncWSeg(){
+  document.querySelectorAll('#wSeg button').forEach(b=>b.classList.toggle('active',Math.abs(+b.dataset.w-curW)<0.06));
+}
+document.querySelectorAll('#wSeg button').forEach(b=>b.onclick=()=>{
+  curW=+b.dataset.w;wSlider.value=curW;document.getElementById('wVal').textContent=curW.toFixed(2);
+  syncWSeg();drawParam();
+});
+
+// ══════════════════════════════════════════════════════
+// DEMO 4：注意力权重热力图（w 滑块）
+// ══════════════════════════════════════════════════════
+const cvHeat=document.getElementById('cvHeat');
+let curWH=17.6458;
+function drawHeat(){
+  const {ctx,W,H}=setupCanvas(cvHeat); clearBg(ctx,W,H);
+  const padL=64,padR=20,padT=20,padB=52,pW=W-padL-padR,pH=H-padT-padB;
+  const cw=pW/50, ch=pH/50;
+  for(let i=0;i<50;i++){
+    const A=attn(XTEST[i],curWH);
+    for(let j=0;j<50;j++){
+      const v=A[j];
+      ctx.fillStyle=`rgba(108,140,255,${0.04+0.96*v})`;
+      ctx.fillRect(padL+j*cw, padT+i*ch, cw+0.6, ch+0.6);
+    }
+  }
+  ctx.fillStyle=COL.muted; ctx.font='12px "JetBrains Mono",monospace';
+  ctx.textAlign='center';
+  ctx.fillText('训练输入（键）xᵢ →', padL+pW/2, H-16);
+  ctx.save(); ctx.translate(16,padT+pH/2); ctx.rotate(-Math.PI/2); ctx.fillText('测试输入（查询）x →',0,0); ctx.restore();
+  const xtk=[0,1,2,3,4,5];
+  ctx.textAlign='center';
+  xtk.forEach(v=>{const j=Math.round(v/0.1);if(j<50){ctx.fillText(v.toFixed(0), padL+j*cw, H-padB+16);}});
+  ctx.textAlign='right';
+  xtk.forEach(v=>{const i=Math.round(v/0.1);if(i<50){ctx.fillText(v.toFixed(0), padL-6, padT+i*ch+4);}});
+  document.getElementById('whVal').textContent=curWH.toFixed(2);
+}
+const whSlider=document.getElementById('whSlider');
+whSlider.oninput=()=>{curWH=+whSlider.value;document.getElementById('whVal').textContent=curWH.toFixed(2);
+  syncWHSeg();drawHeat();};
+function syncWHSeg(){
+  document.querySelectorAll('#whSeg button').forEach(b=>b.classList.toggle('active',Math.abs(+b.dataset.w-curWH)<0.06));
+}
+document.querySelectorAll('#whSeg button').forEach(b=>b.onclick=()=>{
+  curWH=+b.dataset.w;whSlider.value=curWH;document.getElementById('whVal').textContent=curWH.toFixed(2);
+  syncWHSeg();drawHeat();
+});
+
+// ══════════════════════════════════════════════════════
+// DEMO 5：训练 loss 曲线
+// ══════════════════════════════════════════════════════
+const cvLoss=document.getElementById('cvLoss');
+let lossScale='linear';
+function drawLoss(){
+  const {ctx,W,H}=setupCanvas(cvLoss); clearBg(ctx,W,H);
+  const mL=54,mR=24,mT=20,mB=40,plotW=W-mL-mR,plotH=H-mT-mB;
+  const isLog=lossScale==='log';
+  const ls=LOSS.map(d=>Math.log(d[1]+1e-6));
+  const yMin=isLog?Math.min(...ls)-0.25:0, yMax=isLog?Math.max(...ls)+0.25:0.95;
+  const tx=e=>mL+(e-1)/4*plotW;
+  const ty=v=>{const val=isLog?Math.log(v+1e-6):v;return mT+(yMax-val)/(yMax-yMin)*plotH;};
+  ctx.strokeStyle=COL.grid; ctx.fillStyle=COL.muted; ctx.font='12px "JetBrains Mono",monospace'; ctx.lineWidth=1;
+  const yticks=isLog?[0.3,0.46]:[0,0.2,0.4,0.6,0.8];
+  yticks.forEach(v=>{if(isLog&&v<=0)return;const y=ty(v);
+    ctx.beginPath();ctx.moveTo(mL,y);ctx.lineTo(W-mR,y);ctx.stroke();ctx.textAlign='right';ctx.fillText(v.toFixed(2),mL-6,y+4);});
+  ctx.setLineDash([2,3]);
+  [1,2,3,4,5].forEach(e=>{const x=tx(e);ctx.beginPath();ctx.moveTo(x,mT);ctx.lineTo(x,H-mB);ctx.stroke();
+    ctx.setLineDash([]);ctx.textAlign='center';ctx.fillText(e,x,H-mB+16);ctx.setLineDash([2,3]);});
+  ctx.setLineDash([]);
+  ctx.textAlign='center'; ctx.fillText('epoch →', mL+plotW/2, H-mB+34);
+  ctx.save(); ctx.translate(15,mT+plotH/2); ctx.rotate(-Math.PI/2); ctx.fillText('loss',0,0); ctx.restore();
+  ctx.strokeStyle=COL.accent; ctx.lineWidth=2.6; ctx.beginPath();
+  LOSS.forEach((d,i)=>{const X=tx(d[0]),Y=ty(d[1]);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y);});
+  ctx.stroke();
+  LOSS.forEach(d=>{ctx.fillStyle=COL.accent;ctx.beginPath();ctx.arc(tx(d[0]),ty(d[1]),4.5,0,7);ctx.fill();
+    ctx.fillStyle=COL.ink;ctx.font='600 11px "JetBrains Mono",monospace';ctx.textAlign='left';
+    ctx.fillText(d[1].toFixed(3),tx(d[0])+7,ty(d[1])-8);});
+}
+document.querySelectorAll('#lossSeg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#lossSeg button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); lossScale=b.dataset.s; drawLoss();
+});
+
+// ══════════════════════════════════════════════════════
+// DEMO 6：三曲线对比 + MSE 条
+// ══════════════════════════════════════════════════════
+const cvCmp=document.getElementById('cvCmp');
+const CMP_SHOW={avg:true,np:true,pm:true,truth:true};
+const CMP_META={avg:{c:'#ff6b9d',n:'平均汇聚'},np:{c:'#6c8cff',n:'非参数注意力'},pm:{c:'#1c9aa8',n:'带参数注意力'},truth:{c:COL.truth,n:'真值 f(x)'}};
+function drawCmp(){
+  const {ctx,W,H}=setupCanvas(cvCmp); clearBg(ctx,W,H);
+  const m=makeMap(W,H,0,5,-1,5);
+  drawAxes(ctx,m,W,H,'x','y',[0,1,2,3,4,5],[-1,0,1,2,3,4,5]);
+  if(CMP_SHOW.truth) plotCurve(ctx,m,YTRUTH,CMP_META.truth.c,2.6,[6,4]);
+  if(CMP_SHOW.avg) plotCurve(ctx,m,CURVES.avg,CMP_META.avg.c,2.8);
+  if(CMP_SHOW.np) plotCurve(ctx,m,CURVES.np,CMP_META.np.c,2.8);
+  if(CMP_SHOW.pm) plotCurve(ctx,m,CURVES.pm,CMP_META.pm.c,2.8);
+  plotTrain(ctx,m);
+}
+function drawMseBars(){
+  const max=MSE.avg;
+  const rows=[['avg','平均汇聚',MSE.avg],['np','非参数注意力',MSE.np],['pm','带参数注意力',MSE.pm]];
+  document.getElementById('mseBars').innerHTML=rows.map(([k,n,v])=>
+    `<div class="mse-bar"><div class="ml">${n}</div>
+     <div class="mt"><div class="mf" style="width:${(v/max*100).toFixed(1)}%;background:${CMP_META[k].c}"></div></div>
+     <div class="mv" style="color:${CMP_META[k].c}">${v.toFixed(3)}</div></div>`).join('');
+}
+document.querySelectorAll('#cmpChk input').forEach(c=>c.onchange=()=>{CMP_SHOW[c.dataset.k]=c.checked;drawCmp();});
+
+// ══════════════════════════════════════════════════════
+// 初始化
+// ══════════════════════════════════════════════════════
+function drawAll(){drawData();drawInter();drawParam();drawHeat();drawLoss();drawCmp();drawMseBars();}
+drawAll();
+let rt; window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+  [cvData,cvInter,cvParam,cvHeat,cvLoss,cvCmp].forEach(cv=>{cv._scaled=false;cv.width=parseInt(cv.getAttribute('width'));cv.height=parseInt(cv.getAttribute('height'));});
+  drawAll();
+},200);});
+</script>
+</body>
+</html>

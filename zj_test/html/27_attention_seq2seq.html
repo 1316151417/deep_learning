@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>从 Seq2Seq 到 Bahdanau 注意力</title>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.82);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--yellow:#f5c84b;--radius:24px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.container{width:min(1500px,calc(100% - 36px));margin:0 auto;padding:58px 0 90px}
+.header{padding:54px 0 48px}
+.tag,.demo-title{display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.tag:before,.demo-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:1080px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 16px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+p{color:var(--muted);font-size:18px}
+.section{margin-bottom:74px}
+.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif;box-shadow:0 8px 18px rgba(23,32,51,.13)}
+.card,.demo,.code,.flow,.readout,.matrix,.pill{background:var(--card);border:1px solid rgba(222,219,210,.9);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo{padding:clamp(20px,2.5vw,34px)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.flow{padding:22px;display:grid;grid-template-columns:repeat(5,auto);gap:16px;align-items:center;justify-content:center;overflow:auto}
+.box{min-width:140px;padding:14px 18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.75);text-align:center;font-weight:850}
+.arr{color:var(--orange);font-size:32px;font-weight:900}
+.muted{color:var(--muted)}
+.code{padding:22px 24px;overflow:auto;font:15px/1.65 "JetBrains Mono","Fira Code",monospace;white-space:pre;color:var(--ink)}
+.kw{color:#6851c9}.fn{color:#3157d5}.str{color:#167c59}.n{color:#bf6a20}
+.diff{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+.label{font-size:13px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.old{border-left:4px solid var(--muted)}
+.new{border-left:4px solid var(--blue)}
+.pill{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;margin:4px;color:var(--ink);font-weight:850}
+.blue{color:var(--blue)}.cyan{color:var(--cyan)}.orange{color:var(--orange)}
+.demo-grid{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
+.demo-grid>div{min-width:0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin:18px 0}
+label{display:grid;gap:8px;color:var(--muted);font-weight:750}
+input[type=range]{width:100%;accent-color:var(--blue)}
+canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.readout{padding:16px}
+.readout b{display:block;font-size:24px;color:var(--ink)}
+.steps{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:42px 1fr;gap:14px;align-items:start;padding:16px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.62)}
+.dot{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:rgba(49,87,213,.12);color:var(--blue);font-weight:900}
+.mini{font-size:15px;color:var(--muted)}
+.matrix{padding:18px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--ink);background:rgba(255,255,255,.55)}
+td{color:var(--muted)}
+@media(min-width:1180px){.demo-grid{grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr)}}
+@media(max-width:850px){.diff{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg)}}
+</style>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+.demo-grid{display:grid!important;grid-template-columns:1fr!important;gap:clamp(18px,2vw,26px)!important;align-items:start!important}
+.demo-grid>div,.steps{min-width:0!important}
+@media(min-width:1180px){.demo-grid{grid-template-columns:minmax(0,1.1fr) minmax(320px,.9fr)!important}}
+</style>
+</head>
+<body>
+<div class="container lab-page">
+<header class="header">
+<div class="tag">Bahdanau attention · seq2seq patch</div>
+<h1>把 25_seq2seq 轻轻改成带注意力的版本</h1>
+<p>编码器、训练循环、teacher forcing、masked loss 基本不动。真正的变化发生在解码器：固定上下文 c 变成“每一步重新看的上下文”。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>从固定上下文到动态上下文</h2>
+<div class="flow">
+<div class="box">25 Seq2Seq<br><span class="muted">encoder final state</span></div>
+<div class="arr">→</div>
+<div class="box">同一个 c<br><span class="muted">喂给所有 decoder step</span></div>
+<div class="arr">→</div>
+<div class="box">逐词生成</div>
+</div>
+<div class="flow" style="margin-top:18px">
+<div class="box">27 Attention<br><span class="muted">all encoder states</span></div>
+<div class="arr">→</div>
+<div class="box">每步算 α<br><span class="muted">softmax score</span></div>
+<div class="arr">→</div>
+<div class="box">每步新 context</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">1</span>Python 改动只集中在 Decoder</h2>
+<div class="diff">
+<div class="card old">
+<div class="label">25_seq2seq.py</div>
+<div class="code">context = state[-1].repeat(X.shape[0], 1, 1)
+output, state = self.rnn(torch.cat((X, context), 2), state)</div>
+<p>所有目标时间步看到同一个上下文：编码器最后一层最终隐状态。</p>
+</div>
+<div class="card new">
+<div class="label">27_attention_seq2seq.py</div>
+<div class="code">query = hidden_state[-1].unsqueeze(1)
+context = self.attention(query, enc_outputs, enc_outputs, enc_valid_len)
+out, hidden_state = self.rnn(torch.cat((context, x.unsqueeze(1)), -1).permute(1, 0, 2), hidden_state)</div>
+<p>每个目标时间步先用当前 decoder 隐状态查询全部 encoder 输出，再把新上下文送入 GRU。</p>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>新增的 AdditiveAttention</h2>
+<div class="grid">
+<div class="card">
+<p><span class="pill">query = decoder hidden</span><span class="pill">keys = encoder outputs</span><span class="pill">values = encoder outputs</span></p>
+<p>Bahdanau 注意力的打分不是点积，而是先把 query 与 key 投影到同一个空间，相加后过 tanh，再压成一个分数。</p>
+</div>
+<div class="code"><span class="kw">class</span> <span class="fn">AdditiveAttention</span>(nn.Module):
+    <span class="kw">def</span> forward(self, queries, keys, values, valid_len):
+        scores = self.W_v(torch.tanh(
+            self.W_q(queries).unsqueeze(<span class="n">2</span>) +
+            self.W_k(keys).unsqueeze(<span class="n">1</span>))).squeeze(<span class="n">-1</span>)
+        self.attention_weights = masked_softmax(scores, valid_len)
+        <span class="kw">return</span> torch.bmm(self.dropout(self.attention_weights), values)</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">3</span>拖动看“每一步看哪里”</h2>
+<div class="demo">
+<div class="demo-title">interactive attention</div>
+<p>下面不是训练结果，而是用同样形状模拟一次 Bahdanau 注意力：decoder 第 t 步的 query 会对源序列每个位置打分，softmax 后形成权重。</p>
+<div class="demo-grid">
+<div>
+<canvas id="heat" width="1100" height="500"></canvas>
+<div class="controls">
+<label>decoder step <input id="step" type="range" min="0" max="4" value="2"></label>
+<label>temperature <input id="temp" type="range" min="40" max="180" value="82"></label>
+<label>locality bias <input id="bias" type="range" min="0" max="140" value="76"></label>
+</div>
+<div class="readouts">
+<div class="readout">当前 query <b id="q">s2</b></div>
+<div class="readout">最关注源 token <b id="peak">won</b></div>
+<div class="readout">注意力熵 <b id="ent">1.28</b></div>
+</div>
+</div>
+<div class="steps">
+<div class="step"><div class="dot">1</div><div><b>保留 encoder</b><div class="mini">`Seq2SeqEncoder` 不需要改，仍输出 `(T, B, H)` 和最终隐状态。</div></div></div>
+<div class="step"><div class="dot">2</div><div><b>state 变成三元组</b><div class="mini">`(enc_outputs, hidden_state, enc_valid_len)`，因为 decoder 每步都要回看全部源状态。</div></div></div>
+<div class="step"><div class="dot">3</div><div><b>循环解码</b><div class="mini">原来整段 X 一次性拼 context；现在逐步取 x，算 attention，再进 GRU。</div></div></div>
+<div class="step"><div class="dot">4</div><div><b>保存权重</b><div class="mini">预测时可打印或画出 `attention_weights`，解释模型在看哪里。</div></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>接口层面的最小变化</h2>
+<div class="matrix">
+<table>
+<tr><th>位置</th><th>25_seq2seq</th><th>27_attention_seq2seq</th></tr>
+<tr><td>Encoder</td><td>保持原样</td><td>保持原样</td></tr>
+<tr><td>Decoder state</td><td>最终隐状态</td><td>全部 encoder 输出 + decoder 隐状态 + 源长度</td></tr>
+<tr><td>Context</td><td>固定 c</td><td>每步由 attention 生成</td></tr>
+<tr><td>训练循环</td><td>teacher forcing + masked loss</td><td>基本原样</td></tr>
+<tr><td>预测</td><td>返回翻译</td><td>返回翻译 + attention 矩阵</td></tr>
+</table>
+</div>
+</section>
+</div>
+
+<script>
+const src=["i","won","!","<eos>"], tgt=["<bos>","我","赢","了","。"];
+const heat=document.getElementById("heat"), ctx=heat.getContext("2d");
+const step=document.getElementById("step"), temp=document.getElementById("temp"), bias=document.getElementById("bias");
+const q=document.getElementById("q"), peak=document.getElementById("peak"), ent=document.getElementById("ent");
+function weights(t){
+  const tau=Number(temp.value)/100, b=Number(bias.value)/100;
+  const raw=src.map((_,i)=>2.4*Math.exp(-Math.abs(i-(t*.68+.25))*b)+.35*Math.sin((i+1)*(t+2)));
+  const m=Math.max(...raw), ex=raw.map(v=>Math.exp((v-m)/tau)), s=ex.reduce((a,b)=>a+b,0);
+  return ex.map(v=>v/s);
+}
+function draw(){
+  const rect=heat.getBoundingClientRect();
+  const nextW=Math.max(620,Math.round(rect.width||heat.width));
+  const compact=nextW<860;
+  const nextH=compact?560:440;
+  if(heat.width!==nextW||heat.height!==nextH){heat.width=nextW;heat.height=nextH}
+  const t=Number(step.value), w=weights(t), W=heat.width,H=heat.height;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle="rgba(255,255,255,.76)";ctx.fillRect(0,0,W,H);
+  ctx.font="700 24px Inter, sans-serif";ctx.fillStyle="#172033";ctx.fillText("Bahdanau attention at decoder step "+t,40,48);
+  ctx.font="600 18px Inter, sans-serif";ctx.fillStyle="#687083";ctx.fillText("query = previous decoder hidden state, keys / values = all encoder states",40,82);
+  const gap=compact?14:18;
+  const x0=40,y0=150,ch=92;
+  const srcArea=compact?W-80:Math.min(W*.58,610);
+  const cw=(srcArea-gap*3)/4;
+  src.forEach((s,i)=>{
+    const a=w[i], x=x0+i*(cw+gap), y=y0;
+    ctx.fillStyle=`rgba(49,87,213,${.12+a*.78})`;round(x,y,cw,ch,18);ctx.fill();
+    ctx.strokeStyle="rgba(222,219,210,.95)";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=a>.45?"#fff":"#172033";ctx.font="800 28px Inter, sans-serif";ctx.textAlign="center";ctx.fillText(s,x+cw/2,y+43);
+    ctx.font="700 18px JetBrains Mono, monospace";ctx.fillText(a.toFixed(2),x+cw/2,y+72);
+  });
+  const dx=compact?40:x0+srcArea+42, dy=compact?314:170, pillW=compact?118:Math.min(118,Math.max(86,(W-dx-76)/2));
+  ctx.textAlign="left";ctx.fillStyle="#172033";ctx.font="850 24px Inter, sans-serif";
+  if(compact)ctx.fillText("decoder input",dx,dy-22);
+  else ctx.fillText("decoder input",dx,150);
+  pill(dx,dy,pillW,56,tgt[t],"#e66a3c");
+  ctx.fillStyle="#e66a3c";ctx.font="900 36px Inter";ctx.textAlign="left";ctx.fillText("→",dx+pillW+18,dy+37);
+  pill(dx+pillW+60,dy,pillW,56,"s"+t,"#3157d5");
+  ctx.fillStyle="#172033";ctx.font="800 20px Inter";ctx.textAlign="left";ctx.fillText("context = Σ αᵢ hᵢ",dx,dy+108);
+  ctx.fillStyle="#687083";ctx.font="600 18px Inter";ctx.fillText("attention replaces the fixed c",dx,dy+140);
+  const im=w.indexOf(Math.max(...w));
+  q.textContent="s"+t;peak.textContent=src[im];ent.textContent=(-w.reduce((a,v)=>a+v*Math.log(v),0)).toFixed(2);
+}
+function pill(x,y,w,h,text,color){ctx.fillStyle=color;round(x,y,w,h,16);ctx.fill();ctx.fillStyle="#fff";ctx.font="850 24px Inter";ctx.textAlign="center";ctx.fillText(text,x+w/2,y+36)}
+function round(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+[step,temp,bias].forEach(el=>el.addEventListener("input",draw));
+addEventListener("resize",draw);
+draw();
+</script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bahdanau 注意力 - 交互式讲解</title>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.82);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--yellow:#f5c84b;--shadow:0 18px 50px rgba(31,41,72,.09)}
+*{box-sizing:border-box}body{margin:0;color:var(--ink);background:radial-gradient(circle at 6% 3%,rgba(245,200,75,.21),transparent 24rem),radial-gradient(circle at 92% 18%,rgba(49,87,213,.13),transparent 28rem),var(--paper);font:16px/1.65 Inter,ui-sans-serif,-apple-system,"PingFang SC",sans-serif}body:before{content:"Deep Learning Lab";position:sticky;top:0;z-index:10;display:flex;align-items:center;height:68px;padding:0 max(18px,calc((100vw - 1500px)/2 + 18px));border-bottom:1px solid rgba(222,219,210,.8);background:rgba(247,245,239,.84);backdrop-filter:blur(16px);font-weight:850}.wrap{width:min(1500px,calc(100% - 36px));margin:auto;padding:58px 0 90px}.tag{display:inline-flex;gap:8px;align-items:center;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);color:var(--muted);font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.tag:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}h1{max-width:1050px;margin:22px 0 18px;font:700 clamp(46px,6vw,78px)/1.04 Georgia,"Songti SC",serif;letter-spacing:-.055em}h2{display:flex;gap:12px;align-items:center;margin:0 0 18px;font:700 clamp(31px,3.7vw,52px)/1.12 Georgia,"Songti SC",serif;letter-spacing:-.035em}.num{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:11px;background:var(--ink);color:white;font:700 18px Georgia,serif;box-shadow:0 8px 18px rgba(23,32,51,.13)}p{color:var(--muted);font-size:18px}.hero{padding:48px 0 54px}.grid{display:grid;grid-template-columns:.9fr 1.4fr;gap:24px}.card,.demo,.note{background:var(--card);border:1px solid rgba(222,219,210,.9);border-radius:24px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}.card,.demo{padding:clamp(22px,2.5vw,34px)}.note{padding:18px 22px;border-left:3px solid var(--orange);color:var(--muted)}.formula{padding:22px;border-radius:18px;background:rgba(255,255,255,.74);border:1px solid var(--line);font:18px/1.7 ui-monospace,SFMono-Regular,Menlo,monospace}.controls{display:grid;gap:18px}.control label{display:flex;justify-content:space-between;color:var(--muted);font-weight:700}.control b{color:var(--blue);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}input[type=range]{width:100%;accent-color:var(--blue)}button{border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);box-shadow:0 6px 16px rgba(31,41,72,.06);padding:10px 14px;cursor:pointer;font-weight:750}.tokens{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}.tok{padding:8px 13px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.72);font:750 15px ui-monospace,SFMono-Regular,Menlo,monospace}.tok.hot{background:#eef1fb;border-color:rgba(49,87,213,.35);color:var(--blue)}.stage{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:14px;align-items:center;margin:22px 0}.box{padding:18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.72);text-align:center;font-weight:850}.arrow{color:var(--orange);font-size:28px;font-weight:900}.heat-wrap{overflow:auto;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.74);padding:18px}canvas{width:100%;min-height:420px;display:block}.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:16px}.metric{border:1px solid var(--line);border-radius:16px;background:rgba(255,255,255,.72);padding:14px}.metric strong{display:block;font-size:24px}.metric span{color:var(--muted);font-size:13px}.bar{height:11px;border-radius:99px;background:#e8e6df;overflow:hidden}.bar i{display:block;height:100%;width:50%;background:linear-gradient(90deg,var(--blue),var(--cyan))}.section{margin-bottom:74px}pre{background:rgba(255,255,255,.74);border:1px solid var(--line);border-radius:18px;padding:22px;overflow:auto}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}@media(max-width:900px){.grid,.stage{grid-template-columns:1fr}.arrow{text-align:center;transform:rotate(90deg)}h1{font-size:clamp(42px,12vw,58px)}}
+</style>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+</head>
+<body>
+<main class="wrap">
+<header class="hero">
+<div class="tag">D2L 10.4 · Bahdanau Attention</div>
+<h1>每个目标词，都重新看一遍源句</h1>
+<p>普通 Seq2Seq 只用一个固定上下文 c。Bahdanau 注意力把解码器上一隐状态当 query，对所有编码器隐状态做加性注意力池化，得到随时间变化的 cₜ。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>固定上下文的问题</h2>
+<div class="stage">
+<div class="box">源序列<br><span class="tok">i won !</span></div><div class="arrow">→</div>
+<div class="box">编码器 GRU<br>h₁ h₂ h₃</div><div class="arrow">→</div>
+<div class="box">固定 c<br>所有解码步共享</div>
+</div>
+<div class="note"><strong>瓶颈：</strong>源句越长，一个固定向量越难保存所有细节。Bahdanau 的做法是：每生成一个目标 token，都按当前解码状态重新分配源 token 权重。</div>
+</section>
+
+<section class="section grid">
+<div>
+<h2><span class="num">1</span>加性注意力</h2>
+<div class="formula">score(sₜ₋₁, hᵢ) = vᵀ tanh(Wq sₜ₋₁ + Wk hᵢ)<br>αₜᵢ = softmax(score)<br>cₜ = Σ αₜᵢ hᵢ</div>
+<p>query 是上一时刻解码器隐状态，key/value 是所有编码器隐状态。权重 α 每个解码步都会变。</p>
+</div>
+<div class="card controls">
+<div class="control"><label>解码时间步 <b id="stepVal">2</b></label><input id="step" type="range" min="0" max="4" value="2"></div>
+<div class="control"><label>注意力温度 <b id="tempVal">0.80</b></label><input id="temp" type="range" min=".35" max="1.8" step=".05" value=".8"></div>
+<div class="control"><label>对角偏好 <b id="diagVal">1.20</b></label><input id="diag" type="range" min="0" max="2.5" step=".05" value="1.2"></div>
+<div><button id="play">播放解码过程</button></div>
+<div class="readout">
+<div class="metric"><span>当前 query</span><strong id="queryName">s₂</strong></div>
+<div class="metric"><span>上下文峰值</span><strong id="peakName">won</strong></div>
+<div class="metric"><span>权重熵</span><strong id="entropy">1.08</strong></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>交互式注意力热力图</h2>
+<p>横轴是源 token，纵轴是目标 token。拖动时间步会高亮当前 query，底部条形图显示当前上下文 cₜ 如何从源侧聚合。</p>
+<div class="demo">
+<div class="tokens" id="srcTokens"></div>
+<div class="heat-wrap"><canvas id="heat" width="1300" height="560"></canvas></div>
+<div class="tokens" id="tgtTokens"></div>
+</div>
+</section>
+
+<section class="section grid">
+<div>
+<h2><span class="num">3</span>解码器数据流</h2>
+<p>每一步先用 hidden state 查询编码器输出，得到 context，再把 context 与当前输入词嵌入拼接，送入 GRU。</p>
+</div>
+<pre><code>query = hidden[-1].unsqueeze(1)
+context = attention(query, enc_outputs, enc_outputs, valid_len)
+x = torch.cat((context, embedding(x).unsqueeze(1)), -1)
+out, hidden = gru(x.permute(1, 0, 2), hidden)</code></pre>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id)
+const src=["i","won","!","<eos>"], tgt=["我","赢","了","。","<eos>"]
+const base=[
+[2.4,.6,.1,.0],
+[.7,2.2,.4,.0],
+[.2,.8,1.9,.2],
+[.0,.2,1.6,1.1],
+[.0,.1,.7,2.0]
+]
+let timer=null
+function softmax(row,temp,diag,t){
+ const z=row.map((v,i)=>Math.exp((v+diag*Math.exp(-Math.abs(i-t*.7)))/temp))
+ const s=z.reduce((a,b)=>a+b,0)
+ return z.map(v=>v/s)
+}
+function draw(){
+ const step=+$("step").value,temp=+$("temp").value,diag=+$("diag").value
+ $("stepVal").textContent=step;$("tempVal").textContent=temp.toFixed(2);$("diagVal").textContent=diag.toFixed(2);$("queryName").textContent="s"+step
+ const W=1300,H=560,cv=$("heat"),ctx=cv.getContext("2d"),m={l:150,t:60,r:60,b:155}
+ ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.82)";ctx.fillRect(0,0,W,H)
+ const cw=(W-m.l-m.r)/src.length,ch=(H-m.t-m.b-95)/tgt.length
+ const weights=base.map((r,t)=>softmax(r,temp,diag,t))
+ for(let y=0;y<tgt.length;y++)for(let x=0;x<src.length;x++){
+   const a=weights[y][x],px=m.l+x*cw,py=m.t+y*ch
+   ctx.fillStyle=`rgba(49,87,213,${.08+a*.82})`;round(ctx,px+4,py+4,cw-8,ch-8,14);ctx.fill()
+   if(y===step){ctx.strokeStyle="#e66a3c";ctx.lineWidth=3;ctx.stroke()}
+   ctx.fillStyle=a>.45?"white":"#172033";ctx.font="700 18px ui-monospace";ctx.textAlign="center";ctx.fillText(a.toFixed(2),px+cw/2,py+ch/2+6)
+ }
+ ctx.fillStyle="#172033";ctx.font="800 18px ui-monospace";ctx.textAlign="center"
+ src.forEach((t,i)=>ctx.fillText(t,m.l+i*cw+cw/2,36))
+ tgt.forEach((t,i)=>{ctx.textAlign="right";ctx.fillStyle=i===step?"#e66a3c":"#687083";ctx.fillText(t,m.l-22,m.t+i*ch+ch/2+6)})
+ const cur=weights[step],barY=H-100,bh=54
+ cur.forEach((v,i)=>{const x=m.l+i*cw+16,w=(cw-32)*v;ctx.fillStyle="#eef1fb";round(ctx,m.l+i*cw+16,barY,cw-32,bh,12);ctx.fill();ctx.fillStyle="#1c9aa8";round(ctx,x,barY,w,bh,12);ctx.fill();ctx.fillStyle="#172033";ctx.textAlign="center";ctx.font="750 15px ui-monospace";ctx.fillText(src[i],m.l+i*cw+cw/2,barY+bh+27)})
+ const maxI=cur.indexOf(Math.max(...cur)),ent=-cur.reduce((s,v)=>s+v*Math.log(v),0)
+ $("peakName").textContent=src[maxI];$("entropy").textContent=ent.toFixed(2)
+ $("srcTokens").innerHTML=src.map((t,i)=>`<span class="tok ${i===maxI?"hot":""}">${t}</span>`).join("")
+ $("tgtTokens").innerHTML=tgt.map((t,i)=>`<span class="tok ${i===step?"hot":""}">${t}</span>`).join("")
+}
+function round(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+["step","temp","diag"].forEach(id=>$(id).oninput=draw)
+$("play").onclick=()=>{clearInterval(timer);timer=setInterval(()=>{$("step").value=(+$("step").value+1)%tgt.length;draw()},750)}
+draw()
+</script>
+</body>
+</html>

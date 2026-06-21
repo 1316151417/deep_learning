@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自注意力与位置编码</title>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.82);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--yellow:#f5c84b;--radius:24px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.container{width:min(1500px,calc(100% - 36px));margin:0 auto;padding:58px 0 90px}
+.header{padding:54px 0 48px}
+.tag,.demo-title{display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.tag:before,.demo-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:1080px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 16px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+p{color:var(--muted);font-size:18px}
+.section{margin-bottom:74px}
+.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif;box-shadow:0 8px 18px rgba(23,32,51,.13)}
+.card,.demo,.code,.flow,.readout,.matrix,.pill{background:var(--card);border:1px solid rgba(222,219,210,.9);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo{padding:clamp(20px,2.5vw,34px)}
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+.flow{padding:22px;display:grid;grid-template-columns:repeat(5,auto);gap:16px;align-items:center;justify-content:center;overflow:auto}
+.box{min-width:150px;padding:14px 18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.75);text-align:center;font-weight:850}
+.arr{color:var(--orange);font-size:32px;font-weight:900}
+.code{padding:22px 24px;overflow:auto;font:15px/1.65 "JetBrains Mono","Fira Code",monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}
+.demo-grid{display:grid;grid-template-columns:1fr;gap:24px;align-items:start}
+.demo-grid>div{min-width:0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin:18px 0}
+label{display:grid;gap:8px;color:var(--muted);font-weight:750}
+input[type=range]{width:100%;accent-color:var(--blue)}
+canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}
+.readout{padding:16px}
+.readout b{display:block;font-size:24px;color:var(--ink)}
+.matrix{padding:18px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--ink);background:rgba(255,255,255,.55)}
+td{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;padding:8px 13px;margin:4px;color:var(--ink);font-weight:850}
+@media(max-width:850px){.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg)}}
+</style>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+.demo-grid{display:grid!important;grid-template-columns:1fr!important;gap:clamp(18px,2vw,26px)!important;align-items:start!important}
+.demo-grid>div{min-width:0!important}
+.grid{grid-template-columns:1fr!important}
+.code{white-space:pre-wrap!important;overflow-wrap:anywhere!important}
+</style>
+</head>
+<body>
+<div class="container lab-page">
+<header class="header">
+<div class="tag">self-attention · positional encoding</div>
+<h1>自注意力：每个 token 同时看见所有 token</h1>
+<p>这一节的核心很干净：Q、K、V 来自同一组输入，所以序列中任意两个位置可以一步连接；但并行性带来的代价是丢掉顺序，需要位置编码把“第几个 token”加回去。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>自注意力到底变了什么</h2>
+<div class="flow">
+<div class="box">输入序列 X<br><span>n × d</span></div>
+<div class="arr">→</div>
+<div class="box">Q = X<br>K = X<br>V = X</div>
+<div class="arr">→</div>
+<div class="box">softmax(QKᵀ / √d)</div>
+<div class="arr">→</div>
+<div class="box">输出序列 Y<br><span>n × d</span></div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">1</span>极简 PyTorch 写法</h2>
+<div class="grid code-grid">
+<div class="code"><span class="kw">class</span> <span class="fn">PositionalEncoding</span>(nn.Module):
+    <span class="kw">def</span> __init__(self, num_hiddens, dropout=<span class="n">0</span>, max_len=<span class="n">1000</span>):
+        P = torch.zeros(<span class="n">1</span>, max_len, num_hiddens)
+        X = torch.arange(max_len).reshape(<span class="n">-1</span>, <span class="n">1</span>) / torch.pow(
+            <span class="n">10000</span>, torch.arange(<span class="n">0</span>, num_hiddens, <span class="n">2</span>) / num_hiddens)
+        P[:, :, <span class="n">0</span>::<span class="n">2</span>] = torch.sin(X)
+        P[:, :, <span class="n">1</span>::<span class="n">2</span>] = torch.cos(X)</div>
+<div class="code">attn = nn.MultiheadAttention(<span class="n">100</span>, <span class="n">5</span>, batch_first=<span class="kw">True</span>)
+Y, W = attn(X, X, X, key_padding_mask=mask, need_weights=<span class="kw">True</span>)
+
+X.shape == Y.shape
+W.shape == (batch, query_len, key_len)</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>拖动看自注意力权重</h2>
+<div class="demo">
+<div class="demo-title">interactive self-attention</div>
+<p>选中一个 query token，看它如何对所有 key token 分配权重。有效长度会遮住 padding，温度越低，注意力越尖锐。</p>
+<div class="demo-grid">
+<div>
+<canvas id="attn" width="1100" height="700"></canvas>
+<div class="controls">
+<label>query token <input id="query" type="range" min="0" max="5" value="2"></label>
+<label>temperature <input id="temp" type="range" min="35" max="180" value="85"></label>
+<label>valid length <input id="valid" type="range" min="2" max="6" value="5"></label>
+</div>
+<div class="readouts">
+<div class="readout">当前 query <b id="qv">won</b></div>
+<div class="readout">最大关注 <b id="kv">won</b></div>
+<div class="readout">注意力熵 <b id="ev">1.44</b></div>
+</div>
+</div>
+<div class="card">
+<p><span class="pill">Q/K/V 同源</span><span class="pill">输出长度不变</span><span class="pill">padding 需 mask</span></p>
+<p>自注意力不是“解码器看编码器”，而是同一条序列内部互相看。每个 query 都会得到一行权重，整张图就是 n × n 的注意力矩阵。</p>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">3</span>位置编码把顺序加回来</h2>
+<div class="demo">
+<div class="demo-title">sinusoidal positional encoding</div>
+<p>偶数列用 sin，奇数列用 cos。越靠前的编码维度变化越快，越靠后的维度变化越慢，于是一个位置会被多种频率共同描述。</p>
+<div class="demo-grid">
+<div>
+<canvas id="pos" width="1100" height="780"></canvas>
+<div class="controls">
+<label>position <input id="posi" type="range" min="0" max="59" value="12"></label>
+<label>dimension pair <input id="pair" type="range" min="0" max="15" value="3"></label>
+<label>delta <input id="delta" type="range" min="1" max="16" value="5"></label>
+</div>
+<div class="readouts">
+<div class="readout">位置 i <b id="iv">12</b></div>
+<div class="readout">维度 2j/2j+1 <b id="jv">6 / 7</b></div>
+<div class="readout">相对位移 δ <b id="dv">5</b></div>
+</div>
+</div>
+<div class="card">
+<p>固定位置编码不只是记绝对位置。对任意固定偏移 δ，位置 i 的一对 sin/cos 值可以通过一个 2×2 旋转矩阵变成位置 i+δ 的值，这就是它能表达相对位置的原因。</p>
+<div class="code">p(i, 2j) = sin(i / 10000^(2j/d))
+p(i, 2j+1) = cos(i / 10000^(2j/d))</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>CNN / RNN / 自注意力对比</h2>
+<div class="matrix">
+<table>
+<tr><th>架构</th><th>复杂度</th><th>顺序操作</th><th>最大路径长度</th><th>直觉</th></tr>
+<tr><td>CNN</td><td>O(knd²)</td><td>O(1)</td><td>O(n/k)</td><td>局部窗口逐层扩散</td></tr>
+<tr><td>RNN</td><td>O(nd²)</td><td>O(n)</td><td>O(n)</td><td>一步一步传递状态</td></tr>
+<tr><td>Self-attention</td><td>O(n²d)</td><td>O(1)</td><td>O(1)</td><td>任意两个 token 直接相连</td></tr>
+</table>
+</div>
+</section>
+</div>
+
+<script>
+const tokens=["i","won","because","you","helped","<pad>"];
+const attn=document.getElementById("attn"), actx=attn.getContext("2d");
+const query=document.getElementById("query"), temp=document.getElementById("temp"), valid=document.getElementById("valid");
+const qv=document.getElementById("qv"),kv=document.getElementById("kv"),ev=document.getElementById("ev");
+function soft(v,t){const m=Math.max(...v),e=v.map(x=>Math.exp((x-m)/t)),s=e.reduce((a,b)=>a+b,0);return e.map(x=>x/s)}
+function attnWeights(q){
+  const n=Number(valid.value), tau=Number(temp.value)/100;
+  const raw=tokens.map((_,i)=>i<n?1.9*Math.exp(-Math.abs(i-q)*.8)+.55*Math.sin((i+1)*(q+2)):-99);
+  return soft(raw,tau)
+}
+function drawAttn(){
+  const rect=attn.getBoundingClientRect(), W=Math.max(620,Math.round(rect.width||attn.width)), H=W<760?760:700;
+  if(attn.width!==W||attn.height!==H){attn.width=W;attn.height=H}
+  const q=Number(query.value), w=attnWeights(q), n=Number(valid.value);
+  actx.clearRect(0,0,W,H);actx.fillStyle="rgba(255,255,255,.76)";actx.fillRect(0,0,W,H);
+  actx.fillStyle="#172033";actx.font="800 26px Inter";actx.textAlign="left";actx.fillText("Self-attention weights",34,48);
+  const margin=34, gap=10, size=Math.min(92,(W-margin*2-gap*5)/6), x0=margin, y0=118;
+  tokens.forEach((t,i)=>{const x=x0+i*(size+gap), a=w[i];actx.fillStyle=i>=n?"rgba(104,112,131,.12)":`rgba(49,87,213,${.1+a*.86})`;round(actx,x,y0,size,size,16);actx.fill();actx.strokeStyle=i===q?"#e66a3c":"#dedbd2";actx.lineWidth=i===q?4:2;actx.stroke();actx.fillStyle=a>.42?"#fff":"#172033";actx.font="800 18px Inter";actx.textAlign="center";actx.fillText(t,x+size/2,y0+34);actx.font="700 15px JetBrains Mono";actx.fillText(i>=n?"mask":a.toFixed(2),x+size/2,y0+59)});
+  const mx=w.slice(0,n).indexOf(Math.max(...w.slice(0,n))), hmX=margin, hmY=y0+size+110, cell=Math.min(76,(W-margin*2)/6);
+  for(let r=0;r<6;r++)for(let c=0;c<6;c++){const ww=r<n?attnWeights(r)[c]:0,x=hmX+c*cell,y=hmY+r*cell;actx.fillStyle=c>=n||r>=n?"rgba(104,112,131,.08)":`rgba(28,154,168,${.08+ww*.86})`;actx.fillRect(x,y,cell-3,cell-3);if(r===q){actx.strokeStyle="#e66a3c";actx.strokeRect(x+1,y+1,cell-5,cell-5)}}
+  actx.fillStyle="#687083";actx.font="700 16px Inter";actx.textAlign="left";actx.fillText("n × n attention matrix",hmX,hmY-16);
+  qv.textContent=tokens[q];kv.textContent=tokens[mx];ev.textContent=(-w.slice(0,n).reduce((a,v)=>a+v*Math.log(v),0)).toFixed(2)
+}
+const pos=document.getElementById("pos"), pctx=pos.getContext("2d");
+const posi=document.getElementById("posi"), pair=document.getElementById("pair"), delta=document.getElementById("delta");
+const iv=document.getElementById("iv"),jv=document.getElementById("jv"),dv=document.getElementById("dv");
+function P(i,d){const w=1/Math.pow(10000,2*Math.floor(d/2)/32);return d%2===0?Math.sin(i*w):Math.cos(i*w)}
+function drawPos(){
+  const rect=pos.getBoundingClientRect(), W=Math.max(620,Math.round(rect.width||pos.width)), H=W<760?900:780;
+  if(pos.width!==W||pos.height!==H){pos.width=W;pos.height=H}
+  const i=Number(posi.value), j=Number(pair.value), de=Number(delta.value);
+  pctx.clearRect(0,0,W,H);pctx.fillStyle="rgba(255,255,255,.76)";pctx.fillRect(0,0,W,H);
+  pctx.fillStyle="#172033";pctx.font="800 26px Inter";pctx.fillText("Sin / Cos positional encoding",34,48);
+  const margin=42,x0=margin,y0=104,gw=W-margin*2,gh=320, cols=32, rows=24, cw=gw/cols,rh=gh/rows;
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const v=P(r,c), a=(v+1)/2;pctx.fillStyle=`rgba(49,87,213,${.08+a*.68})`;pctx.fillRect(x0+c*cw,y0+r*rh,cw+.5,rh+.5)}
+  pctx.strokeStyle="#e66a3c";pctx.lineWidth=3;pctx.strokeRect(x0+j*2*cw,y0+i%rows*rh,cw*2,rh);
+  const chartX=margin, chartY=y0+gh+92, chartW=W-margin*2, chartH=220;
+  pctx.strokeStyle="#dedbd2";pctx.lineWidth=1;pctx.strokeRect(chartX,chartY,chartW,chartH);
+  [["#3157d5",j*2],["#e66a3c",j*2+1]].forEach(([color,d])=>{pctx.beginPath();for(let x=0;x<60;x++){const px=chartX+x/59*chartW,py=chartY+chartH/2-P(x,d)*chartH*.42;if(x)pctx.lineTo(px,py);else pctx.moveTo(px,py)}pctx.strokeStyle=color;pctx.lineWidth=3;pctx.stroke()});
+  pctx.fillStyle="#172033";pctx.font="800 18px Inter";pctx.fillText(`pair ${j}: dim ${j*2}/${j*2+1}`,chartX,chartY-18);
+  pctx.fillStyle="#687083";pctx.font="650 16px Inter";pctx.fillText(`p(${i}) → p(${Math.min(59,i+de)}) via a 2×2 rotation for fixed δ`,chartX,chartY+chartH+30);
+  iv.textContent=i;jv.textContent=`${j*2} / ${j*2+1}`;dv.textContent=de
+}
+function round(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+[query,temp,valid].forEach(e=>e.addEventListener("input",drawAttn));
+[posi,pair,delta].forEach(e=>e.addEventListener("input",drawPos));
+addEventListener("resize",()=>{drawAttn();drawPos()});
+drawAttn();drawPos();
+</script>
+</body>
+</html>

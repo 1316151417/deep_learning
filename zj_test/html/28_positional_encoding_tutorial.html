@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>位置编码为什么采用正弦和余弦？交互式教程</title>
+  <style>
+    :root{
+      --bg:#f6f8fb; --panel:#ffffff; --text:#162033; --muted:#667085; --line:#d9e2ef;
+      --blue:#246bfe; --green:#16a34a; --orange:#f97316; --purple:#7c3aed; --red:#ef4444;
+      --shadow:0 10px 30px rgba(15,23,42,.08); --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.65}
+    header{position:relative;background:transparent;color:var(--text);padding:18px 28px}
+    header h1{margin:0;font-size:22px;letter-spacing:.2px} header p{margin:4px 0 0;color:#cbd5e1;font-size:14px}
+    .wrap{display:grid;grid-template-columns:300px minmax(0,1fr);gap:20px;padding:20px;max-width:1500px;margin:0 auto}
+    nav{position:sticky;top:92px;align-self:start;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+    nav a{display:block;text-decoration:none;color:#344054;padding:11px 12px;border-radius:12px;font-size:14px;margin:2px 0}
+    nav a:hover{background:#eff6ff;color:#1d4ed8}.main{min-width:0}.grid{display:grid;grid-template-columns:1fr;gap:18px}.full{grid-column:1/-1}
+    section,.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px;margin-bottom:18px}
+    h2{margin:0 0 10px;font-size:22px}h3{margin:0 0 8px;font-size:18px}.muted{color:var(--muted)}
+    .formula{font-family:Georgia,"Times New Roman",serif;background:#f8fafc;border:1px solid #cbd5e1;border-radius:14px;padding:18px;font-size:20px;text-align:center;overflow:auto}.formula small{font-size:15px;color:#475569}
+    .controls{display:grid;grid-template-columns:1fr 90px;gap:12px;align-items:center}.controls label{font-weight:650}.controls input[type=range]{width:100%}.num{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;font-weight:700;text-align:center}
+    canvas{width:100%;height:460px;border:1px solid #e5e7eb;border-radius:14px;background:#fff}.mini canvas{height:400px}.note{border-radius:14px;padding:12px 14px;margin-top:12px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a}.good{background:#f0fdf4;border-color:#bbf7d0;color:#14532d}.warn{background:#fff7ed;border-color:#fed7aa;color:#7c2d12}.purple{background:#faf5ff;border-color:#e9d5ff;color:#581c87}.row{display:grid;grid-template-columns:1fr;gap:14px}.pill{display:inline-block;border-radius:999px;background:#eef2ff;color:#3730a3;padding:2px 9px;font-size:12px;font-weight:700}.badge{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;font-weight:800;margin-right:8px}.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}.kpi div{border:1px solid var(--line);border-radius:14px;padding:14px;background:#f8fafc}.kpi strong{display:block;font-size:24px}.compare{display:grid;grid-template-columns:1fr;gap:14px}.compare ul{margin:8px 0 0;padding-left:20px}.ok li::marker{color:var(--green)}.bad li::marker{color:var(--red)}
+    details{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#f8fafc}summary{cursor:pointer;font-weight:700}code{background:#eef2f7;padding:2px 6px;border-radius:6px}button{border:0;border-radius:12px;background:#1d4ed8;color:#fff;font-weight:800;padding:10px 14px;cursor:pointer}button.secondary{background:#475569}.two-col{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.small{font-size:13px}.slider-block{margin:10px 0 12px}
+    @media (max-width:1000px){.wrap{grid-template-columns:1fr}nav{position:static}.grid,.row,.compare,.two-col{grid-template-columns:1fr}.kpi{grid-template-columns:1fr}canvas{height:280px}}
+  </style>
+  <link rel="stylesheet" href="_attention_theme.css">
+  <script src="_attention_theme.js"></script>
+  <style>
+    html,body{overflow-x:hidden!important}
+    body::before{box-sizing:border-box!important}
+    header.pe-hero{
+      position:relative!important;top:auto!important;z-index:auto!important;
+      width:min(1500px,calc(100% - 36px))!important;margin:0 auto!important;
+      padding:58px 0 30px!important;background:transparent!important;color:var(--ink)!important;
+      box-shadow:none!important;border:0!important
+    }
+    header.pe-hero h1{
+      max-width:1100px;margin:22px 0 18px!important;color:var(--ink)!important;
+      font-family:Georgia,"Songti SC",serif!important;font-size:clamp(44px,6vw,78px)!important;
+      line-height:1.04!important;letter-spacing:-.055em!important
+    }
+    header.pe-hero p{max-width:1100px;color:var(--muted)!important;font-size:18px!important}
+    .wrap.pe-page{
+      display:block!important;width:min(1500px,calc(100% - 36px))!important;
+      max-width:none!important;margin:0 auto!important;padding:0 0 90px!important
+    }
+    .pe-page nav{
+      position:sticky!important;top:68px!important;z-index:20!important;
+      display:flex!important;gap:8px!important;overflow-x:auto!important;align-items:center!important;
+      margin:0 0 28px!important;padding:10px!important;background:rgba(247,245,239,.86)!important;
+      border:1px solid rgba(222,219,210,.9)!important;border-radius:999px!important;
+      box-shadow:0 14px 38px rgba(31,41,72,.08)!important;backdrop-filter:blur(14px)!important
+    }
+    .pe-page nav a{
+      flex:0 0 auto!important;white-space:nowrap!important;margin:0!important;
+      padding:8px 13px!important;border-radius:999px!important;background:rgba(255,255,255,.62)!important;
+      color:var(--muted)!important;font-size:13px!important;font-weight:800!important;text-decoration:none!important
+    }
+    .pe-page nav a:hover{background:#fff!important;color:var(--blue)!important}
+    .main{min-width:0!important}
+    .grid,.row,.compare,.two-col{grid-template-columns:1fr!important;gap:clamp(18px,2vw,28px)!important}
+    .kpi{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important}
+    section,.card{
+      background:var(--card)!important;border:1px solid rgba(222,219,210,.9)!important;
+      border-radius:24px!important;box-shadow:var(--shadow)!important;padding:clamp(22px,2.5vw,36px)!important
+    }
+    h2{font-family:Georgia,"Songti SC",serif!important;font-size:clamp(30px,3.2vw,46px)!important;line-height:1.15!important;letter-spacing:-.035em!important}
+    h3{font-size:22px!important;color:var(--ink)!important}
+    p,li,.muted{color:var(--muted)!important;font-size:18px!important}
+    .formula,.note,.good,.warn,.purple,details,.kpi div{
+      background:rgba(255,255,255,.72)!important;border:1px solid var(--line)!important;
+      border-radius:18px!important;color:var(--ink)!important
+    }
+    .note{border-left:4px solid var(--blue)!important}.good{border-left:4px solid var(--cyan)!important}
+    .warn{border-left:4px solid var(--orange)!important}.purple{border-left:4px solid #6851c9!important}
+    .badge{background:var(--ink)!important;border-radius:11px!important}
+    .pill{background:rgba(49,87,213,.10)!important;color:var(--blue)!important}
+    code{background:rgba(49,87,213,.10)!important;color:var(--blue)!important}
+    canvas{
+      display:block!important;width:100%!important;height:460px!important;
+      background:rgba(255,255,255,.78)!important;border:1px solid var(--line)!important;border-radius:20px!important
+    }
+    .mini canvas{height:400px!important}
+    .controls{grid-template-columns:minmax(170px,.42fr) minmax(240px,1fr) 86px!important;gap:14px!important}
+    .num{background:rgba(255,255,255,.78)!important;border:1px solid var(--line)!important;color:var(--ink)!important}
+    button{
+      border:1px solid rgba(49,87,213,.24)!important;border-radius:999px!important;
+      background:rgba(49,87,213,.12)!important;color:var(--blue)!important;
+      box-shadow:0 10px 24px rgba(49,87,213,.10)!important
+    }
+    button.secondary{
+      background:rgba(255,255,255,.78)!important;color:var(--ink)!important;
+      border-color:var(--line)!important;box-shadow:0 10px 24px rgba(31,41,72,.07)!important
+    }
+    button:hover{background:rgba(49,87,213,.18)!important;color:var(--blue)!important}
+    button.secondary:hover{background:#fff!important;color:var(--ink)!important}
+    @media(max-width:760px){
+      header.pe-hero,.wrap.pe-page{width:min(100% - 22px,1500px)!important}
+      .pe-page nav{top:58px!important;border-radius:22px!important}
+      .controls{grid-template-columns:1fr!important}
+      canvas{height:380px!important}.mini canvas{height:340px!important}
+    }
+  </style>
+</head>
+<body>
+<header class="pe-hero">
+  <h1>位置编码为什么采用正弦和余弦？</h1>
+  <p>交互式可视化教程：频率、唯一性、外推能力、相对位置，以及为什么不是简单学习一个位置表。</p>
+</header>
+<div class="wrap pe-page lab-page">
+  <nav>
+    <a href="#idea">0. 先抓住核心直觉</a>
+    <a href="#formula">1. 公式不是重点，频率才是重点</a>
+    <a href="#freq">2. 不同维度 = 不同频率</a>
+    <a href="#heatmap">3. 每个位置形成独特“条形码”</a>
+    <a href="#extrapolate">4. 为什么能外推到更长序列</a>
+    <a href="#relative">5. 为什么能表达相对位置</a>
+    <a href="#learned">6. 为什么不直接学习位置向量</a>
+    <a href="#summary">7. 总结</a>
+  </nav>
+
+  <main class="main">
+    <section id="idea" class="full">
+      <h2>0. 先抓住核心直觉</h2>
+      <p>Transformer 的自注意力本身不包含顺序。没有位置编码时，<code>我 爱 你</code> 和 <code>你 爱 我</code> 对模型来说很容易退化成同一组词的重新排列。</p>
+      <div class="kpi">
+        <div><span class="pill">作用一</span><strong>标记位置</strong><span class="muted">让第 5 个词和第 12 个词不同。</span></div>
+        <div><span class="pill">作用二</span><strong>表达距离</strong><span class="muted">让模型知道“前 3 个词”“后 2 个词”。</span></div>
+        <div><span class="pill">作用三</span><strong>支持外推</strong><span class="muted">长度超过训练范围时仍可计算。</span></div>
+      </div>
+      <div class="note">一句话理解：正弦/余弦位置编码像给每个位置生成一串由“快表、慢表、超慢表”共同组成的多尺度坐标。</div>
+    </section>
+
+    <section id="formula" class="full">
+      <h2>1. 公式不是重点，频率才是重点</h2>
+      <div class="two-col">
+        <div class="formula">
+          PE(pos, 2i) = sin(pos / 10000<sup>2i / d</sup>)<br/>
+          PE(pos, 2i + 1) = cos(pos / 10000<sup>2i / d</sup>)<br/>
+          <small>pos 是位置，i 是维度索引，d 是模型维度。</small>
+        </div>
+        <div>
+          <p>这个公式真正做的事情是：给不同维度分配不同的波长。</p>
+          <ul>
+            <li>低维度：分母小，变化快，负责分辨近距离位置。</li>
+            <li>高维度：分母大，变化慢，负责提供长距离趋势。</li>
+            <li>正弦和余弦成对出现，相当于同一频率下的二维坐标。</li>
+          </ul>
+          <div class="warn">不要把它理解成“某个神奇公式”。它本质上是用一组不同频率的周期函数，给位置构造多尺度特征。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="full">
+      <h2>交互控制面板</h2>
+      <div class="row">
+        <div>
+          <div class="slider-block controls"><label>序列长度 posMax</label><input id="posMax" type="range" min="16" max="256" value="64"><div class="num" id="posMaxVal"></div></div>
+          <div class="slider-block controls"><label>模型维度 d</label><input id="dim" type="range" min="8" max="64" step="2" value="16"><div class="num" id="dimVal"></div></div>
+        </div>
+        <div>
+          <div class="slider-block controls"><label>查看维度 i</label><input id="viewDim" type="range" min="0" max="15" value="0"><div class="num" id="viewDimVal"></div></div>
+          <div class="note" id="dimExplain"></div>
+          <button id="reset">重置参数</button>
+          <button class="secondary" id="randomPair">随机相对位置示例</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section id="freq">
+        <h2><span class="badge">2</span>不同维度 = 不同频率</h2>
+        <p class="muted">观察不同维度上的正弦曲线。维度越靠前，频率越高；维度越靠后，频率越低。</p>
+        <canvas id="freqCanvas" width="760" height="360"></canvas>
+        <div class="note">这解释了为什么不是只用一个 sin：一个频率只能描述一种尺度；多个频率可以同时表达短距离和长距离。</div>
+      </section>
+
+      <section id="heatmap">
+        <h2><span class="badge">3</span>每个位置形成独特“条形码”</h2>
+        <p class="muted">横轴是维度，纵轴是位置。每一行就是一个位置的编码向量。</p>
+        <canvas id="heatCanvas" width="760" height="360"></canvas>
+        <div class="good">每个位置的编码模式都不同。模型把词向量加上这个位置向量后，就能区分“同一个词出现在不同位置”。</div>
+      </section>
+
+      <section id="extrapolate">
+        <h2><span class="badge" style="background:var(--orange)">4</span>为什么能外推到更长序列</h2>
+        <p class="muted">蓝色区域表示假设的训练长度，橙色虚线表示训练长度之外的位置。</p>
+        <canvas id="extraCanvas" width="760" height="360"></canvas>
+        <div class="warn">正弦/余弦是函数。只要给定 pos，就能计算 PE(pos)。这比“查表式”的可学习位置向量更容易处理未见过的位置。</div>
+      </section>
+
+      <section id="relative">
+        <h2><span class="badge" style="background:var(--purple)">5</span>为什么能表达相对位置</h2>
+        <p class="muted">选择两个位置，观察它们在同一频率下的相位差。</p>
+        <div class="row">
+          <div>
+            <div class="slider-block controls"><label>位置 a</label><input id="posA" type="range" min="0" max="63" value="8"><div class="num" id="posAVal"></div></div>
+            <div class="slider-block controls"><label>位置 b</label><input id="posB" type="range" min="0" max="63" value="21"><div class="num" id="posBVal"></div></div>
+            <div class="formula small" id="relativeText"></div>
+          </div>
+          <div class="mini"><canvas id="relCanvas" width="420" height="300"></canvas></div>
+        </div>
+        <div class="purple">同一频率下，位置差 b-a 会表现为稳定的相位差。由于 sin/cos 有加法公式，PE(pos+k) 可以由 PE(pos) 线性变换得到。这就是“相对距离可被模型利用”的数学基础。</div>
+      </section>
+    </div>
+
+    <section id="learned" class="full">
+      <h2>6. 为什么不直接学习位置向量？</h2>
+      <div class="compare">
+        <div class="card" style="box-shadow:none;margin:0">
+          <h3>可学习位置编码的问题</h3>
+          <ul class="bad">
+            <li>本质是位置表：pos=1 查一行，pos=2 查一行。</li>
+            <li>训练时没见过的位置，表里没有对应向量。</li>
+            <li>相邻位置之间不一定天然具备连续关系。</li>
+            <li>外推到更长序列时不稳定。</li>
+          </ul>
+        </div>
+        <div class="card" style="box-shadow:none;margin:0">
+          <h3>正弦/余弦位置编码的优势</h3>
+          <ul class="ok">
+            <li>任意位置都能通过公式计算。</li>
+            <li>多频率组合，天然支持多尺度位置表达。</li>
+            <li>sin/cos 成对出现，便于表达相对位移。</li>
+            <li>没有额外位置参数，不会受最大位置表限制。</li>
+          </ul>
+        </div>
+      </div>
+      <details style="margin-top:14px">
+        <summary>补充：那为什么后来很多模型又不用原始正弦位置编码？</summary>
+        <p>原始 Transformer 使用绝对正弦/余弦位置编码。后来的模型常用相对位置编码、旋转位置编码等方法，因为语言建模中“相对距离”往往比“绝对第几个词”更重要。但这些改进仍然继承了一个核心思想：用可计算的结构化方式，把位置关系注入注意力机制。</p>
+      </details>
+    </section>
+
+    <section id="summary" class="full">
+      <h2>7. 总结</h2>
+      <p>正弦和余弦位置编码不是为了“好看”或“数学复杂”，而是同时满足四个条件：</p>
+      <ol>
+        <li><strong>唯一性：</strong>每个位置拥有不同编码。</li>
+        <li><strong>多尺度：</strong>不同维度对应不同频率，可以表达近距离和远距离。</li>
+        <li><strong>外推：</strong>它是函数，不是固定表，可以计算训练长度之外的位置。</li>
+        <li><strong>相对位置：</strong>sin/cos 的加法结构让模型更容易学习相对距离。</li>
+      </ol>
+      <div class="note">最重要的直觉：位置编码不是在告诉模型“这是第 17 个词”这么简单，而是在给每个位置一组多频率坐标，让注意力机制能同时感知内容关系和位置关系。</div>
+    </section>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const state = {posMax:64, dim:16, viewDim:0, posA:8, posB:21};
+const colors = ['#2563eb','#16a34a','#f97316','#dc2626','#7c3aed','#0891b2','#be123c','#64748b'];
+function pe(pos, j, d){
+  const i = Math.floor(j/2);
+  const denom = Math.pow(10000, (2*i)/d);
+  const x = pos / denom;
+  return j % 2 === 0 ? Math.sin(x) : Math.cos(x);
+}
+function setupCanvas(canvas){
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = Math.round(rect.width * dpr); canvas.height = Math.round(rect.height * dpr);
+  const ctx = canvas.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w:rect.width,h:rect.height};
+}
+function axes(ctx,w,h,xLabel,yLabel){
+  ctx.clearRect(0,0,w,h); ctx.strokeStyle='#e5e7eb'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){let y=30+i*(h-70)/5; ctx.beginPath();ctx.moveTo(45,y);ctx.lineTo(w-18,y);ctx.stroke();}
+  for(let i=0;i<=8;i++){let x=45+i*(w-65)/8; ctx.beginPath();ctx.moveTo(x,30);ctx.lineTo(x,h-40);ctx.stroke();}
+  ctx.strokeStyle='#64748b';ctx.beginPath();ctx.moveTo(45,30);ctx.lineTo(45,h-40);ctx.lineTo(w-18,h-40);ctx.stroke();
+  ctx.fillStyle='#334155';ctx.font='12px sans-serif';ctx.fillText(xLabel,w/2,h-10);ctx.save();ctx.translate(14,h/2);ctx.rotate(-Math.PI/2);ctx.fillText(yLabel,0,0);ctx.restore();
+}
+function drawFreq(){
+  const {ctx,w,h}=setupCanvas($('freqCanvas')); axes(ctx,w,h,'位置 pos','编码值');
+  const dims = [...new Set([0,1,2,3,Math.min(state.dim-2, state.dim-4),state.dim-1].filter(x=>x>=0&&x<state.dim))];
+  dims.forEach((j,idx)=>{
+    ctx.strokeStyle=colors[idx%colors.length]; ctx.lineWidth=2; ctx.beginPath();
+    for(let p=0;p<=state.posMax;p++){
+      const x=45+p/state.posMax*(w-65); const y=30+(1-pe(p,j,state.dim))/2*(h-70);
+      if(p===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    } ctx.stroke(); ctx.fillStyle=colors[idx%colors.length]; ctx.fillText('维度 '+j, 58+idx*82, 22);
+  });
+  const j=state.viewDim;
+  ctx.strokeStyle='#e66a3c';ctx.lineWidth=4;ctx.beginPath();
+  for(let p=0;p<=state.posMax;p++){
+    const x=45+p/state.posMax*(w-65), y=30+(1-pe(p,j,state.dim))/2*(h-70);
+    if(p===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();ctx.fillStyle='#e66a3c';ctx.font='700 14px sans-serif';ctx.fillText('当前维度 '+j, w-130, 22);
+}
+function drawHeat(){
+  const {ctx,w,h}=setupCanvas($('heatCanvas')); ctx.clearRect(0,0,w,h);
+  const left=52, top=25, right=22, bottom=38; const rows=Math.min(state.posMax+1,80), cols=state.dim;
+  const cw=(w-left-right)/cols, ch=(h-top-bottom)/rows;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const pos=Math.round(r*(state.posMax)/(rows-1)); const v=pe(pos,c,state.dim);
+    const red=v>0?Math.round(255):Math.round(255*(1+v)); const blue=v<0?Math.round(255):Math.round(255*(1-v)); const green=Math.round(230*(1-Math.abs(v))+60*Math.abs(v));
+    ctx.fillStyle=`rgb(${red},${green},${blue})`; ctx.fillRect(left+c*cw,top+r*ch,cw+0.5,ch+0.5);
+  }
+  ctx.strokeStyle='#64748b';ctx.strokeRect(left,top,w-left-right,h-top-bottom);
+  ctx.strokeStyle='#e66a3c';ctx.lineWidth=3;ctx.strokeRect(left+state.viewDim*cw,top,cw,h-top-bottom);
+  ctx.fillStyle='#e66a3c';ctx.font='700 13px sans-serif';ctx.fillText('当前 i='+state.viewDim, left+state.viewDim*cw+4, top+16);
+  ctx.fillStyle='#334155';ctx.font='12px sans-serif';ctx.fillText('维度',w/2,h-10);ctx.save();ctx.translate(15,h/2);ctx.rotate(-Math.PI/2);ctx.fillText('位置 pos',0,0);ctx.restore();
+}
+function drawExtra(){
+  const {ctx,w,h}=setupCanvas($('extraCanvas')); axes(ctx,w,h,'位置 pos','选定维度的编码值');
+  const train=Math.floor(state.posMax*0.55); const total=state.posMax; const j=state.viewDim;
+  ctx.strokeStyle='#2563eb';ctx.lineWidth=2.5;ctx.beginPath();
+  for(let p=0;p<=train;p++){let x=45+p/total*(w-65), y=30+(1-pe(p,j,state.dim))/2*(h-70); if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)} ctx.stroke();
+  ctx.setLineDash([7,6]);ctx.strokeStyle='#f97316';ctx.beginPath();
+  for(let p=train;p<=total;p++){let x=45+p/total*(w-65), y=30+(1-pe(p,j,state.dim))/2*(h-70); if(p===train)ctx.moveTo(x,y);else ctx.lineTo(x,y)} ctx.stroke();ctx.setLineDash([]);
+  const xTrain=45+train/total*(w-65);ctx.strokeStyle='#94a3b8';ctx.beginPath();ctx.moveTo(xTrain,30);ctx.lineTo(xTrain,h-40);ctx.stroke();ctx.fillStyle='#475569';ctx.fillText('假设训练边界',xTrain-42,h-22);
+}
+function drawRel(){
+  const {ctx,w,h}=setupCanvas($('relCanvas')); axes(ctx,w,h,'位置','编码值');
+  const j=state.viewDim; const max=Math.max(state.posA,state.posB,32);
+  ctx.strokeStyle='#7c3aed';ctx.lineWidth=2;ctx.beginPath();
+  for(let p=0;p<=max;p++){let x=45+p/max*(w-65), y=30+(1-pe(p,j,state.dim))/2*(h-70); if(p===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)} ctx.stroke();
+  [state.posA,state.posB].forEach((p,idx)=>{let x=45+p/max*(w-65), y=30+(1-pe(p,j,state.dim))/2*(h-70);ctx.fillStyle=idx?'#16a34a':'#2563eb';ctx.beginPath();ctx.arc(x,y,6,0,Math.PI*2);ctx.fill();ctx.fillText('pos '+p,x+8,y-8)});
+  $('relativeText').innerHTML = `b - a = <b>${state.posB-state.posA}</b><br>维度 ${j} 下：PE(a)=${pe(state.posA,j,state.dim).toFixed(3)}，PE(b)=${pe(state.posB,j,state.dim).toFixed(3)}<br><small>位置差会转化为同一频率下的相位差。</small>`;
+}
+function sync(){
+  $('posMaxVal').textContent=state.posMax; $('dimVal').textContent=state.dim; $('viewDimVal').textContent=state.viewDim; $('posAVal').textContent=state.posA; $('posBVal').textContent=state.posB;
+  $('viewDim').max=state.dim-1; $('posA').max=state.posMax-1; $('posB').max=state.posMax-1;
+  const kind=state.viewDim%2===0?'sin':'cos', pair=Math.floor(state.viewDim/2), denom=Math.pow(10000,(2*pair)/state.dim);
+  $('dimExplain').innerHTML=`当前查看 <b>维度 ${state.viewDim}</b>：使用 <b>${kind}</b>，属于第 <b>${pair}</b> 组频率，分母约为 <b>${denom.toFixed(2)}</b>。拖动它会高亮频率曲线、热力图列、外推曲线和相对位置曲线。`;
+  drawFreq();drawHeat();drawExtra();drawRel();
+}
+['posMax','dim','viewDim','posA','posB'].forEach(id=>$(id).addEventListener('input',e=>{state[id]=+e.target.value;if(state.viewDim>=state.dim)state.viewDim=state.dim-1;sync()}));
+$('reset').addEventListener('click',()=>{Object.assign(state,{posMax:64,dim:16,viewDim:0,posA:8,posB:21});for(const k of Object.keys(state))$(k).value=state[k];sync()});
+$('randomPair').addEventListener('click',()=>{state.posA=Math.floor(Math.random()*state.posMax/2);state.posB=state.posA+1+Math.floor(Math.random()*(state.posMax-state.posA-1));$('posA').value=state.posA;$('posB').value=state.posB;sync()});
+window.addEventListener('resize',sync);sync();
+</script>
+</body>
+</html>

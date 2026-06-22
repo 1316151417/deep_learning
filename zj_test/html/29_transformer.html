@@ -3,33 +3,39 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Transformer 课程原版结构</title>
+<title>Transformer 架构逐块讲解</title>
 <link rel="stylesheet" href="_attention_theme.css">
 <script src="_attention_theme.js"></script>
 <style>
 :root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.84);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--radius:24px}
 *{box-sizing:border-box}
 html,body{overflow-x:hidden}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
-.wrap{width:min(1680px,calc(100% - 36px));margin:0 auto;padding:56px 0 92px}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1720px,calc(100% - 36px));margin:0 auto;padding:56px 0 92px}
 .hero{padding:48px 0 42px}
 .tag,.demo-title{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
 .tag:before,.demo-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
-h1{max-width:1180px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h1{max-width:1220px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
 h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+h3{margin:0 0 12px;color:var(--ink);font-size:22px}
 p,li{color:var(--muted);font-size:18px}
-.section{margin-bottom:76px}
+.section{margin-bottom:78px}
 .num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
-.card,.demo,.code,.chip,.note,.tablebox{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
-.card,.demo,.tablebox{padding:clamp(20px,2.5vw,36px)}
-.flow{display:grid;grid-template-columns:repeat(9,auto);gap:14px;align-items:center;justify-content:center;overflow:auto;padding:8px 0 2px}
-.chip{min-width:130px;padding:15px 18px;text-align:center;font-weight:850}
+.card,.demo,.code,.chip,.note,.tablebox,.panel,.mini{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo,.tablebox,.panel{padding:clamp(20px,2.5vw,36px)}
+.flow{display:grid;grid-template-columns:repeat(9,auto);gap:14px;align-items:center;justify-content:center;overflow:auto;padding:8px 0 8px}
+.chip{min-width:132px;padding:15px 18px;text-align:center;font-weight:850}
 .arr{color:var(--orange);font-size:30px;font-weight:900}
-.split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(360px,.95fr);gap:22px;align-items:stretch}
+.split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);gap:22px;align-items:start}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
 .code{padding:22px 24px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:15px/1.65 "JetBrains Mono","Fira Code",monospace}
 .kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083}
 .note{padding:18px 22px;border-left:5px solid var(--orange)}
+.mini{padding:18px 20px}
+.mini b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.mini p{margin:0}
 .controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin:18px 0}
 label{display:grid;gap:8px;color:var(--muted);font-weight:760}
 input[type=range]{width:100%;accent-color:var(--blue)}
@@ -40,55 +46,154 @@ canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);bor
 table{width:100%;border-collapse:collapse}
 th,td{padding:13px 15px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
 th{color:var(--ink);background:rgba(255,255,255,.58)}td{color:var(--muted)}
-@media(max-width:980px){.split,.grid{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg);justify-self:center}}
+.callout{display:grid;grid-template-columns:72px 1fr;gap:18px;align-items:start}
+.badge{display:grid;place-items:center;width:52px;height:52px;border-radius:18px;background:rgba(49,87,213,.12);color:var(--blue);font-weight:900;font-size:22px}
+.steps{display:grid;gap:14px}
+.step{display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:start;padding:18px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.58)}
+.step strong{display:block;color:var(--ink);font-size:19px}
+@media(max-width:1050px){.split,.grid,.triple{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg);justify-self:center}.callout,.step{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <main class="wrap lab-page">
 <header class="hero">
-<div class="tag">Transformer · D2L course structure</div>
-<h1>Transformer：按课程原版结构手写</h1>
-<p>这个版本不再包一层 PyTorch 的 <code>nn.Transformer</code>。它按照课程里的拆法，把通用组件自己写出来：多头注意力、AddNorm、PositionWiseFFN、EncoderBlock、DecoderBlock、Encoder、Decoder。也就是说，结构更接近教材原文，只是把教材里依赖的 d2l 模块替换成了本文件里的实现。</p>
+<div class="tag">Transformer · read the code</div>
+<h1>Transformer：按代码逐块理解</h1>
+<p>这页的目标不是“看一个动画然后点点滑块”，而是帮你读懂 <code>29_transformer.py</code>。我们会从张量形状开始，把代码里的每个类拆开：它吃什么、吐什么、为什么存在，以及它在翻译任务里承担哪一段责任。</p>
 </header>
 
 <section class="section">
-<h2><span class="num">0</span>一眼看完整结构</h2>
+<h2><span class="num">0</span>先抓住主线</h2>
 <div class="card">
 <div class="flow">
-<div class="chip">源 token<br>Embedding + PE</div><div class="arr">→</div>
-<div class="chip">EncoderBlock × N<br>self-attn + FFN</div><div class="arr">→</div>
-<div class="chip">encoder memory<br>B × S × H</div><div class="arr">→</div>
-<div class="chip">DecoderBlock × N<br>masked self + cross</div><div class="arr">→</div>
-<div class="chip">Linear<br>vocab logits</div>
+<div class="chip">源句 X<br>B × S</div><div class="arr">→</div>
+<div class="chip">Encoder<br>B × S × H</div><div class="arr">→</div>
+<div class="chip">memory<br>整句语义</div><div class="arr">→</div>
+<div class="chip">Decoder<br>B × T × H</div><div class="arr">→</div>
+<div class="chip">Linear<br>B × T × V</div>
 </div>
-<p>和 27_attention_seq2seq 相比，最大变化不是“加了注意力”，而是把 RNN 时间循环替换成注意力块堆叠：编码器一次性看完整源序列，解码器用 causal mask 保持自回归。</p>
+<div class="triple">
+<div class="mini"><b>B</b><p>batch size，一批句子的数量。</p></div>
+<div class="mini"><b>S / T</b><p>S 是源序列长度，T 是目标序列长度。</p></div>
+<div class="mini"><b>H / V</b><p>H 是隐藏维度，V 是目标词表大小。</p></div>
+</div>
+<p>Transformer 翻译模型仍然是 encoder-decoder。变化在于：RNN 的“逐步读入”被 self-attention 替代；decoder 也不是靠 GRU 的隐状态滚动，而是用 masked self-attention 控制“只能看已经生成的目标词”。</p>
 </div>
 </section>
 
 <section class="section">
-<h2><span class="num">1</span>课程组件对应代码</h2>
+<h2><span class="num">1</span>mask：让 padding 和未来词失声</h2>
+<div class="split">
+<div class="panel">
+<h3><code>sequence_mask</code> 和 <code>masked_softmax</code></h3>
+<p>注意力本质上是在一排 key 上做 softmax。如果句子被 padding 到固定长度，padding 位置不应该得到概率；如果是 decoder 自注意力，未来目标词也不应该得到概率。代码里先把非法位置改成一个极小值 <code>-1e6</code>，再 softmax，它们的概率就几乎是 0。</p>
+<pre class="code"><span class="kw">def</span> <span class="fn">masked_softmax</span>(X, valid_lens):
+    <span class="kw">if</span> valid_lens <span class="kw">is</span> None:
+        <span class="kw">return</span> F.softmax(X, dim=-1)
+    X = sequence_mask(X.reshape(-1, shape[-1]), valid_lens, -1e6)
+    <span class="kw">return</span> F.softmax(X.reshape(shape), dim=-1)</pre>
+</div>
+<div class="demo">
+<div class="demo-title">mask intuition</div>
+<canvas id="mask" width="1100" height="700"></canvas>
+<div class="controls">
+<label>目标长度 T <input id="tgtLen" type="range" min="3" max="10" value="7"></label>
+<label>当前 query 行 <input id="row" type="range" min="0" max="6" value="3"></label>
+</div>
+<div class="readouts">
+<div class="readout">self-attn 可看 <b id="seen">0..3</b></div>
+<div class="readout">未来位置 <b>mask</b></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>Scaled Dot-Product Attention</h2>
 <div class="grid">
-<pre class="code"><span class="kw">class</span> <span class="fn">EncoderBlock</span>(nn.Module):
-    <span class="kw">def</span> forward(self, X, valid_lens):
-        Y = self.addnorm1(
-            X, self.attention(X, X, X, valid_lens))
-        <span class="kw">return</span> self.addnorm2(Y, self.ffn(Y))</pre>
-<pre class="code"><span class="kw">class</span> <span class="fn">DecoderBlock</span>(nn.Module):
-    <span class="kw">def</span> forward(self, X, state):
-        X2 = self.attention1(X, key_values, key_values, dec_valid_lens)
-        Y = self.addnorm1(X, X2)
-        Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_lens)
-        Z = self.addnorm2(Y, Y2)
-        <span class="kw">return</span> self.addnorm3(Z, self.ffn(Z)), state</pre>
+<div class="panel">
+<h3><code>DotProductAttention</code></h3>
+<p>这是 Transformer 的最小原子。query 问：“我现在这个位置想找什么信息？” key 回答：“每个位置有什么特征可供匹配？” value 则是最终被加权汇总的信息。分数公式是 <code>QKᵀ / sqrt(d)</code>，除以 <code>sqrt(d)</code> 是为了避免维度变大后分数过猛，softmax 过早变得尖锐。</p>
+<pre class="code">scores = torch.bmm(queries, keys.transpose(1, 2)) / math.sqrt(d)
+attention_weights = masked_softmax(scores, valid_lens)
+output = torch.bmm(attention_weights, values)</pre>
 </div>
-<div class="note">教材里的 <code>d2l.MultiHeadAttention</code>、<code>d2l.PositionalEncoding</code>、<code>d2l.EncoderDecoder</code> 在这里都由本文件自实现；训练数据、mask loss、BLEU 复用前面章节已有的小工具。</div>
+<div class="panel">
+<h3>形状怎么走</h3>
+<table>
+<tr><th>张量</th><th>典型形状</th><th>含义</th></tr>
+<tr><td>queries</td><td>B × query_len × H</td><td>当前位置拿什么去问</td></tr>
+<tr><td>keys</td><td>B × key_len × H</td><td>所有可被看的位置</td></tr>
+<tr><td>values</td><td>B × key_len × H</td><td>真正要被加权求和的信息</td></tr>
+<tr><td>weights</td><td>B × query_len × key_len</td><td>每个 query 看每个 key 的比例</td></tr>
+</table>
+</div>
+</div>
+<div class="note">在 encoder self-attention 里，Q、K、V 都来自同一个 X；在 decoder cross-attention 里，Q 来自 decoder，K 和 V 来自 encoder outputs。</div>
 </section>
 
 <section class="section">
-<h2><span class="num">2</span>拖动看 EncoderBlock</h2>
+<h2><span class="num">3</span>Multi-Head：把一次注意力拆成多种视角</h2>
+<div class="split">
+<div class="panel">
+<h3><code>MultiHeadAttention</code></h3>
+<p>单头注意力只在一个表示空间里匹配。多头注意力先用 <code>W_q/W_k/W_v</code> 投影，再把隐藏维度 H 切成 h 份，让不同头分别学不同关系：有的头可能看主谓关系，有的头可能看相邻词，有的头可能看标点或句尾。</p>
+<pre class="code">queries = transpose_qkv(self.W_q(queries), self.num_heads)
+keys = transpose_qkv(self.W_k(keys), self.num_heads)
+values = transpose_qkv(self.W_v(values), self.num_heads)
+output = self.attention(queries, keys, values, valid_lens)
+return self.W_o(transpose_output(output, self.num_heads))</pre>
+</div>
+<div class="panel">
+<h3>这里的两个 transpose</h3>
+<div class="steps">
+<div class="step"><div class="badge">1</div><div><strong><code>transpose_qkv</code></strong><p>把 <code>B × L × H</code> 变成 <code>(B × h) × L × (H/h)</code>。这样可以把每个 head 当成一个更大的 batch 来并行计算。</p></div></div>
+<div class="step"><div class="badge">2</div><div><strong><code>transpose_output</code></strong><p>多头算完以后，再把 <code>(B × h)</code> 合回 B，把多个头的结果拼回完整 H。</p></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>位置编码：给无序注意力补上顺序感</h2>
+<div class="grid">
+<div class="panel">
+<h3><code>PositionalEncoding</code></h3>
+<p>self-attention 本身不天然知道 token 的先后顺序。如果只把词向量送进去，“我 赢 了”和“了 赢 我”在集合意义上很像。位置编码把每个位置的 sin/cos 向量加到 embedding 上，让模型知道“这个 token 在第几个位置”。</p>
+<pre class="code">X = embedding(tokens) * math.sqrt(num_hiddens)
+X = pos_encoding(X)</pre>
+</div>
+<div class="panel">
+<h3>为什么乘 <code>sqrt(H)</code></h3>
+<p>位置编码的值大约在 -1 到 1 之间。embedding 训练初期数值尺度可能较小，乘上 <code>sqrt(H)</code> 后，词语信息不会被位置编码淹没。这是教材 Transformer 代码里的经典写法。</p>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">5</span>FFN 与 AddNorm：让网络能堆深</h2>
+<div class="grid">
+<div class="panel">
+<h3><code>PositionWiseFFN</code></h3>
+<p>注意力负责“位置之间交流”，FFN 负责“每个位置自己消化信息”。它对每个 token 位置使用同一个两层 MLP，通常先升维再降回 H。本代码里是 <code>H → 64 → H</code>。</p>
+<pre class="code"><span class="kw">class</span> <span class="fn">PositionWiseFFN</span>(nn.Module):
+    <span class="kw">def</span> forward(self, X):
+        <span class="kw">return</span> self.dense2(self.relu(self.dense1(X)))</pre>
+</div>
+<div class="panel">
+<h3><code>AddNorm</code></h3>
+<p>每个子层外面都有残差连接和 LayerNorm。残差让原始信息可以直接穿过子层，LayerNorm 把每个位置的特征尺度拉稳。没有它们，深层 Transformer 很容易训练不稳。</p>
+<pre class="code"><span class="kw">def</span> forward(self, X, Y):
+    <span class="kw">return</span> self.ln(self.dropout(Y) + X)</pre>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">6</span>EncoderBlock：读完整源句</h2>
+<div class="split">
 <div class="demo">
 <div class="demo-title">encoder block</div>
-<p>EncoderBlock 不改变形状。每层先做多头自注意力，让每个源 token 看到其它源 token；再做逐位置前馈网络。两段外面都包 Add & Norm。</p>
 <canvas id="encoder" width="1400" height="660"></canvas>
 <div class="controls">
 <label>源序列长度 S <input id="srcLen" type="range" min="3" max="10" value="6"></label>
@@ -101,40 +206,78 @@ th{color:var(--ink);background:rgba(255,255,255,.58)}td{color:var(--muted)}
 <div class="readout">并行头数 <b id="headOut">4</b></div>
 </div>
 </div>
+<div class="panel">
+<h3>代码对应关系</h3>
+<pre class="code"><span class="kw">def</span> forward(self, X, valid_lens):
+    Y = self.addnorm1(
+        X, self.attention(X, X, X, valid_lens))
+    <span class="kw">return</span> self.addnorm2(Y, self.ffn(Y))</pre>
+<p>这一块只做 self-attention，所以 Q、K、V 都是 X。输出形状仍是 <code>B × S × H</code>，但每个位置已经混入了整句上下文。堆叠多层以后，encoder 返回的就是 decoder 要反复读取的 <code>enc_outputs</code>。</p>
+</div>
+</div>
 </section>
 
 <section class="section">
-<h2><span class="num">3</span>拖动看 DecoderBlock</h2>
+<h2><span class="num">7</span>DecoderBlock：一边生成，一边回看源句</h2>
 <div class="split">
-<div class="demo">
-<div class="demo-title">causal self-attention</div>
-<p>训练时 decoder 一次拿到整条目标序列，但第 t 行只能看 0..t。预测时缓存已经生成的 key/value，逐步追加。</p>
-<canvas id="mask" width="1100" height="700"></canvas>
-<div class="controls">
-<label>目标长度 T <input id="tgtLen" type="range" min="3" max="10" value="7"></label>
-<label>当前 query 行 <input id="row" type="range" min="0" max="6" value="3"></label>
+<div class="panel">
+<h3>三个子层</h3>
+<div class="steps">
+<div class="step"><div class="badge">1</div><div><strong>masked self-attention</strong><p>目标端内部交流，但只能看当前位置及以前的目标 token，不能偷看未来答案。</p></div></div>
+<div class="step"><div class="badge">2</div><div><strong>encoder-decoder attention</strong><p>decoder 当前表示作为 query，encoder outputs 作为 key/value，决定当前要翻译时应该看源句哪里。</p></div></div>
+<div class="step"><div class="badge">3</div><div><strong>FFN + AddNorm</strong><p>每个位置独立处理，再保持形状不变地交给下一层或输出层。</p></div></div>
 </div>
 </div>
 <div class="demo">
 <div class="demo-title">decoder data flow</div>
 <canvas id="decoder" width="900" height="700"></canvas>
 <div class="readouts">
-<div class="readout">self-attn 可看 <b id="seen">0..3</b></div>
 <div class="readout">cross-attn 读取 <b>encoder memory</b></div>
 <div class="readout">缓存层数 <b id="cacheLayers">2</b></div>
 </div>
 </div>
 </div>
+<pre class="code"><span class="kw">def</span> forward(self, X, state):
+    enc_outputs, enc_valid_lens, cache = state
+    key_values = X <span class="kw">if</span> cache[self.i] <span class="kw">is</span> None <span class="kw">else</span> torch.cat((cache[self.i], X), dim=1)
+    cache[self.i] = key_values
+    X2 = self.attention1(X, key_values, key_values, dec_valid_lens)
+    Y = self.addnorm1(X, X2)
+    Y2 = self.attention2(Y, enc_outputs, enc_outputs, enc_valid_lens)
+    Z = self.addnorm2(Y, Y2)
+    <span class="kw">return</span> self.addnorm3(Z, self.ffn(Z)), state</pre>
 </section>
 
 <section class="section">
-<h2><span class="num">4</span>和内置版的差别</h2>
+<h2><span class="num">8</span>训练和预测：同一个 decoder，两种用法</h2>
+<div class="grid">
+<div class="panel">
+<h3>训练：teacher forcing</h3>
+<p>训练时目标句已知，所以 decoder 输入是 <code>&lt;bos&gt; + Y[:-1]</code>，标签是完整的 <code>Y</code>。模型一次性预测每个位置，下三角 mask 保证第 t 位不能看到答案的未来部分。</p>
+<pre class="code">bos = torch.full((Y.shape[0], 1), tgt_vocab["&lt;bos&gt;"])
+dec_X = torch.cat([bos, Y[:, :-1]], 1)
+Y_hat, _ = net(X, dec_X, Xvl)
+l = loss(Y_hat, Y, Yvl)</pre>
+</div>
+<div class="panel">
+<h3>预测：自回归生成</h3>
+<p>预测时没有真实目标句。decoder 从 <code>&lt;bos&gt;</code> 开始，每次拿最后一个位置的 logits 选出下一个 token，再把它接回 decoder 输入，直到生成 <code>&lt;eos&gt;</code>。</p>
+<pre class="code">dec_X = torch.tensor([[tgt_vocab["&lt;bos&gt;"]]])
+Y, state = net.decoder(dec_X, state)
+dec_X = Y[:, -1:].argmax(dim=2)</pre>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">9</span>和另外两个文件怎么区分</h2>
 <div class="tablebox">
 <table>
-<tr><th>文件</th><th>定位</th><th>特点</th></tr>
-<tr><td>29_transformer.py</td><td>课程原版结构复刻</td><td>手写多头注意力、EncoderBlock、DecoderBlock，方便逐行理解教材</td></tr>
-<tr><td>29_transformer_seq2seq.py</td><td>工程版极简 seq2seq</td><td>直接用 PyTorch 内置 <code>nn.Transformer</code>，代码更短但内部细节被封装</td></tr>
-<tr><td>27_attention_seq2seq.py</td><td>Bahdanau 注意力版 RNN</td><td>仍然是 GRU 时间循环，只是 decoder 每步会看 encoder outputs</td></tr>
+<tr><th>文件</th><th>定位</th><th>适合看什么</th></tr>
+<tr><td>29_transformer.py</td><td>课程原版结构复刻</td><td>理解 Transformer 内部组件如何拼起来</td></tr>
+<tr><td>29_transformer_seq2seq.py</td><td>工程版极简 seq2seq</td><td>看 PyTorch 内置 <code>nn.Transformer</code> 怎么快速完成翻译模型</td></tr>
+<tr><td>29_transformer_seq2seq_v2.py</td><td>数据清洗优化版</td><td>看同源多译文、低频 token 对小样本翻译结果的影响</td></tr>
+<tr><td>27_attention_seq2seq.py</td><td>Bahdanau 注意力版 RNN</td><td>对比 RNN decoder 和 Transformer decoder 的根本差别</td></tr>
 </table>
 </div>
 </section>

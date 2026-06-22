@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer Seq2Seq 翻译</title>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.82);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7}
+.container{width:min(1500px,calc(100% - 36px));margin:0 auto;padding:58px 0 90px}
+.header{padding:54px 0 48px}
+.tag,.demo-title{display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.55);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+.tag:before,.demo-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:1120px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 16px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+p,li{color:var(--muted);font-size:18px}
+.section{margin-bottom:74px}
+.num{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card,.demo,.code,.flow,.readout,.matrix,.pill{background:var(--card);border:1px solid rgba(222,219,210,.9);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo{padding:clamp(20px,2.5vw,34px)}
+.flow{padding:22px;display:grid;grid-template-columns:repeat(7,auto);gap:14px;align-items:center;justify-content:center;overflow:auto}
+.box{min-width:130px;padding:14px 18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.75);text-align:center;font-weight:850}
+.arr{color:var(--orange);font-size:30px;font-weight:900}
+.code{padding:22px 24px;overflow:auto;font:15px/1.65 "JetBrains Mono","Fira Code",monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink)}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}
+.grid{display:grid;grid-template-columns:1fr;gap:18px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:18px;margin:18px 0}
+label{display:grid;gap:8px;color:var(--muted);font-weight:750}
+input[type=range]{width:100%;accent-color:var(--blue)}
+canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:14px}
+.readout{padding:16px}.readout b{display:block;font-size:24px;color:var(--ink)}
+.matrix{padding:18px;overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 14px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--ink);background:rgba(255,255,255,.55)}td{color:var(--muted)}
+.pill{display:inline-flex;align-items:center;padding:8px 13px;margin:4px;color:var(--ink);font-weight:850}
+@media(max-width:850px){.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg)}}
+</style>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>.grid{grid-template-columns:1fr!important}.code{white-space:pre-wrap!important;overflow-wrap:anywhere!important}</style>
+</head>
+<body>
+<div class="container lab-page">
+<header class="header">
+<div class="tag">29_transformer_seq2seq · translation</div>
+<h1>从注意力 GRU 到 Transformer Seq2Seq</h1>
+<p>保留 27_attention_seq2seq 的数据、teacher forcing、masked loss、BLEU 和贪心预测；把 GRU encoder/decoder 换成 PyTorch 内置 nn.Transformer。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>改造主线</h2>
+<div class="flow">
+<div class="box">源序列<br>English</div><div class="arr">→</div>
+<div class="box">src embedding<br>+ positional encoding</div><div class="arr">→</div>
+<div class="box">Transformer encoder<br>self-attention</div><div class="arr">→</div>
+<div class="box">Transformer decoder<br>causal + cross attention</div><div class="arr">→</div>
+<div class="box">中文 token<br>logits</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">1</span>代码变化集中在模型主体</h2>
+<div class="grid">
+<div class="code"><span class="kw">class</span> <span class="fn">TransformerSeq2Seq</span>(nn.Module):
+    self.src_embedding = nn.Embedding(src_vocab, d_model)
+    self.tgt_embedding = nn.Embedding(tgt_vocab, d_model)
+    self.pos_encoding = PositionalEncoding(d_model, dropout)
+    self.transformer = nn.Transformer(d_model, heads, layers, layers, ffn, dropout, batch_first=<span class="kw">True</span>)
+    self.dense = nn.Linear(d_model, tgt_vocab)</div>
+<div class="code">src_pad = arange(src_len) >= enc_valid_len
+tgt_pad = dec_X == pad
+tgt_mask = upper_triangle_bool_mask
+Y = transformer(src, tgt,
+                tgt_mask=tgt_mask,
+                src_key_padding_mask=src_pad,
+                tgt_key_padding_mask=tgt_pad,
+                memory_key_padding_mask=src_pad)</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>训练流程基本沿用 27</h2>
+<div class="matrix">
+<table>
+<tr><th>环节</th><th>27_attention_seq2seq</th><th>29_transformer_seq2seq</th></tr>
+<tr><td>数据</td><td>load_data_nmt</td><td>完全复用</td></tr>
+<tr><td>训练输入</td><td>[bos] + Y[:-1]</td><td>完全复用</td></tr>
+<tr><td>损失</td><td>MaskedSoftmaxCELoss</td><td>完全复用</td></tr>
+<tr><td>模型</td><td>GRU + additive attention</td><td>nn.Transformer + causal mask</td></tr>
+<tr><td>预测</td><td>逐 token 贪心生成</td><td>完全复用思路</td></tr>
+</table>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">3</span>拖动看翻译时的数据流</h2>
+<div class="demo">
+<div class="demo-title">interactive translation flow</div>
+<p>Transformer 训练时目标序列可以并行输入，但 decoder 的自注意力必须用因果遮罩；推理时仍然一个 token 一个 token 生成。</p>
+<canvas id="flowCanvas" width="1200" height="760"></canvas>
+<div class="controls">
+<label>decoder step <input id="step" type="range" min="0" max="5" value="3"></label>
+<label>target length <input id="len" type="range" min="3" max="8" value="6"></label>
+<label>heads <input id="heads" type="range" min="1" max="8" value="4"></label>
+</div>
+<div class="readouts">
+<div class="readout">当前可看目标 token <b id="seen">4</b></div>
+<div class="readout">目标长度 <b id="lenOut">6</b></div>
+<div class="readout">注意力头 <b id="headOut">4</b></div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>为什么这里更像真正 Transformer</h2>
+<div class="card">
+<p><span class="pill">不手写多头注意力</span><span class="pill">不手写 encoder/decoder block</span><span class="pill">只保留位置编码与训练胶水</span></p>
+<p>这份代码的重点是把 27 的翻译任务迁移到 Transformer 架构。通用能力交给 PyTorch：多头注意力、Add & Norm、位置前馈网络、encoder/decoder 堆叠都由 <code>nn.Transformer</code> 负责。</p>
+</div>
+</section>
+</div>
+
+<script>
+const src=["i","won","!","<eos>"], tgt=["<bos>","我","赢","了","。","<eos>","<pad>","<pad>"];
+const canvas=document.getElementById("flowCanvas"),ctx=canvas.getContext("2d");
+const step=document.getElementById("step"),len=document.getElementById("len"),heads=document.getElementById("heads");
+const seen=document.getElementById("seen"),lenOut=document.getElementById("lenOut"),headOut=document.getElementById("headOut");
+function fit(){const r=canvas.getBoundingClientRect(),w=Math.max(620,Math.round(r.width||canvas.width)),h=w<820?900:760;if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}return[w,h]}
+function round(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function box(x,y,w,h,text,color){ctx.fillStyle=color;round(x,y,w,h,18);ctx.fill();ctx.strokeStyle="#dedbd2";ctx.stroke();ctx.fillStyle="#172033";ctx.font="800 18px Inter";ctx.textAlign="center";ctx.fillText(text,x+w/2,y+h/2+6)}
+function draw(){
+  const [W,H]=fit(),t=Number(step.value),n=Number(len.value),h=Number(heads.value),compact=W<820;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.76)";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#172033";ctx.font="850 28px Inter";ctx.textAlign="left";ctx.fillText("Transformer seq2seq translation",34,50);
+  const tokW=Math.min(92,(W-90)/Math.max(src.length,n)),gap=10,x0=42,srcY=110,tgtY=compact?520:350;
+  src.forEach((s,i)=>box(x0+i*(tokW+gap),srcY,tokW,58,s,"rgba(49,87,213,.14)"));
+  ctx.fillStyle="#687083";ctx.font="800 16px Inter";ctx.fillText("source tokens → encoder memory",x0,srcY-20);
+  const midY=compact?230:210, encW=compact?W-84:360, decW=compact?W-84:420;
+  box(x0,midY,encW,88,"encoder: self-attention + FFN","rgba(28,154,168,.14)");
+  const decX=compact?x0:x0+encW+80;
+  box(decX,midY,decW,88,"decoder: causal self-attn + cross-attn","rgba(230,106,60,.14)");
+  ctx.fillStyle="#e66a3c";ctx.font="900 36px Inter";ctx.textAlign="center";if(!compact)ctx.fillText("→",x0+encW+42,midY+54);
+  for(let i=0;i<n;i++){const visible=i<=t, future=i>t;box(x0+i*(tokW+gap),tgtY,tokW,58,tgt[i],future?"rgba(104,112,131,.10)":visible?"rgba(49,87,213,.20)":"rgba(255,255,255,.7)");if(i===t){ctx.strokeStyle="#e66a3c";ctx.lineWidth=4;ctx.strokeRect(x0+i*(tokW+gap)+2,tgtY+2,tokW-4,54)}}
+  ctx.fillStyle="#687083";ctx.font="800 16px Inter";ctx.textAlign="left";ctx.fillText(`decoder step ${t}: can attend target positions 0..${t}`,x0,tgtY-20);
+  const headY=tgtY+120,headW=Math.min(76,(W-84)/h-8);
+  for(let i=0;i<h;i++)box(x0+i*(headW+8),headY,headW,48,"h"+(i+1),"rgba(49,87,213,.12)");
+  seen.textContent=Math.min(t+1,n);lenOut.textContent=n;headOut.textContent=h;
+}
+[step,len,heads].forEach(e=>e.addEventListener("input",draw));
+addEventListener("resize",draw);draw();
+</script>
+</body>
+</html>

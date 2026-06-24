@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transformer 处理流程可视化 · 来自真实运行日志</title>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.84);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--purple:#6851c9;--green:#2f9e6b;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1720px,calc(100% - 36px));margin:0 auto;padding:56px 0 92px}
+.hero{padding:48px 0 42px}
+.tag{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.tag:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:1220px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(40px,5.6vw,72px);line-height:1.06;letter-spacing:-.05em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(29px,3.5vw,48px);line-height:1.12;letter-spacing:-.03em}
+h3{margin:0 0 12px;color:var(--ink);font-size:21px}
+p,li{color:var(--muted);font-size:17.5px}
+.lead{font-size:19px}
+.section{margin-bottom:78px}
+.num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card,.demo,.code,.chip,.note,.mini,.panel,.step,.kvcard,.stat,.resrow,.heattile,.cache-cell,.leg,.seg,.sbar{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo,.panel{padding:clamp(20px,2.5vw,34px)}
+.code{padding:18px 22px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:14.5px/1.65 "JetBrains Mono","Fira Code",monospace;background:rgba(255,255,255,.78)}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083}
+.note{padding:16px 20px;border-left:5px solid var(--blue)}
+.note.warn{border-left-color:var(--orange)}
+.note.tip{border-left-color:var(--cyan)}
+.mini{padding:16px 18px}
+.mini b{display:block;color:var(--ink);font-size:19px;margin-bottom:5px}
+.mini p{margin:0;font-size:15.5px}
+.split{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);gap:22px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.auto3{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.auto6{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px}
+
+/* 主线流程 */
+.flow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;padding:6px 0}
+.fchip{padding:13px 16px;border-radius:16px;background:rgba(255,255,255,.78);border:1px solid var(--line);text-align:center;font-weight:800;min-width:118px}
+.fchip .s{display:block;font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--blue);font-weight:700;margin-top:3px}
+.fchip.enc{box-shadow:inset 3px 0 0 var(--blue)}
+.fchip.dec{box-shadow:inset 3px 0 0 var(--cyan)}
+.fchip.mem{box-shadow:inset 3px 0 0 var(--ink)}
+.fchip.out{box-shadow:inset 3px 0 0 var(--orange)}
+.farr{color:var(--orange);font-size:24px;font-weight:900}
+
+/* 步进器 */
+.stepper{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(330px,.95fr);gap:22px;align-items:start}
+.schematic{max-height:600px;overflow:auto;padding:18px 16px 22px;scroll-behavior:smooth}
+.schematic::-webkit-scrollbar{width:8px}.schematic::-webkit-scrollbar-thumb{background:#d8d4c8;border-radius:8px}
+.lanes{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.lane-head{font-weight:900;font-size:15px;letter-spacing:.04em;color:var(--ink);margin:2px 4px 10px;padding-bottom:8px;border-bottom:2px solid var(--blue)}
+.lane.dec .lane-head{border-bottom-color:var(--cyan)}
+.lnode{position:relative;padding:10px 13px 10px 15px;margin:0 4px 9px;border-radius:14px;background:rgba(255,255,255,.62);border:1px solid var(--line);border-left:4px solid #c9c5b8;transition:.22s;font-size:14.5px;line-height:1.35;cursor:default}
+.lnode .nm{font-weight:850;color:var(--ink);display:block}
+.lnode .sh{display:block;font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--muted);margin-top:2px}
+.lnode .mtag{display:inline-block;margin-top:5px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(104,81,201,.13);color:var(--purple)}
+.lnode.t-attn{border-left-color:var(--blue)}
+.lnode.t-cross{border-left-color:var(--cyan)}
+.lnode.t-ffn{border-left-color:var(--orange)}
+.lnode.t-io{border-left-color:var(--purple)}
+.lnode.t-mem{border-left-color:var(--ink);background:rgba(23,32,51,.05)}
+.lnode.t-out{border-left-color:var(--orange)}
+.lnode.active{background:#fff;border-left-width:6px;box-shadow:0 14px 32px rgba(31,41,72,.18);transform:translateX(3px) scale(1.015);z-index:2}
+.lnode.active .nm{color:var(--ink)}
+.lgrp{font-size:11.5px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 4px 7px;padding-left:2px}
+.bridge{grid-column:1/-1;margin:4px 8px 2px;padding:8px 14px;border-radius:12px;background:rgba(28,154,168,.1);border:1px dashed var(--cyan);color:var(--cyan);font-weight:800;font-size:13px;text-align:center}
+.bridge b{color:var(--ink)}
+
+.detail{padding:24px;position:sticky;top:84px}
+.dstage{font-size:13px;font-weight:900;letter-spacing:.06em;text-transform:uppercase}
+.dtitle{font-family:Georgia,"Songti SC",serif;font-size:25px;line-height:1.2;color:var(--ink);margin:8px 0 14px;letter-spacing:-.01em}
+.shape-chip{display:inline-block;font-family:"JetBrains Mono",monospace;font-weight:800;font-size:14px;color:#fff;background:var(--ink);padding:7px 13px;border-radius:11px;margin-bottom:14px}
+.dwhat{color:var(--ink);font-size:16px;margin:0 0 12px}
+.dins{color:var(--muted);font-size:15px;margin:0;padding-top:12px;border-top:1px solid var(--line)}
+.dins b{color:var(--ink)}
+
+.controls{display:flex;align-items:center;gap:10px;margin:18px 0 4px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--ink);font-weight:800;font-size:15px;padding:10px 16px;cursor:pointer;box-shadow:0 6px 16px rgba(31,41,72,.06);transition:.15s}
+.btn:hover{transform:translateY(-1px);border-color:rgba(49,87,213,.4)}
+.btn.primary{background:var(--ink);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.progwrap{flex:1;min-width:120px;height:9px;border-radius:999px;background:#e6e2d6;overflow:hidden}
+.progbar{height:100%;width:0;background:linear-gradient(90deg,var(--blue),var(--cyan));transition:width .25s}
+.counter{font-family:"JetBrains Mono",monospace;font-weight:800;color:var(--muted);font-size:14px;min-width:54px;text-align:right}
+
+/* 三种注意力卡片 */
+.kvcard{padding:22px}
+.kvcard h3{display:flex;align-items:center;gap:9px}
+.dot{width:11px;height:11px;border-radius:50%}
+.kvrow{display:flex;align-items:center;gap:8px;margin:14px 0 8px;flex-wrap:wrap}
+.kvbox{padding:9px 12px;border-radius:12px;font-weight:850;font-size:14px;text-align:center;min-width:78px}
+.kvbox.q{background:rgba(49,87,213,.14);color:var(--blue)}
+.kvbox.k{background:rgba(104,81,201,.14);color:var(--purple)}
+.kvbox.v{background:rgba(230,106,60,.14);color:var(--orange)}
+.kvop{color:var(--muted);font-weight:900}
+.mchip{display:inline-block;font-size:12.5px;font-weight:800;padding:3px 11px;border-radius:999px;margin-top:4px}
+.mchip.pad{background:rgba(104,81,201,.15);color:var(--purple)}
+.mchip.cau{background:rgba(230,106,60,.15);color:var(--orange)}
+.mchip.none{background:rgba(47,158,107,.15);color:var(--green)}
+.kvcard p{font-size:15px;margin:8px 0 0}
+
+/* 多头 / heatmap */
+.headsplit{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0}
+.headbox{padding:14px 8px;border-radius:14px;background:rgba(49,87,213,.1);border:1px solid rgba(49,87,213,.25);text-align:center;font-weight:850;font-size:13.5px}
+.headbox .h{display:block;font-family:"JetBrains Mono",monospace;color:var(--blue);font-size:11.5px;margin-top:3px}
+.heatwrap{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start}
+.heatgrid{display:grid;gap:3px;padding:14px}
+.heatcell{width:34px;height:30px;border-radius:6px;display:grid;place-items:center;font-size:11px;font-weight:800}
+.heatcell.mask{background:repeating-linear-gradient(45deg,#efece3,#efece3 5px,#e6e2d6 5px,#e6e2d6 10px);color:var(--muted)}
+.axlab{font-size:12px;color:var(--muted);font-weight:700}
+.seg{display:inline-flex;gap:6px;padding:6px;margin-bottom:14px}
+.seg button{border:1px solid var(--line);background:#fff;border-radius:11px;padding:8px 14px;font-weight:800;font-size:14px;cursor:pointer;color:var(--ink)}
+.seg button.active{background:#eef1fb;color:var(--blue);border-color:rgba(49,87,213,.4)}
+
+/* 训练 vs 预测 */
+.tvp{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.tvcard{padding:22px;border-radius:var(--radius);background:var(--card);border:1px solid rgba(222,219,210,.9);box-shadow:0 18px 50px rgba(31,41,72,.09)}
+.tvcard.train{box-shadow:inset 4px 0 0 var(--blue),0 18px 50px rgba(31,41,72,.09)}
+.tvcard.pred{box-shadow:inset 4px 0 0 var(--cyan),0 18px 50px rgba(31,41,72,.09)}
+.tvcard h3{margin-top:0}
+.seqline{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.tok{padding:6px 9px;border-radius:9px;background:rgba(255,255,255,.8);border:1px solid var(--line);font-size:13px;font-weight:700}
+.tok.bos{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tok.eos{background:var(--cyan);color:#fff;border-color:var(--cyan)}
+.tok.pad{opacity:.45}
+.tok.new{background:var(--orange);color:#fff;border-color:var(--orange)}
+
+/* 预测步进 */
+.predstage{padding:26px}
+.membar{padding:14px 18px;border-radius:16px;background:rgba(23,32,51,.06);border:1px dashed var(--ink);margin-bottom:18px;font-weight:800}
+.membar .s{font-family:"JetBrains Mono",monospace;color:var(--ink);font-size:13px}
+.cache-area{min-height:96px;padding:16px;border-radius:16px;background:rgba(28,154,168,.07);border:1px solid rgba(28,154,168,.22);margin-bottom:16px}
+.cache-area .clab{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--cyan);margin-bottom:10px;display:block}
+.cache-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.cache-cell{padding:9px 12px;border-radius:11px;background:#fff;border:1.5px solid var(--cyan);font-weight:800;font-size:14px}
+.cache-cell.fresh{background:var(--cyan);color:#fff}
+.flowline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 4px}
+.pill{padding:8px 14px;border-radius:12px;font-weight:800;font-size:14px}
+.pill.in{background:rgba(49,87,213,.13);color:var(--blue)}
+.pill.out{background:rgba(47,158,107,.15);color:var(--green)}
+.parr{color:var(--orange);font-weight:900;font-size:22px}
+
+/* 统计 */
+.stat{padding:18px 20px}
+.stat b{display:block;font-family:Georgia,serif;font-size:30px;color:var(--ink);line-height:1}
+.stat span{font-size:13px;color:var(--muted);font-weight:700}
+.lossbars{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;align-items:end;height:200px;padding:18px 8px 4px}
+.lbar{position:relative;border-radius:10px 10px 0 0;background:linear-gradient(180deg,var(--blue),var(--cyan));transition:.4s;display:grid;place-items:end center;padding-bottom:5px}
+.lbar .v{position:absolute;top:-22px;font-family:"JetBrains Mono",monospace;font-weight:800;font-size:12.5px;color:var(--ink)}
+.lbar .ep{position:absolute;bottom:-24px;font-size:12px;color:var(--muted);font-weight:700;white-space:nowrap}
+.restbl{width:100%;border-collapse:collapse}
+.restbl th,.restbl td{padding:11px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:15px}
+.restbl th{color:var(--ink);background:rgba(255,255,255,.5)}
+.restbl td{color:var(--muted)}
+.restbl .ok{color:var(--green);font-weight:850}
+.restbl .bad{color:var(--orange);font-weight:800}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:8px}
+.leg{padding:7px 13px;border-radius:999px;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.7);border:1px solid var(--line)}
+.leg .sw{width:12px;height:12px;border-radius:4px}
+@media(max-width:980px){.split,.stepper,.grid2,.grid3,.tvp,.lanes,.heatwrap{grid-template-columns:1fr}.detail{position:static}.headsplit{grid-template-columns:repeat(2,1fr)}.lossbars{height:160px}}
+</style>
+</head>
+<body>
+<main class="wrap lab-page">
+<header class="hero">
+<div class="tag">Transformer · 处理流程可视化</div>
+<h1>跑起来的 Transformer 长什么样：照着真实日志看一遍</h1>
+<p class="lead">这页把 <code>29_transformer_log.py</code> 一次真实运行的日志拆成可以「点」的流程。页面上每一个形状、每一个数字——<code>(64,10,32)</code>、拆头后的 <code>(256,10,8)</code>、第 1 批 loss <code>221.764</code>、训练 200 轮后 loss <code>0.039</code>、<code>"hi ."</code> 的自回归解码——都来自你刚跑出来的那份输出。</p>
+<p>先用下面这条主线抓住整体，再用两个可交互的「逐步器」分别走一遍<b>训练的前向传播</b>和<b>预测的自回归解码</b>。</p>
+</header>
+
+<!-- 0 主线 -->
+<section class="section">
+<h2><span class="num">0</span>一次前向传播的全景</h2>
+<div class="card">
+<div class="flow">
+<div class="fchip enc">源句 X<span class="s">B × 10</span></div><span class="farr">→</span>
+<div class="fchip enc">Embed + PE<span class="s">B×10×32</span></div><span class="farr">→</span>
+<div class="fchip enc">Encoder ×2<span class="s">B×10×32</span></div><span class="farr">→</span>
+<div class="fchip mem">memory<span class="s">B×10×32</span></div><span class="farr">→</span>
+<div class="fchip dec">Decoder ×2<span class="s">B×10×32</span></div><span class="farr">→</span>
+<div class="fchip out">Linear<span class="s">B×10×286</span></div><span class="farr">→</span>
+<div class="fchip out">loss<span class="s">标量</span></div>
+</div>
+<div class="auto6">
+<div class="mini"><b>B = 64</b><p>batch size，一批 64 个句子。</p></div>
+<div class="mini"><b>10</b><p>num_steps，每句截断/填充到 10 个 token。</p></div>
+<div class="mini"><b>32</b><p>num_hiddens，每个 token 的向量维度 H。</p></div>
+<div class="mini"><b>4 头</b><p>num_heads，H 切成 4 份，每头 8 维。</p></div>
+<div class="mini"><b>2 层</b><p>num_layers，编码器和解码器各堆 2 层。</p></div>
+<div class="mini"><b>286</b><p>目标词表大小 V，线性投影输出维度。</p></div>
+</div>
+<div class="note">离散 token id <code>B × 10</code> 经 <code>nn.Embedding</code> 变成 <code>B × 10 × 32</code>。Encoder 只接收<b>已经是向量</b>的序列；它不查词向量。decoder 读的 <code>memory</code> 就是编码器最后一层的输出。</div>
+</div>
+</section>
+
+<!-- 1 训练逐步器 -->
+<section class="section">
+<h2><span class="num">1</span>训练第 1 批：前向传播逐步展开</h2>
+<p>下面把日志里「第 1 个 epoch 的第 1 个训练批次」的 18 个步骤排成一条线。点 <b>下一步</b> 或 <b>自动播放</b>，右边的图会高亮当前正在算的部件，右侧面板给出它的形状、做了什么、为什么这么做。</p>
+<div class="legend" style="margin-bottom:18px">
+<span class="leg"><span class="sw" style="background:var(--blue)"></span>自注意力</span>
+<span class="leg"><span class="sw" style="background:var(--cyan)"></span>交叉注意力</span>
+<span class="leg"><span class="sw" style="background:var(--orange)"></span>FFN</span>
+<span class="leg"><span class="sw" style="background:var(--purple)"></span>嵌入 / IO</span>
+<span class="leg"><span class="sw" style="background:var(--ink)"></span>memory</span>
+</div>
+<div class="stepper">
+<div class="schematic card" tabindex="0" id="schematic">
+<div class="lanes">
+<div class="lane enc">
+<div class="lane-head">编码器 ENCODER</div>
+<div class="lnode t-io" data-node="enc-emb"><span class="nm">词嵌入 × √32</span><span class="sh">(64,10) → (64,10,32)</span></div>
+<div class="lnode t-io" data-node="enc-pe"><span class="nm">+ 位置编码</span><span class="sh">(64,10,32)</span></div>
+<div class="lgrp">编码器层 1/2</div>
+<div class="lnode t-attn" data-node="enc1-sa"><span class="nm">多头自注意力</span><span class="sh">Q=K=V=X · scores (256,10,10)</span><span class="mtag">padding mask</span></div>
+<div class="lnode t-ffn" data-node="enc1-ffn"><span class="nm">残差+LN → FFN → 残差+LN</span><span class="sh">(64,10,32)</span></div>
+<div class="lgrp">编码器层 2/2</div>
+<div class="lnode t-attn" data-node="enc2-sa"><span class="nm">多头自注意力</span><span class="sh">scores (256,10,10)</span><span class="mtag">padding mask</span></div>
+<div class="lnode t-ffn" data-node="enc2-ffn"><span class="nm">残差+LN → FFN → 残差+LN</span><span class="sh">(64,10,32)</span></div>
+<div class="lnode t-mem" data-node="memory"><span class="nm">memory</span><span class="sh">(64,10,32)</span></div>
+</div>
+<div class="lane dec">
+<div class="lane-head">解码器 DECODER</div>
+<div class="lnode t-io" data-node="dec-shift"><span class="nm">dec_X = [bos]+Y[:-1]</span><span class="sh">(64,10)</span></div>
+<div class="lnode t-io" data-node="dec-emb"><span class="nm">词嵌入 × √32</span><span class="sh">(64,10,32)</span></div>
+<div class="lnode t-io" data-node="dec-pe"><span class="nm">+ 位置编码</span><span class="sh">(64,10,32)</span></div>
+<div class="lgrp">解码器层 1/2</div>
+<div class="lnode t-attn" data-node="dec1-sa"><span class="nm">带掩码自注意力</span><span class="sh">Q=X,K=V=累积上下文</span><span class="mtag">因果 mask 1..t</span></div>
+<div class="lnode t-cross" data-node="dec1-ca"><span class="nm">交叉注意力</span><span class="sh">Q=dec, K=V=memory</span></div>
+<div class="lnode t-ffn" data-node="dec1-ffn"><span class="nm">FFN + 残差+LN</span><span class="sh">(64,10,32)</span></div>
+<div class="lgrp">解码器层 2/2</div>
+<div class="lnode t-attn" data-node="dec2-sa"><span class="nm">带掩码自注意力</span><span class="mtag">因果 mask 1..t</span></div>
+<div class="lnode t-cross" data-node="dec2-ca"><span class="nm">交叉注意力</span><span class="sh">Q=dec, K=V=memory</span></div>
+<div class="lnode t-ffn" data-node="dec2-ffn"><span class="nm">FFN + 残差+LN</span><span class="sh">(64,10,32)</span></div>
+<div class="lnode t-out" data-node="linear"><span class="nm">线性投影 → logits</span><span class="sh">(64,10,286)</span></div>
+<div class="lnode t-out" data-node="loss"><span class="nm">掩码交叉熵 + 反向传播</span></div>
+</div>
+<div class="bridge">↑ <b>memory</b>（编码器输出）被每一层的<b>交叉注意力</b>反复读取——这是 decoder→encoder 的唯一信息通道 ↑</div>
+</div>
+</div>
+
+<div class="detail card" id="detail">
+<div class="dstage" id="tStage">编码器 · 输入</div>
+<div class="dtitle" id="tTitle">词嵌入 × √32</div>
+<div class="shape-chip" id="tShape">(64,10) → (64,10,32)</div>
+<p class="dwhat" id="tWhat">每个 token id 经 nn.Embedding 查成 32 维向量，再整体乘 √32。</p>
+<p class="dins" id="tInsWrap" style="display:none"><b>为什么：</b><span id="tIns"></span></p>
+<div class="controls">
+<button class="btn" id="tPrev">‹ 上一步</button>
+<button class="btn primary" id="tPlay">▶ 自动播放</button>
+<button class="btn" id="tNext">下一步 ›</button>
+<div class="progwrap"><div class="progbar" id="tBar"></div></div>
+<div class="counter" id="tCounter">1 / 18</div>
+</div>
+</div>
+</div>
+<div class="note warn" style="margin-top:18px">注意第 1 批的 loss 是 <code>221.764</code>（有效 token 378 个，≈ <code>0.587/token</code>）——这是模型<b>还没怎么学</b>时的起点。训练 200 轮后它会降到 <code>0.039</code>，见最后一节。</div>
+</section>
+
+<!-- 2 三种注意力 -->
+<section class="section">
+<h2><span class="num">2</span>三种注意力：Q / K / V 分别从哪来</h2>
+<p>Transformer 里只有一种算子（缩放点积注意力），但它用三种不同的方式「接线」。看懂 Q/K/V 的来源，就看懂了三种子层的本质区别。</p>
+<div class="grid3">
+<div class="kvcard">
+<h3><span class="dot" style="background:var(--blue)"></span>编码器自注意力</h3>
+<div class="kvrow"><span class="kvbox q">Q = X</span><span class="kvop">·</span><span class="kvbox k">K = X</span><span class="kvop">·</span><span class="kvbox v">V = X</span></div>
+<span class="mchip pad">padding mask</span>
+<p>源句内部词与词互相看。<code>Q=K=V=X</code>，所以每个源词都能注意到整句。把 <code>&lt;pad&gt;</code> 位置 mask 掉。</p>
+</div>
+<div class="kvcard">
+<h3><span class="dot" style="background:var(--blue)"></span>解码器自注意力</h3>
+<div class="kvrow"><span class="kvbox q">Q = X</span><span class="kvop">·</span><span class="kvbox k">K = KV缓存</span><span class="kvop">·</span><span class="kvbox v">KV缓存</span></div>
+<span class="mchip cau">因果 mask 1..t</span>
+<p>目标端内部交互。训练时用<b>因果掩码</b>：第 t 个位置只看 1..t，<b>不能偷看未来的答案</b>。预测时每步只喂 1 个新 token，K/V 来自不断增长的缓存。</p>
+</div>
+<div class="kvcard">
+<h3><span class="dot" style="background:var(--cyan)"></span>编码器-解码器交叉注意力</h3>
+<div class="kvrow"><span class="kvbox q">Q = 解码端</span><span class="kvop">·</span><span class="kvbox k">K = memory</span><span class="kvop">·</span><span class="kvbox v">V = memory</span></div>
+<span class="mchip pad">padding mask</span>
+<p>Q 来自解码器，K/V 来自编码器输出。这是「翻译时该看源句哪里」的地方——decoder 拿着自己的问题，去 memory 里挑相关的源信息。</p>
+</div>
+</div>
+<div class="note tip">只有交叉注意力的 K/V 来自<b>另一侧</b>。这是编码器信息流入解码器的<b>唯一通道</b>。其余两种注意力的 Q/K/V 都来自本侧序列。</div>
+</section>
+
+<!-- 3 多头 + heatmap -->
+<section class="section">
+<h2><span class="num">3</span>多头拆分 & 注意力掩码</h2>
+<div class="grid2">
+<div class="panel">
+<h3>一次注意力被拆成 4 个视角</h3>
+<p>日志里 <code>Q/K/V 形状 (256,10,8)</code> 是这样来的：把 <code>(64,10,32)</code> 的隐藏维切成 4 头，每头 8 维；再把「batch × 头」合并成一个更大的 batch <code>256 = 64×4</code> 并行算。</p>
+<pre class="code"><span class="cm"># transpose_qkv: (B, L, H) → (B×头, L, H/头)</span>
+<span class="n">64, 10, 32</span>  ──拆4头──▶  <span class="n">(256, 10, 8)</span>
+                       scores = Q·Kᵀ/√<span class="n">8</span>  →  <span class="n">(256, 10, 10)</span></pre>
+<div class="headsplit">
+<div class="headbox">头 1<span class="h">(…,10,8)</span></div>
+<div class="headbox">头 2<span class="h">(…,10,8)</span></div>
+<div class="headbox">头 3<span class="h">(…,10,8)</span></div>
+<div class="headbox">头 4<span class="h">(…,10,8)</span></div>
+</div>
+<p style="font-size:14.5px;margin-top:10px">不同头可以学到不同关系（有的看主谓、有的看相邻词、有的看标点）。算完再用 <code>transpose_output</code> 把 4 头拼回 32 维，过 <code>W_o</code> 输出投影。</p>
+</div>
+<div class="panel">
+<h3>掩蔽：让 padding 和未来词失声</h3>
+<div class="seg" id="maskSeg">
+<button class="active" data-m="pad">编码器 padding</button>
+<button data-m="cau">解码器因果</button>
+</div>
+<div class="heatwrap">
+<div>
+<div class="axlab" style="margin-bottom:6px">key →</div>
+<div class="heatgrid card" id="heatgrid"></div>
+</div>
+<div>
+<p style="font-size:15px;margin-top:0"><b id="mTitle">源句 "hi ."</b> padding 到 10 位，有效 3 位（hi / . / &lt;eos&gt;）。斜纹格子是被 mask 掉的非法位置（softmax 前置成 <code>-1e6</code>），其余格子是合法的注意力（<span style="color:var(--muted)">示意权重，非真实值</span>）。</p>
+<div class="auto3" style="margin-top:14px">
+<div class="stat"><b>10×10</b><span>scores 形状（单头单句）</span></div>
+<div class="stat"><b>√8</b><span>缩放因子 = √(H/头)</span></div>
+<div class="stat"><b>=1</b><span>每行 softmax 权重和</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 4 训练 vs 预测 -->
+<section class="section">
+<h2><span class="num">4</span>同一个解码器，两种用法</h2>
+<div class="tvp">
+<div class="tvcard train">
+<h3>训练：teacher forcing</h3>
+<p>目标句已知，decoder 输入 = <code>[&lt;bos&gt;] + Y[:-1]</code>（目标右移一位），<b>整句一次性</b>送进去，每个位置同时预测。靠因果掩码保证「第 t 位看不到答案的未来部分」。</p>
+<div class="seqline">
+<span class="tok bos">&lt;bos&gt;</span><span class="tok">了</span><span class="tok">他</span><span class="tok">們</span><span class="tok eos">&lt;eos&gt;</span><span class="tok pad">&lt;pad&gt;</span><span class="tok pad">&lt;pad&gt;</span>
+</div>
+<pre class="code">dec_X = torch.cat([bos, Y[:, :-1]], 1)  <span class="cm"># 整句</span>
+Y_hat, _ = net(X, dec_X, Xvl)            <span class="cm"># 一次前向</span></pre>
+<div class="note" style="margin-top:14px">整句并行 → 训练快；<code>dec_valid_lens = 1..t</code> 构造下三角可见区。</div>
+</div>
+<div class="tvcard pred">
+<h3>预测：自回归生成</h3>
+<p>没有真实目标句。从 <code>&lt;bos&gt;</code> 起，每步<b>只喂 1 个 token</code>，取最后一位 logits 的 <code>argmax</code> 作为下一个 token，再把它回填进输入，循环到 <code>&lt;eos&gt;</code>。</p>
+<div class="seqline">
+<span class="tok bos">&lt;bos&gt;</span><span class="parr" style="font-size:18px">→</span><span class="tok new">下一个词</span><span class="parr" style="font-size:18px">↻</span>
+</div>
+<pre class="code">Y, state = net.decoder(dec_X, state)  <span class="cm"># 每步1个token</span>
+dec_X = Y[:, -1:].argmax(dim=2)       <span class="cm"># 回填</span></pre>
+<div class="note tip" style="margin-top:14px">为避免每步重算历史，每层把已生成 token 的 K/V 存进 <b>KV 缓存</b>，逐步增长——见下一节。</div>
+</div>
+</div>
+</section>
+
+<!-- 5 预测逐步器 -->
+<section class="section">
+<h2><span class="num">5</span>预测 "hi ."：自回归 + KV 缓存</h2>
+<p>这是日志里 <code>"hi ."</code> 的真实解码过程。编码器只跑<b>一次</b>；之后每步 decoder 只处理 1 个新 token，但自注意力能通过缓存看到所有已生成内容。点 <b>下一步</b> 看缓存如何增长。</p>
+<div class="predstage card">
+<div class="membar">阶段 1 · 编码源序列（一次性）：<span class="s">"hi ." → [hi, ., &lt;eos&gt;, &lt;pad&gt;×7] → memory (1,10,32)</span></div>
+<div class="cache-area">
+<span class="clab">阶段 2 · KV 缓存（自注意力能看到的 token）</span>
+<div class="cache-row" id="cacheRow"></div>
+</div>
+<div class="flowline">
+<span class="pill in" id="pIn">输入: &lt;bos&gt;</span>
+<span class="parr">→</span>
+<span style="font-weight:800;color:var(--muted)">decoder ×2</span>
+<span class="parr">→</span>
+<span class="pill out" id="pOut">预测: —</span>
+</div>
+<p style="margin-top:14px;color:var(--muted)" id="pNote">点「下一步」开始第 1 步解码。</p>
+<div class="controls" style="margin-top:16px">
+<button class="btn" id="pPrev">‹ 上一步</button>
+<button class="btn primary" id="pPlay">▶ 自动播放</button>
+<button class="btn" id="pNext">下一步 ›</button>
+<div class="progwrap"><div class="progbar" id="pBar"></div></div>
+<div class="counter" id="pCounter">0 / 3</div>
+</div>
+</div>
+<div class="note warn">这次 <code>"hi ."</code> 第一步预测出了 <code>&lt;unk&gt;</code>（低频/未登录词），最终输出 <code>&lt;unk&gt;。</code>——这是 600 条小样本模型的局限。<b>机制本身</b>（缓存增长、argmax、命中 <code>&lt;eos&gt;</code> 停止）才是要看的。同样这套机制下，<code>"hello !"</code>、<code>"i try ."</code>、<code>"i won !"</code> 都拿到了 BLEU 1.0（见下表）。</div>
+</section>
+
+<!-- 6 运行统计 -->
+<section class="section">
+<h2><span class="num">6</span>这次运行的关键数字</h2>
+<div class="auto6" style="margin-bottom:24px">
+<div class="stat"><b>215 / 286</b><span>源 / 目标词表大小</span></div>
+<div class="stat"><b>32 · 4 · 2</b><span>H · 头数 · 层数</span></div>
+<div class="stat"><b>64 · 10</b><span>batch · num_steps</span></div>
+<div class="stat"><b>600</b><span>训练句对数</span></div>
+<div class="stat"><b>0.005</b><span>学习率 (Adam)</span></div>
+<div class="stat"><b>200</b><span>训练轮数</span></div>
+</div>
+<div class="grid2">
+<div class="panel">
+<h3>loss 随训练下降</h3>
+<p>掩码交叉熵（每个有效 token 的平均负对数似然）。从 epoch 1 的 <code>0.505</code> 降到 epoch 200 的 <code>0.039</code>。</p>
+<div class="lossbars card" id="lossbars"></div>
+</div>
+<div class="panel">
+<h3>预测结果 (BLEU-2)</h3>
+<table class="restbl">
+<tr><th>输入</th><th>预测</th><th>参考</th><th>BLEU</th></tr>
+<tr><td>hi .</td><td>&lt;unk&gt;。</td><td>嗨。</td><td class="bad">0.000</td></tr>
+<tr><td>wait !</td><td>等一下！</td><td>等等！</td><td class="bad">0.000</td></tr>
+<tr><td>hello !</td><td>你好。</td><td>你好。</td><td class="ok">1.000</td></tr>
+<tr><td>i try .</td><td>我试试。</td><td>我试试。</td><td class="ok">1.000</td></tr>
+<tr><td>i won !</td><td>我赢了。</td><td>我赢了。</td><td class="ok">1.000</td></tr>
+<tr><td>fire !</td><td>火啊！</td><td>火！</td><td class="bad">0.000</td></tr>
+</table>
+<div class="note tip" style="margin-top:14px">命中参考句的 3 条都拿到 1.0；其余是「意思接近但字面不同」（如 <code>等一下</code> vs <code>等等</code>），BLEU 按字面 n-gram 重叠判 0。</div>
+</div>
+</div>
+<div class="note" style="margin-top:24px">回到代码：<code>29_transformer_log.py</code> 用 <code>vprint</code>（流程级）和 <code>vdetail</code>（数值内部）两层日志把上面这些步骤打出来——训练时只详演第 1 批，预测时只详演第 1 句，其余静默，所以你能看到完整流程又不被刷屏。</div>
+</section>
+
+</main>
+
+<script>
+/* ============ 训练前向传播逐步器 ============ */
+const trainSteps=[
+ {node:"enc-emb",stage:"编码器 · 输入",color:"#6851c9",title:"词嵌入 × √32",shape:"(64,10) → (64,10,32)",
+  what:"每个 token id 经 nn.Embedding 查成 32 维向量，再整体乘 √32。",
+  ins:"放大是为了让 embedding 不被值域在 [-1,1] 的位置编码淹没。"},
+ {node:"enc-pe",stage:"编码器",color:"#6851c9",title:"+ 位置编码 (sin/cos)",shape:"(64,10,32)",
+  what:"把按位置 i 的 sin/cos 向量加到 embedding 上，并过 dropout。",
+  ins:"self-attention 本身无序，位置编码补上「这是第几个 token」。"},
+ {node:"enc1-sa",stage:"编码器层 1/2",color:"#3157d5",title:"子层1 · 多头自注意力 (Q=K=V=X)",shape:"拆头 (256,10,8) · scores (256,10,10)",
+  what:"4 头并行：scores = Q·Kᵀ/√8，padding 列 mask，softmax 后乘 V，再合并 + W_o。",
+  ins:"Q=K=V=X → 源句内部每个词互相看；mask 掉 <pad> 位置。"},
+ {node:"enc1-ffn",stage:"编码器层 1/2",color:"#e66a3c",title:"残差+LN → FFN → 残差+LN",shape:"(64,10,32)",
+  what:"自注意力输出先残差+LayerNorm；再过逐位置 FFN(32→64→32)+残差+LN。",
+  ins:"FFN 让每个位置独立「消化」信息；残差+LayerNorm 让网络能堆深。"},
+ {node:"enc2-sa",stage:"编码器层 2/2",color:"#3157d5",title:"子层1 · 多头自注意力 (Q=K=V=X)",shape:"scores (256,10,10)",
+  what:"第二层结构完全相同，输入是第一层的输出。",
+  ins:"堆叠让表示从「词级」逐步走向「句意级」。"},
+ {node:"enc2-ffn",stage:"编码器层 2/2",color:"#e66a3c",title:"残差+LN → FFN → 残差+LN",shape:"(64,10,32)",
+  what:"同上。",
+  ins:"EncoderBlock 的两个子层到此结束，输出仍是 B×10×32。"},
+ {node:"memory",stage:"编码器输出",color:"#172033",title:"memory = 编码序列",shape:"(64,10,32)",
+  what:"编码器最终输出，作为之后每一步交叉注意力的 K/V。",
+  ins:"整句的源端表示，被解码器每一层反复读取。"},
+ {node:"dec-shift",stage:"解码器 · 输入",color:"#6851c9",title:"dec_X = [<bos>] + Y[:, :-1]",shape:"(64,10)",
+  what:"teacher forcing：把目标句右移一位，前面补 <bos>。样例: <bos> <unk> 了 他 們 <eos> …",
+  ins:"训练时目标已知，所以能让模型一次并行预测所有位置。"},
+ {node:"dec-emb",stage:"解码器",color:"#6851c9",title:"词嵌入 × √32",shape:"(64,10,32)",
+  what:"目标 token id 查向量再乘 √32，与编码器一致。",
+  ins:"解码器和编码器有各自独立的 embedding 表（源/目标词表不同）。"},
+ {node:"dec-pe",stage:"解码器",color:"#6851c9",title:"+ 位置编码",shape:"(64,10,32)",
+  what:"加 sin/cos 位置向量 + dropout。",
+  ins:""},
+ {node:"dec1-sa",stage:"解码器层 1/2",color:"#3157d5",title:"子层1 · 带掩码自注意力 (Q=X, K=V=累积上下文)",shape:"scores (256,10,10)",
+  what:"目标端内部交互；训练用 dec_valid_lens=1..t 的因果掩码。",
+  ins:"第 t 个位置只能看 1..t，不能偷看未来答案——这是「生成」的关键。"},
+ {node:"dec1-ca",stage:"解码器层 1/2",color:"#1c9aa8",title:"子层2 · 交叉注意力 (Q=解码端, K=V=memory)",shape:"scores (256,10,10), key_len=10(源)",
+  what:"解码端表示作 Q，去编码器输出 memory 里取 K/V。",
+  ins:"翻译对齐源句的地方——decoder→encoder 的唯一信息通道。"},
+ {node:"dec1-ffn",stage:"解码器层 1/2",color:"#e66a3c",title:"子层3 · FFN + 残差+LN",shape:"(64,10,32)",
+  what:"三个子层各配一个 AddNorm（残差+LayerNorm）。",
+  ins:"DecoderBlock 比编码器多一个交叉注意力子层。"},
+ {node:"dec2-sa",stage:"解码器层 2/2",color:"#3157d5",title:"子层1 · 带掩码自注意力",shape:"scores (256,10,10)",
+  what:"第二层重复同样的三个子层。",
+  ins:""},
+ {node:"dec2-ca",stage:"解码器层 2/2",color:"#1c9aa8",title:"子层2 · 交叉注意力",shape:"scores (256,10,10)",
+  what:"再次读取同一份 memory。",
+  ins:"不同层在 memory 上关注不同的源位置。"},
+ {node:"dec2-ffn",stage:"解码器层 2/2",color:"#e66a3c",title:"子层3 · FFN + 残差+LN",shape:"(64,10,32)",
+  what:"",
+  ins:"解码器两层到此结束。"},
+ {node:"linear",stage:"输出",color:"#e66a3c",title:"线性投影 → logits",shape:"(64,10,32) → (64,10,286)",
+  what:"把 32 维投影到目标词表大小 286（dense 层）。",
+  ins:"softmax 后即每个位置「下一个词」的概率分布。"},
+ {node:"loss",stage:"训练",color:"#172033",title:"掩码交叉熵损失 + 反向传播",shape:"loss=221.764 / 有效token=378",
+  what:"只在有效位置算交叉熵（padding 不计入）；反向传播→梯度裁剪(范数≤1)→Adam 更新。",
+  ins:"第 1 批 ≈ 0.587/token；训练 200 轮后降到 0.039。"},
+];
+let tIdx=0,tTimer=null;
+const $=id=>document.getElementById(id);
+function renderTrain(){
+ const s=trainSteps[tIdx];
+ document.querySelectorAll("#schematic .lnode").forEach(n=>n.classList.toggle("active",n.dataset.node===s.node));
+ $("tStage").textContent=s.stage;$("tStage").style.color=s.color;
+ $("tTitle").textContent=s.title;
+ $("tShape").textContent=s.shape;
+ $("tWhat").textContent=s.what;
+ {const w=$("tInsWrap");if(s.ins){w.style.display="";$("tIns").textContent=s.ins;}else{w.style.display="none";}}
+ $("tCounter").textContent=(tIdx+1)+" / "+trainSteps.length;
+ $("tBar").style.width=((tIdx+1)/trainSteps.length*100)+"%";
+ $("tPrev").disabled=tIdx===0;$("tNext").disabled=tIdx===trainSteps.length-1;
+ const an=document.querySelector('#schematic .lnode[data-node="'+s.node+'"]');
+ if(an){const c=document.getElementById("schematic");const r=an.getBoundingClientRect(),cr=c.getBoundingClientRect();
+   if(r.top<cr.top||r.bottom>cr.bottom)an.scrollIntoView({block:"nearest",behavior:"smooth"});}
+}
+function tGo(i){tIdx=Math.max(0,Math.min(trainSteps.length-1,i));renderTrain();}
+function tPlay(){const b=$("tPlay");
+ if(tTimer){clearInterval(tTimer);tTimer=null;b.textContent="▶ 自动播放";return;}
+ if(tIdx===trainSteps.length-1)tGo(0);
+ b.textContent="⏸ 暂停";
+ tTimer=setInterval(()=>{if(tIdx<trainSteps.length-1)tGo(tIdx+1);
+   else{clearInterval(tTimer);tTimer=null;b.textContent="▶ 自动播放";}},1500);}
+$("tPrev").onclick=()=>tGo(tIdx-1);
+$("tNext").onclick=()=>tGo(tIdx+1);
+$("tPlay").onclick=tPlay;
+$("schematic").addEventListener("keydown",e=>{if(e.key==="ArrowRight"){tGo(tIdx+1);e.preventDefault()}if(e.key==="ArrowLeft"){tGo(tIdx-1);e.preventDefault()}});
+renderTrain();
+
+/* ============ 预测自回归逐步器 ============ */
+const predSteps=[
+ {cache:["<bos>"],fresh:0,input:"<bos>",out:"<unk>",note:"第 1 步：decoder 只收 <bos>。KV 缓存从空变成 1 个 token。argmax 在 286 维 logits 上选出下一个词 = <unk>（低频/未登录词）。"},
+ {cache:["<bos>","<unk>"],fresh:1,input:"<unk>",out:"。",note:"第 2 步：把 <unk> 喂进去。缓存增长到 2，自注意力能看 [<bos>, <unk>]。预测出句号「。」。"},
+ {cache:["<bos>","<unk>","。"],fresh:2,input:"。",out:"<eos>",note:"第 3 步：缓存增长到 3。预测出 <eos>，命中停止符，解码结束。最终输出 = 「<unk>。」"},
+];
+let pIdx=-1,pTimer=null;
+function renderPred(){
+ const done=pIdx<0;
+ $("cacheRow").innerHTML="";
+ if(done){$("pIn").textContent="输入: <bos>";$("pOut").textContent="预测: —";$("pNote").textContent="点「下一步」开始第 1 步解码。";
+   $("pCounter").textContent="0 / 3";$("pBar").style.width="0%";$("pPrev").disabled=true;$("pNext").disabled=false;return;}
+ const s=predSteps[pIdx];
+ s.cache.forEach((t,i)=>{const c=document.createElement("span");c.className="cache-cell"+(i===s.fresh?" fresh":"");c.textContent=t;$("cacheRow").appendChild(c);});
+ $("pIn").textContent="输入: "+s.input;$("pOut").textContent="预测: "+s.out;
+ $("pNote").textContent=s.note;$("pCounter").textContent=(pIdx+1)+" / 3";
+ $("pBar").style.width=((pIdx+1)/3*100)+"%";
+ $("pPrev").disabled=false;$("pNext").disabled=pIdx===predSteps.length-1;
+}
+function pGo(i){pIdx=Math.max(-1,Math.min(predSteps.length-1,i));renderPred();}
+function pPlay(){const b=$("pPlay");
+ if(pTimer){clearInterval(pTimer);pTimer=null;b.textContent="▶ 自动播放";return;}
+ if(pIdx===predSteps.length-1)pGo(-1);
+ b.textContent="⏸ 暂停";pGo(pIdx+1);
+ pTimer=setInterval(()=>{if(pIdx<predSteps.length-1)pGo(pIdx+1);
+   else{clearInterval(pTimer);pTimer=null;b.textContent="▶ 自动播放";}},1700);}
+$("pPrev").onclick=()=>pGo(pIdx-1);
+$("pNext").onclick=()=>pGo(pIdx+1);
+$("pPlay").onclick=pPlay;
+renderPred();
+
+/* ============ 掩码热力图 ============ */
+function rc(alpha){return "rgba(49,87,213,"+alpha+")";}
+function drawMask(mode){
+ const grid=$("heatgrid");grid.style.gridTemplateColumns="repeat(10,34px)";
+ grid.innerHTML="";
+ // 标注：pad 模式 valid=3；cau 模式有效下三角
+ const valid=3;
+ for(let i=0;i<10;i++){
+  for(let j=0;j<10;j++){
+   let masked=false,w=0;
+   if(mode==="pad"){masked=j>=valid;}
+   else{masked=j>i;}
+   const d=document.createElement("div");d.className="heatcell"+(masked?" mask":"");
+   if(!masked){w=0.12+0.5*Math.abs(Math.sin((i+1)*1.3+(j+1)*0.7))+0.18*(i===j?1:0);d.style.background=rc(Math.min(.9,w));d.style.color="#fff";d.textContent=(w*10|0);}
+   grid.appendChild(d);
+  }
+ }
+ $("mTitle").textContent = mode==="pad" ? '源句 "hi ."（有效 3 位）' : '解码器目标（因果）';
+ document.querySelectorAll("#maskSeg button").forEach(b=>b.classList.toggle("active",b.dataset.m===mode));
+}
+document.querySelectorAll("#maskSeg button").forEach(b=>b.onclick=()=>drawMask(b.dataset.m));
+drawMask("pad");
+
+/* ============ loss 柱状图 ============ */
+const lossData=[["1",0.505],["40",0.127],["80",0.073],["120",0.052],["160",0.047],["200",0.039]];
+const lmax=Math.max(...lossData.map(d=>d[1]));
+const lb=$("lossbars");lb.innerHTML="";
+lossData.forEach(([ep,v])=>{
+ const b=document.createElement("div");b.className="lbar";
+ b.style.height=(v/lmax*100)+"%";
+ b.innerHTML='<span class="v">'+v+'</span><span class="ep">ep '+ep+'</span>';
+ lb.appendChild(b);
+});
+</script>
+</body>
+</html>

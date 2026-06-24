@@ -67,16 +67,18 @@ th{color:var(--ink);background:rgba(255,255,255,.58)}td{color:var(--muted)}
 <div class="card">
 <div class="flow">
 <div class="chip">源句 X<br>B × S</div><div class="arr">→</div>
+<div class="chip">Embedding + PE<br>B × S × H</div><div class="arr">→</div>
 <div class="chip">Encoder<br>B × S × H</div><div class="arr">→</div>
-<div class="chip">memory<br>整句语义</div><div class="arr">→</div>
+<div class="chip">memory<br>B × S × H</div><div class="arr">→</div>
 <div class="chip">Decoder<br>B × T × H</div><div class="arr">→</div>
 <div class="chip">Linear<br>B × T × V</div>
 </div>
 <div class="triple">
 <div class="mini"><b>B</b><p>batch size，一批句子的数量。</p></div>
-<div class="mini"><b>S / T</b><p>S 是源序列长度，T 是目标序列长度。</p></div>
-<div class="mini"><b>H / V</b><p>H 是隐藏维度，V 是目标词表大小。</p></div>
+<div class="mini"><b>S / T</b><p>S 是源序列长度，T 是目标序列长度，都是 token 个数，不是向量维度。</p></div>
+<div class="mini"><b>H / V</b><p>H 是每个 token 的向量大小，也就是代码里的 <code>num_hiddens</code>；V 是目标词表大小。</p></div>
 </div>
+<div class="note">先有离散 token id：<code>B × S</code>。经过 <code>nn.Embedding</code> 后，每个 token id 会变成一个 H 维向量，所以才得到 <code>B × S × H</code>。后面的 Encoder 不负责“查词向量”，它接收的已经是向量序列。</div>
 <p>Transformer 翻译模型仍然是 encoder-decoder。变化在于：RNN 的“逐步读入”被 self-attention 替代；decoder 也不是靠 GRU 的隐状态滚动，而是用 masked self-attention 控制“只能看已经生成的目标词”。</p>
 </div>
 </section>
@@ -129,7 +131,13 @@ output = torch.bmm(attention_weights, values)</pre>
 </table>
 </div>
 </div>
+<div class="triple">
+<div class="mini"><b>query_len</b><p>query 的位置数量，也就是“当前要为多少个位置各算一次注意力”。它是长度，不是向量大小。</p></div>
+<div class="mini"><b>key_len</b><p>可被看的 key/value 位置数量。softmax 会沿这个维度做，让每个 query 对所有 key 的权重加起来等于 1。</p></div>
+<div class="mini"><b>H</b><p>每个位置的向量维度。点积时用 H 维向量相似度打分；softmax 后 H 不在权重矩阵里。</p></div>
+</div>
 <div class="note">在 encoder self-attention 里，Q、K、V 都来自同一个 X；在 decoder cross-attention 里，Q 来自 decoder，K 和 V 来自 encoder outputs。</div>
+<div class="note">举个翻译里的具体形状：encoder self-attention 中 <code>query_len = key_len = S</code>；decoder masked self-attention 中 <code>query_len = key_len = T</code>；decoder cross-attention 中 <code>query_len = T</code>，但 <code>key_len = S</code>。</div>
 </section>
 
 <section class="section">
@@ -150,6 +158,7 @@ return self.W_o(transpose_output(output, self.num_heads))</pre>
 <div class="step"><div class="badge">1</div><div><strong><code>transpose_qkv</code></strong><p>把 <code>B × L × H</code> 变成 <code>(B × h) × L × (H/h)</code>。这样可以把每个 head 当成一个更大的 batch 来并行计算。</p></div></div>
 <div class="step"><div class="badge">2</div><div><strong><code>transpose_output</code></strong><p>多头算完以后，再把 <code>(B × h)</code> 合回 B，把多个头的结果拼回完整 H。</p></div></div>
 </div>
+<div class="note"><code>L</code> 是当前位置序列长度的泛称：可能是源长度 S，也可能是目标长度 T。<code>H/h</code> 才是每个 head 分到的向量维度。</div>
 </div>
 </div>
 </section>

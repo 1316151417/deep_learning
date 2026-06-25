@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>那些"乘除一个特殊常数"的操作到底在防什么 · 缩放点积 / LayerNorm / 嵌入放大</title>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.86);--line:#dedbd2;
+--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--purple:#6851c9;--green:#2f9e6b;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1080px,calc(100% - 36px));margin:0 auto;padding:40px 0 92px}
+.hero{padding:40px 0 38px}
+.tag{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.tag:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--purple)}
+h1{max-width:980px;margin:20px 0 16px;font-family:Georgia,"Songti SC",serif;font-size:clamp(32px,4.6vw,54px);line-height:1.1;letter-spacing:-.03em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(25px,3.1vw,38px);line-height:1.16;letter-spacing:-.02em}
+h3{margin:0 0 10px;color:var(--ink);font-size:19px}
+p,li{color:var(--muted);font-size:17px}
+.lead{font-size:19px}
+b,strong{color:var(--ink)}
+.section{margin-bottom:68px}
+.num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px);padding:clamp(20px,2.5vw,32px)}
+.code{padding:18px 22px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:14.5px/1.7 "JetBrains Mono","Fira Code",monospace;background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:18px}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083;font-style:italic}.hl{color:var(--orange);font-weight:850}
+.note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:14px;padding:15px 20px;margin:16px 0}
+.note.tip{border-left-color:var(--cyan)}
+.note.warn{border-left-color:var(--orange)}
+.note.why{border-left-color:var(--purple)}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 12px 30px rgba(31,41,72,.06)}
+.mini b{display:block;color:var(--ink);font-size:18px;margin-bottom:4px;font-family:"JetBrains Mono",monospace}
+.mini p{margin:0;font-size:14.5px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.auto3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+
+/* 总览流水线 */
+.flow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.flow .fc{border-radius:18px;padding:18px;border:1px solid var(--line);background:var(--card)}
+.flow .fc .ftag{font-size:12px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:#fff;padding:4px 10px;border-radius:999px;display:inline-block}
+.flow .f1 .ftag{background:var(--purple)}.flow .f2 .ftag{background:var(--blue)}.flow .f3 .ftag{background:var(--cyan)}
+.flow h3{margin:10px 0 4px}
+.flow .fop{font-family:"JetBrains Mono",monospace;font-weight:850;color:var(--ink);font-size:16px;margin:6px 0}
+.flow p{font-size:14.5px;margin:6px 0 0}
+.flow .guard{margin-top:10px;font-size:13px;font-weight:800;color:var(--orange)}
+
+/* 交互演示通用 */
+.demo{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(18px,2.2vw,28px);box-shadow:0 18px 50px rgba(31,41,72,.09)}
+.demo h3{margin-bottom:4px}
+.demosub{color:var(--muted);font-size:14.5px;margin:0 0 16px}
+.ctls{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin:0 0 8px}
+.ctrl{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink);font-weight:700}
+.ctrl .cv{font-family:"JetBrains Mono",monospace;color:var(--purple);font-weight:850;min-width:46px}
+.btn{border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-weight:800;font-size:14.5px;padding:9px 16px;cursor:pointer;box-shadow:0 6px 16px rgba(31,41,72,.06);transition:.15s}
+.btn:hover{transform:translateY(-1px);border-color:rgba(49,87,213,.4)}
+.btn.primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.toggle button{border:none;background:#fff;color:var(--muted);font-weight:850;font-size:14px;padding:9px 16px;cursor:pointer}
+.toggle button.on{background:var(--purple);color:#fff}
+
+input[type=range]{ -webkit-appearance:none;appearance:none;width:150px;height:6px;border-radius:3px;background:rgba(49,87,213,.18);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--purple);cursor:pointer;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--purple);cursor:pointer;border:3px solid #fff}
+
+/* 柱状图 */
+.panels{display:grid;gap:16px;margin-top:14px}
+.panel{background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:16px;padding:14px 16px}
+.panel.sat{border-color:rgba(230,106,60,.5);background:rgba(230,106,60,.06)}
+.panel .pt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+.panel .pt b{font-size:15px;color:var(--ink)}
+.panel .pmeta{font-family:"JetBrains Mono",monospace;font-size:12.5px;color:var(--muted)}
+.bars{display:flex;align-items:flex-end;gap:6px;height:120px;padding-top:6px}
+.bcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;min-width:0}
+.stack{width:100%;display:flex;flex-direction:column-reverse;justify-content:flex-start;align-items:stretch;border-radius:6px 6px 0 0;overflow:hidden;height:100%}
+.seg{width:100%;transition:height .25s}
+.blbl{font-family:"JetBrains Mono",monospace;font-size:10.5px;color:var(--muted);margin-top:4px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.dot{width:13px;height:13px;border-radius:4px;display:inline-block}
+
+.readout{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.ro{background:rgba(23,32,51,.05);border:1px solid var(--line);border-radius:12px;padding:10px 12px;text-align:center}
+.ro .lab{font-size:11.5px;font-weight:900;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ro .val{font-family:"JetBrains Mono",monospace;font-size:18px;font-weight:850;color:var(--ink);margin-top:3px}
+.ro.alarm .val{color:var(--orange)}
+
+/* LayerNorm 四步 */
+.lngrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.lnstage{background:rgba(255,255,255,.7);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.lnstage .lt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.lnstage .lt b{font-size:14px}
+.lnstage .lt .lf{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--blue)}
+.lnbars{display:flex;align-items:flex-end;gap:5px;height:110px}
+.lnbars .lbcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;height:100%;min-width:0}
+.lnbars .lbar{border-radius:5px 5px 0 0;min-height:2px;transition:height .25s,background .25s}
+.lnbars .lblv{font-family:"JetBrains Mono",monospace;font-size:10px;color:var(--muted);margin-top:3px;text-align:center}
+
+/* 常数卡片网格 */
+.cgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.cc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:inset 4px 0 0 var(--blue)}
+.cc.c1{box-shadow:inset 4px 0 0 var(--orange)}
+.cc.c2{box-shadow:inset 4px 0 0 var(--cyan)}
+.cc.c3{box-shadow:inset 4px 0 0 var(--green)}
+.cc.c4{box-shadow:inset 4px 0 0 var(--purple)}
+.cc .cwhere{font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:850;color:var(--ink);margin-bottom:6px}
+.cc .cval{display:inline-block;font-family:"JetBrains Mono",monospace;font-weight:850;font-size:13px;color:#fff;background:var(--ink);padding:3px 9px;border-radius:8px;margin-bottom:8px}
+.cc p{font-size:14px;margin:4px 0 0}
+
+/* 总表 */
+table.tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px;background:var(--card);border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(31,41,72,.06)}
+table.tbl th,table.tbl td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+table.tbl th{background:rgba(23,32,51,.06);color:var(--ink);font-size:12.5px;text-transform:uppercase;letter-spacing:.04em}
+table.tbl tr:last-child td{border-bottom:none}
+table.tbl td:first-child{color:var(--ink);font-weight:700}
+table.tbl code{font-size:12.5px}
+.gtag{display:inline-block;font-size:11.5px;font-weight:900;padding:2px 8px;border-radius:999px;color:#fff}
+.g1{background:var(--purple)}.g2{background:var(--blue)}.g3{background:var(--cyan)}.g4{background:var(--orange)}.g5{background:var(--green)}
+@media(max-width:760px){.split,.auto3,.flow,.lngrid,.cgrid,.readout{grid-template-columns:1fr}.readout{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="hero">
+<div class="tag">Transformer · 数值护栏专题</div>
+<h1>那些 <b style="color:var(--purple)">×√d</b>、<b style="color:var(--blue)">÷√d</b>、LayerNorm ……「乘除一个特殊常数」的操作,到底在<b style="color:var(--orange)">防什么</b>?</h1>
+<p class="lead">读 <a href="../py/29_transformer.py" style="color:var(--blue);font-weight:700">29_transformer.py</a> 时你会反复撞见一类操作:某处突然 <code>× √d</code>、某处 <code>÷ √d</code>、某处又 <code>LayerNorm</code> 归一化。它们看似零散,其实是<b>同一件事</b>——<b>控制数字的"幅度/方差"</b>,让 softmax 不饱和、梯度不消失、深层堆叠不漂移。这页按<b>数据流(前向传播)顺序</b>把它们串成一条线,每个关键处配一个可动手的小演示。</p>
+<p>真实运行配置:<code>num_hiddens = 32</code>(= d<sub>model</sub>)、<code>num_heads = 4</code>、每个头维度 <code>d = 8</code>;于是 √d<sub>model</sub> ≈ <code>5.66</code>、√d<sub>head</sub> ≈ <code>2.83</code>。</p>
+</header>
+
+<!-- §0 总览 -->
+<section class="section">
+<h2><span class="num">0</span>一张图:三个"数值护栏",挡在数据流的三道关口</h2>
+<p>先把答案摆出来。Transformer 的前向通路里,有三处<b>"乘除一个特殊常数"</b>的操作,它们分别挡在三个关口,各防一种失败:</p>
+<div class="flow">
+<div class="fc f1"><span class="ftag">关口 ① · 输入端</span><h3>嵌入放大</h3><div class="fop">embedding(X) <span class="hl">× √d_model</span></div><p>在 <code>TransformerEncoder/Decoder.forward</code> 第一行,embedding 一出来就乘 √32。</p><div class="guard">防:语义信号被位置编码淹没</div></div>
+<div class="fc f2"><span class="ftag">关口 ② · 注意力核心</span><h3>缩放点积</h3><div class="fop">Q·Kᵀ <span class="hl">÷ √d</span></div><p>在 <code>DotProductAttention</code> 里,q、k 点积完立刻除以 √8。</p><div class="guard">防:softmax 饱和 → 梯度消失</div></div>
+<div class="fc f3"><span class="ftag">关口 ③ · 每一层</span><h3>层归一化</h3><div class="fop">LayerNorm( <span class="hl">x + 子层(x)</span> )</div><p>每个 attention / FFN 外面都裹一层 <code>AddNorm</code>。</p><div class="guard">防:深层堆叠幅度漂移</div></div>
+</div>
+<div class="note why"><b>统一主题:</b>三件事看似无关,根因都是<b>"数字太大或太小,网络就训不动"</b>。所以下面三节(§1 嵌入放大 → §2 缩放点积 → §3 LayerNorm)严格按<b>数据流顺序</b>讲——这正好是你在代码里从上到下读到它们的顺序,也是信号在网络里流动的顺序。</div>
+</section>
+
+<!-- §1 嵌入放大 -->
+<section class="section">
+<h2><span class="num">1</span>为什么 embedding 要 <code>× √num_hiddens</code>?</h2>
+<p>对应代码([29_transformer.py:151](../py/29_transformer.py#L151) 与 [:208](../py/29_transformer.py#L208)):</p>
+<div class="code">X = self.pos_encoding(self.embedding(X) <span class="hl">* math.sqrt(self.num_hiddens)</span>)
+<span class="cm"># self.embedding = nn.Embedding(vocab_size, num_hiddens)
+# self.pos_encoding = PositionalEncoding(num_hiddens, dropout)</span></div>
+
+<h3>问题:词嵌入要和位置编码"相加",但两者量级不对等</h3>
+<p>embedding 查表得到的向量,接下来要和<b>位置编码 PE</b> 逐元素相加(<code>X + self.P</code>)。PE 是由 sin / cos 生成的、每个分量都被<b>锁死在 [−1, 1]</b> 之间、幅度 O(1)。而词嵌入向量:</p>
+<ul class="mini" style="list-style:none;padding:18px 20px;display:grid;gap:8px">
+<li style="background:none;border:none;padding:0">① 初始化时是 N(0,1),幅度 O(1);但<b>训练过程中嵌入向量的幅度通常会缩小</b>,远小于 1;</li>
+<li style="background:none;border:none;padding:0">② 即使不缩小,它也是"可学习、承载语义"的,而 PE 是"固定、承载位置"的。</li>
+</ul>
+<p>如果直接相加、不加缩放:幅度偏小的 embedding 会被 O(1) 的 PE <b>盖过</b>,<code>X + P ≈ P</code>——也就是说,模型拿到的输入几乎只剩位置信息,<b>语义信息被稀释</b>。</p>
+
+<div class="note tip"><b>为什么偏偏是 √d_model 这个数?</b> ① 它把 embedding 抬到与 PE <b>量级相当</b>(而非淹没或被淹没),两者都能保留;② 这个 √d 和后面注意力里的 ÷√d(§2)是<b>一对</b>——一个在入口放大、一个在注意力里缩小,共同把信号方差维持在大致恒定。③ 出处:原论文 "Attention Is All You Need" 里输入嵌入与输出层<b>共用</b>同一矩阵,输出端做 softmax 需要嵌入幅度小、输入端又需要它够大,√d_model 正好平衡两端。</div>
+
+<div class="demo">
+<h3>演示:嵌入 vs 位置编码 的"能量"占比</h3>
+<p class="demosub">用 d=8 演示(真实 d=32)。橙色 = 词嵌入的贡献,蓝色 = 位置编码 PE 的贡献,二者叠加成该维度的最终值。切换<b>「×√d」</b>看嵌入是否还"看得见"。</p>
+<div class="ctls">
+<div class="toggle" id="embToggle"><button class="on" data-on="1">× √d_model(论文做法)</button><button data-on="0">不缩放</button></div>
+<div class="ctrl">d_model = <span class="cv" id="embDval">8</span></div>
+</div>
+<div class="panels" id="embPanels"></div>
+<div class="legend"><span><span class="dot" style="background:var(--orange)"></span>词嵌入 embedding(可学习·语义)</span><span><span class="dot" style="background:var(--blue)"></span>位置编码 PE(固定·位置)</span></div>
+<div class="readout">
+<div class="ro"><div class="lab">嵌入平均幅度</div><div class="val" id="embMag">—</div></div>
+<div class="ro"><div class="lab">PE 平均幅度</div><div class="val" id="peMag">—</div></div>
+<div class="ro"><div class="lab">缩放因子</div><div class="val" id="embScale">—</div></div>
+<div class="ro" id="embVerdictRo"><div class="lab">结论</div><div class="val" id="embVerdict">—</div></div>
+</div>
+<div class="note tip" style="margin-top:14px"><b>看出来的事:</b>不缩放时,PE(蓝)几乎决定了每一维的形状,嵌入(橙)只是根上的小毛刺——语义被位置淹没;打开 ×√d 后,嵌入的占比明显上升,模型能同时看到"是什么词"和"在哪个位置"。</div>
+</div>
+</section>
+
+<!-- §2 缩放点积 -->
+<section class="section">
+<h2><span class="num">2</span>为什么 Q·Kᵀ 要 <code>÷ √d</code>?</h2>
+<p>对应代码([29_transformer.py:50](../py/29_transformer.py#L50)):</p>
+<div class="code">d = queries.shape[<span class="n">-1</span>]                          <span class="cm"># 每个头的维度,这里 = 8</span>
+scores = torch.bmm(queries, keys.transpose(<span class="n">1, 2</span>)) <span class="hl">/ math.sqrt(d)</span>
+self.attention_weights = masked_softmax(scores, valid_lens)</div>
+
+<h3>问题:维度越高,点积越大,softmax 就越"尖"</h3>
+<p>假设 q、k 的每个分量独立、均值 0、方差 1(经过线性层 + Xavier 初始化后近似成立)。点积 <code>q·k = Σᵢ qᵢkᵢ</code> 是 <b>d 个乘积之和</b>,于是:</p>
+<div class="code" style="font-size:15px">Var(q·k) = Σᵢ Var(qᵢkᵢ) = Σᵢ (1·1) = <span class="hl">d</span>      ⇒      std(q·k) = <span class="hl">√d</span></div>
+<p>也就是说,注意力分数的<b>标准差随维度 d 线性增长到 √d</b>。d=8 时 std≈2.83,d=512 时 std≈22.6。这些分数直接喂进 softmax,而 softmax 对"大的输入"极其敏感:</p>
+<ul class="mini" style="list-style:none;padding:18px 20px;display:grid;gap:8px">
+<li style="background:none;border:none;padding:0">① 分数一旦拉开 √d 的差距,softmax 输出就退化成<b>几乎 one-hot</b>——某个 key 拿走 ≈100% 的注意力,其余全是 0;</li>
+<li style="background:none;border:none;padding:0">② 而 softmax 的梯度是 <code>(p − onehot)</code>;当 p 已经 ≈ onehot 时,<b>梯度 ≈ 0</b>;</li>
+<li style="background:none;border:none;padding:0">③ 于是反向传播传不回去,注意力<b>学不动</b>。这正是"梯度消失"的一种。</li>
+</ul>
+<div class="note warn"><b>解法:</b>除以 √d,把方差从 d 拉回 1(<code>Var(score/√d) = d/d = 1</code>)。分数回到 O(1),softmax 输出变得平滑、可微,梯度健康。这就是 "Scaled" Dot-Product Attention 里 "Scaled" 的全部含义。</div>
+
+<div class="demo">
+<h3>演示:拖大维度 d,看 softmax 何时"塌成 one-hot"</h3>
+<p class="demosub">1 个 query 对 5 个 key 打分。key₀ 故意和 query 更像(预设的"正确关注对象")。拖动 d,对比<b>不缩放</b>与<b>÷√d</b>两组注意力分布。</p>
+<div class="ctls">
+<div class="ctrl">每个头维度 d = <span class="cv" id="attDval">8</span><input type="range" id="attD" min="2" max="512" step="2" value="8"></div>
+<div class="ctrl" style="color:var(--muted)">√d = <span class="cv" id="attSqrt" style="color:var(--blue)">2.83</span></div>
+</div>
+<div class="panels" style="grid-template-columns:1fr 1fr">
+<div class="panel" id="attPanelUn"><div class="pt"><b>不缩放:softmax(Q·Kᵀ)</b><span class="pmeta"></span></div><div class="bars" id="attBarsUn"></div></div>
+<div class="panel" id="attPanelSc"><div class="pt"><b>缩放:softmax(Q·Kᵀ / √d)</b><span class="pmeta"></span></div><div class="bars" id="attBarsSc"></div></div>
+</div>
+<div class="readout">
+<div class="ro" id="roUnSat"><div class="lab">不缩放·最大权重</div><div class="val" id="unMax">—</div></div>
+<div class="ro"><div class="lab">缩放·最大权重</div><div class="val" id="scMax">—</div></div>
+<div class="ro"><div class="lab">分数标准差(理论)</div><div class="val" id="attStd">—</div></div>
+<div class="ro" id="roVerdict"><div class="lab">诊断</div><div class="val" id="attVerdict">—</div></div>
+</div>
+<div class="note warn" style="margin-top:14px"><b>看出来的事:</b>把 d 拖到 128、256……,左边"不缩放"那条最大权重很快冲到 ≈1.0(变红=饱和),其余 key 权重贴 0、梯度归零;右边"÷√d"始终保持在平滑区间,无论 d 多大都稳。这就是为什么必须除以 √d。</div>
+</div>
+</section>
+
+<!-- §3 LayerNorm -->
+<section class="section">
+<h2><span class="num">3</span>LayerNorm 到底是什么?为什么这里需要?</h2>
+<p>对应代码([29_transformer.py:112-119](../py/29_transformer.py#L112-L119))。每个 attention / FFN 子层外面都裹一层 <code>AddNorm</code>:</p>
+<div class="code"><span class="kw">class</span> <span class="fn">AddNorm</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, normalized_shape, dropout):
+        <span class="cm">...</span>
+        self.ln = nn.<span class="fn">LayerNorm</span>(normalized_shape)     <span class="cm"># normalized_shape=[32]</span>
+    <span class="kw">def</span> <span class="fn">forward</span>(self, X, Y):
+        <span class="kw">return</span> self.ln(self.dropout(Y) <span class="hl">+ X</span>)     <span class="cm"># 残差相加,再层归一化</span></div>
+
+<h3>它做什么:对"每一个 token 的 d 个特征"做标准化</h3>
+<p>给一个 token 的特征向量 <code>x ∈ ℝᵈ</code>(这里 d=32),LayerNorm <b>独立地</b>对这个向量做三步:</p>
+<div class="code">μ  = mean(x)                          <span class="cm"># 这个 token 自己的 d 个特征的均值</span>
+σ² = var(x)                           <span class="cm"># 这个 token 自己的方差(注意:不是跨 batch!)</span>
+x̂  = (x − μ) / √(σ² + <span class="hl">ε</span>)              <span class="cm"># 标准化到均值0、方差1;ε=1e-5 防除零</span>
+y  = <span class="hl">γ</span> · x̂ + <span class="hl">β</span>                          <span class="cm"># 再用"可学习"的缩放γ、平移β 重新整形</span></div>
+<p>关键点(也是它和 BatchNorm 的根本区别):LayerNorm 是<b>沿着"特征维"对单个 token 做的</b>,完全不依赖 batch 里其他样本。所以——</p>
+<div class="split">
+<div class="note"><b>为什么不选 BatchNorm?</b> BatchNorm 沿 batch 维统计均值方差:① batch 大小一变统计量就变,推理时还得维护滑动平均;② 自回归解码时一次只喂 1 个 token,batch 维根本没法统计。LayerNorm 对每个 token 独立算,与 batch 无关,<b>训练/推理行为一致</b>,完美适配 NLP。</div>
+<div class="note tip"><b>为什么这里必须归一化?</b> Transformer 是 N 层相同结构堆起来的,每层都 <code>x + 子层(x)</code>。<b>残差加法</b>会让幅度层层累加、整体漂移(越来越大或越来越偏);子层输出也可能把分布推开。LayerNorm 在每次相加后把幅度"拉回"受控范围,再由 γ/β 重新整形成网络想要的样子——<b>深层堆叠才稳得住、才训得动</b>。</div>
+</div>
+<div class="note why"><b>连 γ、β、ε 也都是"特殊值"!</b> γ、β 是<b>可学习</b>的(初始 γ=1、β=0),给网络"反悔"归一化的自由;ε=1e-5 是个小常数,防止某个 token 所有特征都相等时 σ²=0 导致除零。一个 LayerNorm 里就藏了 3 类特殊值。</div>
+
+<div class="demo">
+<h3>演示:把 LayerNorm 的四步拆给你看</h3>
+<p class="demosub">假设某层出来一个 token 的 8 个特征已经"漂移"到很大的值(见第①步)。拖动 γ、β,看标准化如何一步步把它拉回,再被 γ/β 重新整形。</p>
+<div class="ctls">
+<div class="ctrl">γ(缩放)= <span class="cv" id="lnG">1.00</span><input type="range" id="lnGrange" min="0.1" max="2" step="0.1" value="1"></div>
+<div class="ctrl">β(平移)= <span class="cv" id="lnB">0.00</span><input type="range" id="lnBrange" min="-2" max="2" step="0.2" value="0"></div>
+</div>
+<div class="lngrid" id="lnStages"></div>
+<div class="readout">
+<div class="ro"><div class="lab">原始均值 μ</div><div class="val" id="lnMu">—</div></div>
+<div class="ro"><div class="lab">原始标准差 σ</div><div class="val" id="lnSig">—</div></div>
+<div class="ro" id="lnMeanRo"><div class="lab">④输出均值(=β)</div><div class="val" id="lnMu2">0</div></div>
+<div class="ro" id="lnStdRo"><div class="lab">④输出标准差(≈γ)</div><div class="val" id="lnSig2">1</div></div>
+</div>
+<div class="note tip" style="margin-top:14px"><b>拖动 γ / β 看这两件事:</b>① <b>γ(缩放)</b>——把 ④ 的柱子整体放大/缩小(柱高和右下角"④输出标准差≈γ"同步变化);γ 控制的是<b>展宽(方差)</b>。② <b>β(平移)</b>——把 ④ 的柱子整体上移/下移("④输出均值=β"同步变化);β 控制的是<b>中心(均值)</b>。第②③步是"硬复位"到均值0、方差1;第④步 γ、β 再让网络把它整形成想要的样子——<b>归一化 = 先复位、再可学习地微调</b>。</div>
+</div>
+</section>
+
+<!-- §4 其他特殊值 -->
+<section class="section">
+<h2><span class="num">4</span>还有哪些"乘除一个特殊值"的角落?</h2>
+<p>除了上面三处主角,代码里还散落着好几个特殊常数。<b>它们无一例外,都是数值护栏</b>——防溢出、防除零、防梯度爆炸、保持方差恒定。逐个点名:</p>
+<div class="cgrid">
+<div class="cc c1"><div class="cwhere">masked_softmax · 第 31 行</div><span class="cval">−1e6</span><p>把 padding 位置在 softmax <b>之前</b>置成一个巨大的负数。这样 <code>exp(−1e6) ≈ 0</code>,padding 位概率精确归零。为什么不用 0?因为 <code>exp(0)=1</code>,padding 会分到正概率;为什么不用 −∞?会产生 NaN。<b>−1e6 = 安全的"负无穷"</b>。</p></div>
+<div class="cc c2"><div class="cwhere">PositionalEncoding · 第 92-93 行</div><span class="cval">10000</span><p>位置编码的频率底数。<code>1 / 10000^(2i/d)</code> 让不同维度有从 <code>2π</code> 到 <code>2π·10000</code> 的<b>多尺度波长</code></b>:高频维区分相邻位置,低频维区分远距离位置。10000 够大,长序列也能编码出可区分的位置。</p></div>
+<div class="cc c3"><div class="cwhere">train · 第 247 行</div><span class="cval">clip_grad_norm_(…, 1)</span><p>梯度裁剪的上限。<b>把所有参数梯度的整体 L2 范数限制在 1 以内</b>。一旦某步梯度爆炸(范数>1),就等比缩放回去。防的是训练瞬间崩盘——和 RNN 里一模一样的招。</p></div>
+<div class="cc c4"><div class="cwhere">xavier · 第 227-229 行</div><span class="cval">方差 2/(fan_in+fan_out)</span><p>Xavier 初始化给权重填入<b>这个特定方差</b>的随机数。它正是为"让每一层输出的方差≈输入方差"算出来的最优缩放——<b>本质就是乘上一个 √(2/(in+out)) 的特殊因子</b>。和 §1~§3 是同一个"控方差"主题。</p></div>
+<div class="cc"><div class="cwhere">Dropout · 全局 dropout=0.1</div><span class="cval">× 1/(1−p)</span><p>Dropout 随机置零 10% 的激活后,会<b>把剩下的乘以 1/0.9 ≈ 1.11</b>。这个放大是为了让"开/关 dropout"时的<b>期望幅度不变</b>——又一个保方差的常数。(代码里用 <code>nn.Dropout</code> 自动处理。)</p></div>
+<div class="cc c1"><div class="cwhere">LayerNorm 内部</div><span class="cval">ε = 1e-5</span><p>标准化分母里的 <code>√(σ² + 1e-5)</code>。当某 token 所有特征几乎相等时 σ²≈0,没有 ε 就会除零产生 inf/NaN。一个小常数兜底,和上面的 −1e6 是同一种"防数值灾难"的思路。</p></div>
+<div class="cc c2"><div class="cwhere">AddNorm · 第 119 行</div><span class="cval">残差 + X</span><p>严格说不是"常数",但 <code>dropout(Y) + X</code> 里的 <b>+</b> 是残差连接本身:让梯度能直通浅层,解决深层梯度消失。LayerNorm 负责控幅度,残差负责通梯度,二者搭档(所以叫 Add<b>Norm</b>)。</p></div>
+<div class="cc c3"><div class="cwhere">softmax 数值稳定(Python 侧未显式写)</div><span class="cval">− max(x)</span><p><code>F.softmax</code> 内部会先减去最大值再 exp,防 <code>exp(大数)</code> 上溢。<code>masked_softmax</code> 用的 <code>−1e6</code> 其实就是手工版的"压住不该赢的项"——同一套稳定化思路。</p></div>
+</div>
+</section>
+
+<!-- §5 总表 -->
+<section class="section">
+<h2><span class="num">5</span>总表:一张表收齐所有"特殊值"</h2>
+<p>把全文出现过的特殊常数归到一张表。注意 <b>"防什么"</b>那一列——它们几乎全是<b>"防数字失控"</b>的变体:</p>
+<table class="tbl">
+<thead><tr><th>位置</th><th>操作</th><th>特殊值</th><th>类别</th><th>防什么</th></tr></thead>
+<tbody>
+<tr><td>输入嵌入 §1</td><td>embedding × √d</td><td><code>√32 ≈ 5.66</code></td><td><span class="gtag g1">放大</span></td><td>语义信号不被位置编码淹没</td></tr>
+<tr><td>点积注意力 §2</td><td>Q·Kᵀ ÷ √d</td><td><code>√8 ≈ 2.83</code></td><td><span class="gtag g2">缩小</span></td><td>softmax 不饱和、梯度不消失</td></tr>
+<tr><td>AddNorm §3</td><td>LayerNorm 归一化</td><td><code>μ, σ², γ, β</code></td><td><span class="gtag g3">归一化</span></td><td>深层堆叠幅度不漂移</td></tr>
+<tr><td>LayerNorm 内 §3</td><td>分母 +ε</td><td><code>1e-5</code></td><td><span class="gtag g4">兜底</span></td><td>σ²≈0 时除零</td></tr>
+<tr><td>masked_softmax §4</td><td>置极小值</td><td><code>−1e6</code></td><td><span class="gtag g4">兜底</span></td><td>padding 位概率归零(安全的−∞)</td></tr>
+<tr><td>位置编码 §4</td><td>频率底数</td><td><code>10000</code></td><td><span class="gtag g5">设计</span></td><td>多尺度位置波长</td></tr>
+<tr><td>梯度裁剪 §4</td><td>clip 范数</td><td><code>1</code></td><td><span class="gtag g4">兜底</span></td><td>梯度爆炸</td></tr>
+<tr><td>Xavier §4</td><td>权重方差</td><td><code>2/(in+out)</code></td><td><span class="gtag g3">归一化</span></td><td>各层激活方差恒定</td></tr>
+<tr><td>Dropout §4</td><td>残留放大</td><td><code>1/(1−p)</code></td><td><span class="gtag g3">归一化</span></td><td>开关时期望幅度不变</td></tr>
+<tr><td>softmax 内部 §4</td><td>减最大值</td><td><code>−max</code></td><td><span class="gtag g4">兜底</span></td><td>exp 上溢</td></tr>
+</tbody>
+</table>
+<div class="auto3" style="margin-top:22px">
+<div class="mini"><b>放大 / 缩小</b><p>×√d(入口)与 ÷√d(注意力)是一对,把信号方差维持恒定。</p></div>
+<div class="mini"><b>归一化</b><p>LayerNorm、Xavier、Dropout 都在做同一件事:把幅度/方差钉在受控范围。</p></div>
+<div class="mini"><b>兜底常数</b><p>−1e6、1e-5、clip=1、−max 全是为防"数值灾难"留的安全垫。</p></div>
+</div>
+<div class="note why"><b>一句话总结:</b>Transformer 里那些看着奇怪的"乘除一个特殊常数",没有一个是玄学——它们是<b>为了让数字保持在网络能正常学习的尺度</b>。理解了"控幅度/控方差"这一根主线,你就能自己推导出:哪里数字会变大(→缩小它)、哪里会漂移(→归一化它)、哪里可能除零/溢出(→加兜底常数)。</div>
+</section>
+</main>
+
+<script>
+/* ============ 工具 ============ */
+function softmax(z){const m=Math.max(...z);const e=z.map(x=>Math.exp(x-m));const s=e.reduce((a,b)=>a+b,0);return e.map(x=>x/s);}
+function makeRng(seed){let s=(seed%2147483647);if(s<=0)s+=2147483646;return()=>{s=(s*16807)%2147483647;return s/2147483647;};}
+const f2=x=>x.toFixed(2), f3=x=>x.toFixed(3);
+
+/* ============ §1 嵌入放大 演示 ============ */
+const EMB_D=8;
+// 模拟"训练后的"小幅度嵌入(语义,可学习)
+const EMB=[0.35,-0.22,0.41,-0.15,0.28,-0.38,0.19,0.12];
+function peVal(pos,i,d){const k=Math.floor(i/2);const arg=pos/Math.pow(10000,(2*k)/d);return i%2===0?Math.sin(arg):Math.cos(arg);}
+function embScaleOn(){return document.querySelector('#embToggle button.on').dataset.on==='1';}
+function renderEmb(){
+  const on=embScaleOn();
+  const d=EMB_D;
+  const scale=Math.sqrt(d);
+  const pe=Array.from({length:d},(_,i)=>peVal(3,i,d));
+  const emb=EMB.slice(0,d);
+  const embUse=on?emb.map(v=>v*scale):emb.slice();
+  // 用最大绝对值归一化柱高
+  const all=[...embUse,...pe].map(Math.abs);
+  const maxAbs=Math.max(...all,0.001);
+  const embMag=embUse.reduce((a,c)=>a+Math.abs(c),0)/d;
+  const peMag=pe.reduce((a,c)=>a+Math.abs(c),0)/d;
+  const box=document.getElementById('embPanels');
+  box.innerHTML='';
+  const wrap=document.createElement('div');
+  wrap.className='panel';
+  const sums=embUse.map((v,i)=>v+pe[i]);
+  let cols='';
+  for(let i=0;i<d;i++){
+    const eh=Math.abs(embUse[i])/maxAbs*100;
+    const ph=Math.abs(pe[i])/maxAbs*100;
+    // 符号决定颜色深浅方向:正向上,负仍向上但用不同底色(简化:统一向上,颜色区分来源)
+    cols+='<div class="bcol"><div class="stack">'+
+      '<div class="seg" style="height:'+ph+'%;background:var(--blue);opacity:.85"></div>'+
+      '<div class="seg" style="height:'+eh+'%;background:var(--orange)"></div>'+
+      '</div><div class="blbl">'+sums[i].toFixed(1)+'</div></div>';
+  }
+  wrap.innerHTML='<div class="pt"><b>相加后的输入 X = embedding + PE</b><span class="pmeta">每维叠加值(下方标注)</span></div><div class="bars">'+cols+'</div>';
+  box.appendChild(wrap);
+  document.getElementById('embMag').textContent=f2(embMag);
+  document.getElementById('peMag').textContent=f2(peMag);
+  document.getElementById('embScale').textContent=on?('×'+f2(scale)):('×1.00');
+  const ratio=embMag/(peMag+1e-9);
+  const v=document.getElementById('embVerdict'),ro=document.getElementById('embVerdictRo');
+  if(on){
+    v.textContent='量级相当 ✓';v.style.color='var(--green)';ro.classList.remove('alarm');
+  }else{
+    v.textContent='被PE淹没 ✗';v.style.color='var(--orange)';ro.classList.add('alarm');
+  }
+}
+document.querySelectorAll('#embToggle button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#embToggle button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');renderEmb();
+});
+renderEmb();
+
+/* ============ §2 缩放点积 演示 ============ */
+const NKEYS=5;
+function genQK(d){
+  const rq=makeRng(7);
+  const q=Array.from({length:d},()=>(rq()*2-1));
+  const keys=[];
+  for(let t=0;t<NKEYS;t++){
+    const rr=makeRng(100+t*13);
+    if(t===0){ keys.push(q.map(v=>v*0.9+(rr()*2-1)*0.25)); }
+    else{ keys.push(Array.from({length:d},()=>(rr()*2-1))); }
+  }
+  return {q,keys};
+}
+function renderAtt(){
+  const d=parseInt(document.getElementById('attD').value);
+  document.getElementById('attDval').textContent=d;
+  const sqrtD=Math.sqrt(d);
+  document.getElementById('attSqrt').textContent=f2(sqrtD);
+  const {q,keys}=genQK(d);
+  const logits=keys.map(k=>{let s=0;for(let i=0;i<q.length;i++)s+=q[i]*k[i];return s;});
+  const scaled=logits.map(x=>x/sqrtD);
+  const pUn=softmax(logits), pSc=softmax(scaled);
+  const maxAbs=Math.max(...logits.map(Math.abs),1e-9);
+  drawAttBars('attBarsUn','attPanelUn',pUn,logits,maxAbs);
+  drawAttBars('attBarsSc','attPanelSc',pSc,scaled,maxAbs);
+  const uMax=Math.max(...pUn), sMax=Math.max(...pSc);
+  document.getElementById('unMax').textContent=(uMax*100).toFixed(1)+'%';
+  document.getElementById('scMax').textContent=(sMax*100).toFixed(1)+'%';
+  document.getElementById('attStd').textContent=f2(sqrtD);
+  const roUn=document.getElementById('roUnSat'), verdict=document.getElementById('attVerdict'), roV=document.getElementById('roVerdict');
+  const sat=uMax>0.85;
+  if(sat){roUn.classList.add('alarm');roV.classList.add('alarm');verdict.textContent='不缩放已饱和 ⚠';verdict.style.color='var(--orange)';}
+  else{roUn.classList.remove('alarm');roV.classList.remove('alarm');verdict.textContent='都在健康区间 ✓';verdict.style.color='var(--green)';}
+}
+function drawAttBars(boxId,panelId,p,logits,maxAbs){
+  const box=document.getElementById(boxId),panel=document.getElementById(panelId);
+  box.innerHTML='';
+  const maxP=Math.max(...p);
+  // 标注最大 logit 的索引
+  const topIdx=logits.indexOf(Math.max(...logits));
+  p.forEach((pi,i)=>{
+    const col=document.createElement('div');col.className='bcol';
+    const h=(pi/maxP)*100;
+    const isTop=i===topIdx;
+    const bar=document.createElement('div');
+    bar.style.cssText='width:100%;height:'+(h)+'%;border-radius:6px 6px 0 0;min-height:2px;transition:height .25s,background .25s;background:'+(isTop?'var(--orange)':'var(--blue)');
+    const lbl=document.createElement('div');lbl.className='blbl';lbl.textContent=(pi*100).toFixed(0)+'%';
+    col.appendChild(bar);col.appendChild(lbl);box.appendChild(col);
+  });
+  // 饱和则面板标红
+  if(Math.max(...p)>0.85) panel.classList.add('sat'); else panel.classList.remove('sat');
+}
+document.getElementById('attD').oninput=renderAtt;
+renderAtt();
+
+/* ============ §3 LayerNorm 演示 ============ */
+const LN_X=[12,-9,15,-3,8,-11,6,-2];
+function layernorm(x,g,b){
+  const m=x.reduce((a,c)=>a+c,0)/x.length;
+  const v=x.reduce((a,c)=>a+(c-m)*(c-m),0)/x.length;
+  const sd=Math.sqrt(v+1e-5);
+  const centered=x.map(c=>c-m);
+  const normed=centered.map(c=>c/sd);
+  const out=normed.map(c=>c*g+b);
+  return {m,v,sd,centered,normed,out};
+}
+function drawLn(title,formula,vals,denom,colorBySign){
+  let cols='';
+  vals.forEach(v=>{
+    const h=Math.min(100, Math.abs(v)/(denom||1e-9)*100);   // 用传入的固定尺子,不随本阶段缩放
+    const col=colorBySign ? (v>=0?'var(--green)':'var(--orange)') : 'var(--purple)';
+    cols+='<div class="lbcol">'+
+      '<div class="lbar" style="height:'+h+'%;background:'+col+'"></div>'+
+      '<div class="lblv">'+v.toFixed(1)+'</div></div>';
+  });
+  return '<div class="lnstage"><div class="lt"><b>'+title+'</b><span class="lf">'+formula+'</span></div>'+
+    '<div class="lnbars">'+cols+'</div></div>';
+}
+function renderLn(){
+  const g=parseFloat(document.getElementById('lnGrange').value);
+  const b=parseFloat(document.getElementById('lnBrange').value);
+  document.getElementById('lnG').textContent=g.toFixed(2);
+  document.getElementById('lnB').textContent=b.toFixed(2);
+  const r=layernorm(LN_X,g,b);
+  document.getElementById('lnMu').textContent=r.m.toFixed(2);
+  document.getElementById('lnSig').textContent=r.sd.toFixed(2);
+  // ④ 输出的真实均值/标准差(γ·标准化+β ⇒ 均值=β,标准差≈γ),随滑块变化
+  const outMean=r.out.reduce((a,c)=>a+c,0)/r.out.length;
+  const outStd=Math.sqrt(r.out.reduce((a,c)=>a+(c-outMean)*(c-outMean),0)/r.out.length);
+  document.getElementById('lnMu2').textContent=outMean.toFixed(2);
+  document.getElementById('lnSig2').textContent=outStd.toFixed(2);
+  // 各阶段的"尺子":①② 各自;③④ 共用一把"与 γ 无关"的固定尺(= ③ 的最大绝对值)
+  const d1=Math.max(...LN_X.map(Math.abs));
+  const d2=Math.max(...r.centered.map(Math.abs));
+  const d34=Math.max(...r.normed.map(Math.abs),1e-9);
+  const box=document.getElementById('lnStages');
+  box.innerHTML=
+    drawLn('① 原始 x(已漂移)','子层输出',LN_X,d1,true)+
+    drawLn('② 减均值','x − μ',r.centered,d2,true)+
+    drawLn('③ 除标准差','(x−μ)/√(σ²+ε)',r.normed,d34,true)+
+    drawLn('④ 仿射 γ·()+β','可学习整形',r.out,d34,true);
+}
+document.getElementById('lnGrange').oninput=renderLn;
+document.getElementById('lnBrange').oninput=renderLn;
+renderLn();
+</script>
+</body>
+</html>

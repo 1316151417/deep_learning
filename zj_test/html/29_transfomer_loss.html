@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>训练损失是怎么算的 · 为什么整数 token id 不影响损失值</title>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.86);--line:#dedbd2;
+--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--purple:#6851c9;--green:#2f9e6b;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1080px,calc(100% - 36px));margin:0 auto;padding:40px 0 92px}
+.hero{padding:40px 0 38px}
+.tag{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.tag:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:980px;margin:20px 0 16px;font-family:Georgia,"Songti SC",serif;font-size:clamp(34px,4.8vw,56px);line-height:1.08;letter-spacing:-.04em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(26px,3.2vw,40px);line-height:1.14;letter-spacing:-.02em}
+h3{margin:0 0 10px;color:var(--ink);font-size:20px}
+p,li{color:var(--muted);font-size:17px}
+.lead{font-size:19px}
+b,strong{color:var(--ink)}
+.section{margin-bottom:70px}
+.num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px);padding:clamp(20px,2.5vw,32px)}
+.code{padding:18px 22px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:14.5px/1.7 "JetBrains Mono","Fira Code",monospace;background:rgba(255,255,255,.82);border:1px solid var(--line);border-radius:18px}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083;font-style:italic}
+.note{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:14px;padding:15px 20px;margin:16px 0}
+.note.tip{border-left-color:var(--cyan)}
+.note.warn{border-left-color:var(--orange)}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 12px 30px rgba(31,41,72,.06)}
+.mini b{display:block;color:var(--ink);font-size:18px;margin-bottom:4px;font-family:"JetBrains Mono",monospace}
+.mini p{margin:0;font-size:14.5px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.auto3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+
+/* 输入张量卡 */
+.tcard{padding:18px 18px 16px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:inset 4px 0 0 var(--purple)}
+.tcard.l{box-shadow:inset 4px 0 0 var(--orange)}
+.tcard.v{box-shadow:inset 4px 0 0 var(--cyan)}
+.tcard .sh{font-family:"JetBrains Mono",monospace;font-weight:850;font-size:17px;color:var(--ink)}
+.tcard .nm{font-size:13px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.tcard p{font-size:14px;margin:8px 0 0}
+
+/* 四步流水线 */
+.pipe{display:grid;gap:12px}
+.step{display:grid;grid-template-columns:42px 1fr;gap:14px;align-items:start}
+.step .sn{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--blue);color:#fff;font-family:Georgia,serif;font-size:18px;font-weight:700}
+.step .sbody{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 18px}
+.step .scode{font-family:"JetBrains Mono",monospace;font-size:14px;color:var(--ink);font-weight:600}
+.step .sout{display:inline-block;margin-top:8px;font-family:"JetBrains Mono",monospace;font-size:12.5px;font-weight:800;color:#fff;background:var(--ink);padding:4px 10px;border-radius:9px}
+.step .swhy{color:var(--muted);font-size:14.5px;margin:8px 0 0}
+
+/* 交互计算器 */
+.demo{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:clamp(18px,2.2vw,28px);box-shadow:0 18px 50px rgba(31,41,72,.09)}
+.demo h3{margin-bottom:4px}
+.demosub{color:var(--muted);font-size:14.5px;margin:0 0 18px}
+.vocab{display:grid;gap:8px}
+.vrow{display:grid;grid-template-columns:64px 54px 58px 1fr auto;align-items:center;gap:12px;padding:10px 14px;border-radius:13px;background:rgba(255,255,255,.7);border:1px solid var(--line);cursor:pointer;transition:.16s}
+.vrow:hover{border-color:rgba(49,87,213,.4);transform:translateX(2px)}
+.vrow.correct{background:#fff;border:2px solid var(--orange);box-shadow:0 10px 24px rgba(230,106,60,.18)}
+.idbadge{font-family:"JetBrains Mono",monospace;font-weight:850;font-size:13px;color:var(--purple);background:rgba(104,81,201,.13);text-align:center;padding:5px 0;border-radius:9px}
+.vrow.correct .idbadge{background:rgba(230,106,60,.16);color:var(--orange)}
+.vword{font-size:19px;font-weight:850;color:var(--ink);text-align:center}
+.vlogit{font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--muted);text-align:center}
+.vbarwrap{position:relative;height:24px;background:rgba(49,87,213,.08);border-radius:8px;overflow:hidden}
+.vbar{height:100%;border-radius:8px;transition:width .3s}
+.vbarlbl{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:"JetBrains Mono",monospace;font-size:11.5px;font-weight:800;color:var(--ink)}
+.vstar{font-size:12.5px;font-weight:850;color:var(--orange);white-space:nowrap}
+.ctls{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 4px}
+.btn{border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);font-weight:800;font-size:14.5px;padding:10px 16px;cursor:pointer;box-shadow:0 6px 16px rgba(31,41,72,.06);transition:.15s}
+.btn:hover{transform:translateY(-1px);border-color:rgba(49,87,213,.4)}
+.btn.primary{background:var(--purple);color:#fff;border-color:var(--purple)}
+.btn.ghost{background:rgba(255,255,255,.7)}
+
+/* 损失 / 公式展示 */
+.result{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+.lossbox,.formbox{border-radius:16px;padding:18px 20px}
+.lossbox{background:rgba(230,106,60,.1);border:1px solid rgba(230,106,60,.3);text-align:center}
+.lossbox .lab{font-size:12.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--orange)}
+.bigloss{font-family:Georgia,serif;font-size:52px;font-weight:700;color:var(--ink);line-height:1.05;margin-top:4px}
+.bigloss.flash{animation:flash .9s ease}
+@keyframes flash{0%{color:var(--green);transform:scale(1.06)}100%{color:var(--ink);transform:scale(1)}}
+.lossbox .sub{font-size:13px;color:var(--muted);margin-top:2px}
+.formbox{background:rgba(23,32,51,.05);border:1px solid var(--line)}
+.formbox .lab{font-size:12.5px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.formula{font-family:"JetBrains Mono",monospace;font-size:14.5px;color:var(--ink);margin-top:10px;line-height:1.9}
+.formula .hl-id{color:var(--purple);font-weight:850}
+.formula .hl-pr{color:var(--blue);font-weight:850}
+.formula .hl-ls{color:var(--orange);font-weight:850}
+.renote{margin-top:12px;padding:10px 14px;border-radius:11px;background:rgba(47,158,107,.12);border:1px dashed var(--green);color:var(--green);font-weight:800;font-size:13.5px;opacity:0;transition:.3s;max-height:0;overflow:hidden}
+.renote.show{opacity:1;max-height:80px;margin-top:12px}
+
+/* 对比 / 要点 */
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vs{border-radius:18px;padding:20px;border:1px solid var(--line)}
+.vs.ok{background:rgba(47,158,107,.09);border-color:rgba(47,158,107,.3)}
+.vs.bad{background:rgba(230,106,60,.08);border-color:rgba(230,106,60,.3)}
+.vs h3{display:flex;align-items:center;gap:8px}
+.vs .badge{font-size:13px;font-weight:900;padding:3px 10px;border-radius:999px}
+.vs.ok .badge{background:var(--green);color:#fff}
+.vs.bad .badge{background:var(--orange);color:#fff}
+.keylist{display:grid;gap:12px;margin:0;padding:0;list-style:none}
+.keylist li{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.keylist .k{display:grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--ink);color:#fff;font-size:13px;font-weight:800}
+@media(max-width:760px){.split,.auto3,.result,.versus{grid-template-columns:1fr}.vrow{grid-template-columns:50px 46px 50px 1fr}.bigloss{font-size:42px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header class="hero">
+<div class="tag">Transformer · 训练损失专题</div>
+<h1>训练时损失到底怎么算?为什么用「整数 id」当标签却<b style="color:var(--orange)">不影响</b>损失值</h1>
+<p class="lead">解码器吐出 <code>(64, 10, 286)</code> 的 logits,真值却只是 <code>(64, 10)</code> 的整数 token id。这页<b>只讲两件事</b>:① 这个损失一步步怎么算出来;② 为什么用自然数 id 当标签,而这个数字的大小根本不影响损失。下方有一个可点的「迷你词表损失计算器」把这两件事一次演给你看。</p>
+<p>真实运行配置:batch=64、序列长 10、目标词表 V=286;首轮 per-token loss ≈ <code>0.505</code>,训完 200 轮 ≈ <code>0.039</code>。</p>
+</header>
+
+<!-- §1 三个输入 -->
+<section class="section">
+<h2><span class="num">1</span>损失函数吃进去的三个东西</h2>
+<p>训练时 <a href="../py/29_transformer_log.py" style="color:var(--blue);font-weight:700">train()</a> 里这一句 <code>l = loss(Y_hat, Y, Yvl)</code> 传进 <code>MaskedSoftmaxCELoss</code> 的就是下面三个张量。注意它们的形状<b>各不相同</b>——这恰恰是关键。</p>
+<div class="auto3">
+<div class="tcard"><div class="nm">参数 1 · pred (Y_hat)</div><div class="sh">(64, 10, 286)</div><p>解码器输出的 logits。每个位置对词表里 <b>286 个词各打一个分</b>——一组未归一化的"概率猜测"。</p></div>
+<div class="tcard l"><div class="nm">参数 2 · label (Y)</div><div class="sh">(64, 10)</div><p>真值 token id。每个位置<b>一个整数</b>,表示"正确答案是词表第几号"。注意:比 pred 少了那一维 286。</p></div>
+<div class="tcard v"><div class="nm">参数 3 · valid_len (Yvl)</div><div class="sh">(64,)</div><p>每条目标句的有效长度。用来把后面 <code>&lt;pad&gt;</code> 填充位的损失屏蔽掉。</p></div>
+</div>
+<div class="note tip">最反直觉的地方就在这:<code>pred</code> 每个位置是 <b>286 个数</b>(一条分布),<code>label</code> 每个位置是 <b>1 个数</b>(一个编号)。它们形状不同却能配对——因为交叉熵本来就是「一条分布 vs 一个正确编号」的运算,见第 3 节。</div>
+</section>
+
+<!-- §2 四步流水线 -->
+<section class="section">
+<h2><span class="num">2</span>四步算出损失:<code>MaskedSoftmaxCELoss</code> 逐行</h2>
+<div class="split">
+<div class="code"><span class="kw">class</span> <span class="fn">MaskedSoftmaxCELoss</span>(nn.CrossEntropyLoss):
+    <span class="kw">def</span> <span class="fn">forward</span>(self, pred, label, valid_len):
+        weights = <span class="fn">sequence_mask</span>(
+            torch.<span class="fn">ones_like</span>(label), valid_len)   <span class="cm"># ① (64,10)</span>
+        self.reduction = <span class="n">"none"</span>                  <span class="cm"># ② 关掉自动平均</span>
+        unweighted = <span class="kw">super</span>().<span class="fn">forward</span>(
+            pred.<span class="fn">permute</span>(<span class="n">0, 2, 1</span>), label)        <span class="cm"># ③ (64,10)</span>
+        <span class="kw">return</span> (unweighted * weights).<span class="fn">mean</span>(dim=<span class="n">1</span>)  <span class="cm"># ④ (64,)</span></div>
+<div class="pipe">
+<div class="step"><div class="sn">1</div><div class="sbody"><div class="scode">weights = sequence_mask(ones, valid_len)</div><span class="sout">(64,10) · 0/1 掩码</span><p class="swhy">先生成全 1 的 <code>(64,10)</code>,再把每个样本<b>超出有效长度</b>的位置(即 <code>&lt;pad&gt;</code>)置 0。真 token = 1,padding = 0。</p></div></div>
+<div class="step"><div class="sn">2</div><div class="sbody"><div class="scode">self.reduction = "none"</div><span class="sout">配置</span><p class="swhy"><code>CrossEntropyLoss</code> 默认会把所有损失平均成一个标量。设 <code>"none"</code> 让它<b>保留每个位置</b>的损失,因为我们要自己先屏蔽 padding 再平均。</p></div></div>
+<div class="step"><div class="sn">3</div><div class="sbody"><div class="scode">unweighted = CE(pred.permute(0,2,1), label)</div><span class="sout">(64,10) · 每位置一个 loss</span><p class="swhy"><code>permute</code> 把 <code>(64,10,286)→(64,286,10)</code>,让<b>类别维 286 落在 dim 1</b>(PyTorch 硬性约定)。然后每个位置算 <code>−ln(softmax(logits)[label])</code>。</p></div></div>
+<div class="step"><div class="sn">4</div><div class="sbody"><div class="scode">(unweighted * weights).mean(dim=1)</div><span class="sout">(64,) · 每样本一个 loss</span><p class="swhy">padding 位 ×0 归零,真 token 位保留;再沿序列维求平均,得到每个样本一个标量损失。</p></div></div>
+</div>
+</div>
+<div class="note">第 3 步就是整页的核心:<code>label</code> 这个整数<b>只被当作下标</b>,去 <code>softmax(logits)</code> 这条 286 长的概率向量里"挑出第 <code>label</code> 个分量",再取负对数。第 4 节会证明:这个整数的大小完全不影响结果,它只是个指针。</div>
+</section>
+
+<!-- §3 交互计算器 -->
+<section class="section">
+<h2><span class="num">3</span>交互:迷你词表损失计算器</h2>
+<p>把第 2 步放大到一个<b>只有 6 个词的迷你词表</b>(真实是 286 个)。每个词有一行 logits(模型对它的打分),softmax 把 logits 变成概率条。<b>点任意一行</b>把它设成"正确答案",损失会实时重算;再点<b>「重新编号」</b>打乱 id,你会看到损失纹丝不动。</p>
+<div class="demo">
+<h3>某个解码位置 · 预测下一个词</h3>
+<p class="demosub">logits 是模型给定的;你扮演"真值"——指定哪个词才是正确答案(等价于填 <code>label</code>)。</p>
+<div class="vocab" id="vocabrows"></div>
+<div class="ctls">
+<button class="btn primary" id="btnRenumber">🔀 重新编号词表(打乱 id)</button>
+<button class="btn ghost" id="btnReset">↩ 恢复 id = 0,1,2,3,4,5</button>
+</div>
+<div class="result">
+<div class="lossbox"><div class="lab">交叉熵损失</div><div class="bigloss" id="bigloss">—</div><div class="sub">= −ln( 正确词的概率 )</div></div>
+<div class="formbox"><div class="lab">实时公式(标签 = 正确词当前的 id)</div>
+<div class="formula">label id = <span class="hl-id" id="fid">—</span><br>
+loss = −ln( softmax(logits)⟨<span class="hl-id" id="fid2">—</span>⟩ )<br>
+&nbsp;&nbsp;&nbsp;&nbsp;= −ln( <span class="hl-pr" id="fprob">—</span> ) = <span class="hl-ls" id="floss">—</span></div>
+<div class="renote" id="renote"></div>
+</div>
+</div>
+</div>
+<div class="note tip"><b>两个动作,两种结论:</b>① 点<b>不同的词</b>当正确答案 → 损失会变(因为选中了不同的 logit);② 点<b>「重新编号」</b> → 正确词的 id 数字变了,但损失<b>不变</b>。前者说明"选哪个词"重要,后者说明"那个 id 是几"不重要。这就是下一节要讲的全部。</div>
+</section>
+
+<!-- §4 为什么整数索引不影响损失 -->
+<section class="section">
+<h2><span class="num">4</span>为什么「自然数 id」不影响损失值</h2>
+<p>反直觉感的根源是一个误解:<b>损失函数从头到尾没有拿 token id 这个数去做任何算术</b>,它只把它当"下标 / 指针"用。</p>
+<ul class="keylist">
+<li><span class="k">1</span><div><b style="color:var(--ink)">id 是下标,不是数值。</b> <code>label = 17</code> 不表示"答案的值是 17 这么大",它只指向 <code>softmax(logits)</code> 这条向量里的<b>第 17 个分量</b>。整个过程是"查表",不是"加减乘除"——就像你用页码查字典,并不意味着你在对页码做数学。</div></li>
+<li><span class="k">2</span><div><b style="color:var(--ink)">换个编号,损失不变。</b> 把词表的编号整体打乱(上节「重新编号」按钮):正确词的 id 从 2 变成 4,但它在概率向量里被取出的<b>那个分量值没变</b>,所以损失完全一样。证明:损失只取决于"指针 dereference 到的那个 logit",不取决于指针上印的数字。</div></li>
+<li><span class="k">3</span><div><b style="color:var(--ink)">这是分类问题,分类就该这样。</b> 下一个词预测 = 从 286 个词里选 1 个 = <b>288 类分类</b>。分类问题的标准目标就是"类别编号",标准损失就是交叉熵。这跟 ImageNet 用 <code>0~999</code> 的整数当标签一模一样——没人会把类别编号当成要回归的数值。</div></li>
+<li><span class="k">4</span><div><b style="color:var(--ink)">"比词向量"的直觉其实藏在输出层。</b> 最后那个线性层 <code>nn.Linear(32, 286)</code> 的权重是 <code>(286, 32)</code>,可看作<b>每个词学了一个 32 维输出向量</b>;<code>logit_词w = 隐藏向量 · 词w的向量</code>。所以模型确实在拿表示和每个词的向量比内积——只不过对<b>全部 286 个词同时比</b>,比出分数再 softmax,最后用 id 指出"该奖励哪一个"。</div></li>
+</ul>
+
+<div class="versus">
+<div class="vs ok"><h3><span class="badge">✓ 正确</span></h3><p style="color:var(--ink);font-size:15.5px;margin:8px 0 0"><b>把 id 当"类别下标" → 交叉熵</b></p><p>loss = −ln( 选中那个盒子的概率 )。重新编号 → 盒子换号,但被选中盒子的概率不变 → <b>损失不变</b>。"好"是几号无所谓,只要 logits 和 label 对应上同一条。</p></div>
+<div class="vs bad"><h3><span class="badge">✗ 错误</span></h3><p style="color:var(--ink);font-size:15.5px;margin:8px 0 0"><b>把 id 当"要回归的数值" → MSE</b></p><p>假如逼模型输出一个数去逼近 id 的数值:那"好"=2 和重新编号后"好"=4,目标就不同了,损失会变。这显然荒唐——<b>同一个字没变,换个编号凭什么要学不同的数?</b>这也正是不能用词向量 MSE 的根本原因。</p></div>
+</div>
+
+<div class="note tip"><b>一句话:</b>输入侧用 id 查"输入词向量"(embedding),输出侧用 id 当"分类标签"去监督一个对所有词的打分。id 在两端都只起<b>"指认是哪个词"</b>的作用,从不作为数值参与运算——所以它是 0 还是 285,对损失毫无影响。</div>
+</section>
+
+<!-- §5 总结 -->
+<section class="section">
+<h2><span class="num">5</span>记下这几条就够了</h2>
+<div class="auto3">
+<div class="mini"><b>形状配对</b><p><code>(64,286,10)</code> 的 logits 配 <code>(64,10)</code> 的 id:类别维被"吃掉",每个位置输出一个标量损失。</p></div>
+<div class="mini"><b>id 只下标</b><p>整数被用来从概率向量里挑分量,从不参与算术,所以它的大小不影响损失。</p></div>
+<div class="mini"><b>padding 归零</b><p><code>weights</code> 把 <code>&lt;pad&gt;</code> 位的损失 ×0,只对真 token 求平均。</p></div>
+<div class="mini"><b>这是分类</b><p>选 1 个正确词 = V 类分类,交叉熵是标准做法;不是对向量做回归。</p></div>
+<div class="mini"><b>向量比较没丢</b><p>它被泛化进输出线性层:对所有词同时打分,再用 id 指出奖励谁。</p></div>
+<div class="mini"><b>编号可任意</b><p>重新编号词表,只要 logits 与 label 一同对应,损失完全不变。</p></div>
+</div>
+</section>
+</main>
+
+<script>
+/* ============ 迷你词表损失计算器 ============ */
+const WORDS = [
+  {w:"嗨",  logit:2.5},
+  {w:"你",  logit:0.9},
+  {w:"好",  logit:2.1},
+  {w:"再见",logit:0.4},
+  {w:"我",  logit:1.2},
+  {w:"是",  logit:0.6},
+];
+let idMap   = [0,1,2,3,4,5];   // position i 在词表里的 id(可被打乱)
+let correct = 2;              // 正确答案 = 第几个位置(初始 "好")
+
+function softmax(z){
+  const m = Math.max(...z);
+  const e = z.map(x => Math.exp(x - m));
+  const s = e.reduce((a,b)=>a+b, 0);
+  return e.map(x => x / s);
+}
+const f3 = x => x.toFixed(3);
+
+function render(){
+  const z  = WORDS.map(o => o.logit);
+  const p  = softmax(z);
+  const mp = Math.max(...p);
+  const box = document.getElementById("vocabrows");
+  box.innerHTML = "";
+  WORDS.forEach((o, i) => {
+    const id  = idMap[i];
+    const isC = (i === correct);
+    const row = document.createElement("div");
+    row.className = "vrow" + (isC ? " correct" : "");
+    row.onclick = () => { correct = i; render(); };
+    row.innerHTML =
+      '<div class="idbadge">id ' + id + '</div>' +
+      '<div class="vword">' + o.w + '</div>' +
+      '<div class="vlogit">' + o.logit.toFixed(2) + '</div>' +
+      '<div class="vbarwrap"><div class="vbar" style="width:' + Math.round(p[i]/mp*100) +
+        '%;background:' + (isC ? "var(--orange)" : "var(--blue)") + '"></div>' +
+        '<span class="vbarlbl">' + (p[i]*100).toFixed(1) + '%</span></div>' +
+      (isC ? '<div class="vstar">✓ 正确答案</div>' : '<div></div>');
+    box.appendChild(row);
+  });
+  const cp   = p[correct];
+  const loss = -Math.log(cp);
+  const cid  = idMap[correct];
+  document.getElementById("fid").textContent  = cid;
+  document.getElementById("fid2").textContent = cid;
+  document.getElementById("fprob").textContent= cp.toFixed(3);
+  document.getElementById("floss").textContent= loss.toFixed(3);
+  document.getElementById("bigloss").textContent = loss.toFixed(3);
+}
+
+function renumber(){
+  const oldId = idMap[correct];
+  const oldLoss = -Math.log(softmax(WORDS.map(o=>o.logit))[correct]);
+  const a = idMap.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  if (a.every((v,i) => v === idMap[i])) { [a[0], a[1]] = [a[1], a[0]]; } // 避免没动
+  idMap = a;
+  render();
+  const newId = idMap[correct];
+  const lossEl = document.getElementById("bigloss");
+  lossEl.classList.remove("flash"); void lossEl.offsetWidth; lossEl.classList.add("flash");
+  const note = document.getElementById("renote");
+  note.innerHTML = '✓ 正确词「' + WORDS[correct].w + '」的 id 从 <b>' + oldId +
+    '</b> 变成 <b>' + newId + '</b>,但损失仍是 <b>' + oldLoss.toFixed(3) +
+    '</b> —— 数字只是指针,换号不影响结果。';
+  note.classList.add("show");
+}
+
+function resetIds(){
+  idMap = [0,1,2,3,4,5];
+  document.getElementById("renote").classList.remove("show");
+  render();
+}
+
+document.getElementById("btnRenumber").onclick = renumber;
+document.getElementById("btnReset").onclick    = resetIds;
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPT-2：无监督多任务，零样本就够了</title>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.84);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--purple:#6851c9;--green:#167c59;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1720px,calc(100% - 36px));margin:0 auto;padding:56px 0 92px}
+.hero{padding:48px 0 42px}
+.tag,.demo-title{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.tag:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green)}
+h1{max-width:1220px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+h3{margin:0 0 12px;color:var(--ink);font-size:22px}
+p,li{color:var(--muted);font-size:18px}
+.section{margin-bottom:78px}
+.num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card,.demo,.code,.chip,.note,.tablebox,.panel,.mini{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo,.tablebox,.panel{padding:clamp(20px,2.5vw,36px)}
+.flow{display:grid;grid-template-columns:repeat(11,auto);gap:12px;align-items:center;justify-content:center;overflow:auto;padding:8px 4px}
+.chip{min-width:108px;padding:14px 14px;text-align:center;font-weight:850}
+.chip small{display:block;font-weight:700;color:var(--muted);font-size:12px;margin-top:3px;letter-spacing:.02em}
+.arr{color:var(--orange);font-size:28px;font-weight:900}
+.split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);gap:22px;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.code{padding:22px 24px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:14.5px/1.65 "JetBrains Mono","Fira Code",monospace}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083}.st{color:#167c59}
+.note{padding:18px 22px;border-left:5px solid var(--green)}
+.note.b{border-left-color:var(--blue)}.note.c{border-left-color:var(--cyan)}.note.o{border-left-color:var(--orange)}
+.mini{padding:18px 20px}
+.mini b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.mini p{margin:0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin:18px 0 4px}
+label{display:grid;gap:8px;color:var(--muted);font-weight:760}
+input[type=range]{width:100%;accent-color:var(--green)}
+input[type=text]{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.74);color:var(--ink);font:16px Inter}
+canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:14px}
+.readout{padding:15px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.64);color:var(--muted)}
+.readout b{display:block;font-size:22px;color:var(--ink);margin-top:2px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:13px 15px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--ink);background:rgba(255,255,255,.58)}td{color:var(--muted)}
+td code{font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+.tab{padding:10px 16px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--muted);font-weight:800;cursor:pointer;font-size:15px}
+.tab.active{background:#e7f3ee;color:var(--green);border-color:rgba(22,124,89,.35)}
+.bars{display:grid;gap:18px;margin-top:8px}
+.barrow{display:grid;gap:7px}
+.barlab{display:flex;justify-content:space-between;color:var(--muted);font-weight:780;font-size:15px}
+.barlab b{color:var(--ink)}
+.bar-track{height:26px;border-radius:999px;background:#e8e6df;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;background:var(--green);transition:width .4s}
+.bar-fill.b{background:var(--blue)}.bar-fill.o{background:var(--orange)}.bar-fill.p{background:var(--purple)}
+.wordbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.wordbtns button{padding:7px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);cursor:pointer;font-weight:780;font-size:14px}
+.wordbtns button.active{background:#e7f3ee;color:var(--green);border-color:rgba(22,124,89,.35)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;color:var(--muted);font-size:14px;font-weight:760}
+.sw{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+@media(max-width:1050px){.split,.grid,.triple{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg);justify-self:center}}
+</style>
+</head>
+<body>
+<main class="wrap lab-page">
+<header class="hero">
+<div class="tag">GPT-2 · zero-shot, no finetune</div>
+<h1>GPT-2：无监督多任务，零样本就够了</h1>
+<p>这页把 <code>zj_test/py/31_gpt2/</code> 这套实现拆开讲。GPT-2 相对 GPT-1 的核心转变不是堆参数，而是<b style="color:var(--ink)">砍掉微调</b>：一个纯语言模型，把任何任务都写成「文本续写」，靠提示词零样本完成。配套的两个工程变化是 <b style="color:var(--ink)">字节级 BPE</b>（永远没有 OOV）和把架构/初始化微调成更耐深的 Pre-LN。我们会逐块对照代码，看每一处在干什么、和 GPT-1 差在哪。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>先抓住主线：从「两阶段」到「一阶段」</h2>
+<div class="card">
+<div class="flow">
+<div class="chip" style="background:rgba(245,200,75,.18)">WebText<small>Reddit karma≥3 网页 ~40GB</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(49,87,213,.14)">无监督预训练<small>目标：下一 token</small></div><div class="arr">→</div>
+<div class="chip">存权重<small>gpt2_pretrained.pth</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(22,124,89,.16)">零样本做任务<small>任务 = 提示词续写</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(28,154,168,.16)">直接输出<small>翻译 / 问答 / 摘要</small></div>
+</div>
+<div class="triple">
+<div class="mini"><b>GPT-1：两阶段</b><p>预训练 → 每个任务再<b>微调</b> + 任务头 + 辅助 LM 损失。换一个任务就要重训一次头。</p></div>
+<div class="mini"><b>GPT-2：一阶段</b><p>只预训练。<b>没有任务头、没有微调</b>。任务靠把输入拼成自然语言提示，让模型「接着写」。</p></div>
+<div class="mini"><b>为什么能</b><p>WebText 里本就含翻译、问答、摘要的文本。模型在学「续写」时，顺带学会了「按格式续写 = 完成任务」。</p></div>
+</div>
+<div class="note">这套「无监督多任务学习」(unsupervised multitask learner) 的赌注是：<b style="color:var(--ink)">只要数据和模型够大，语言建模本身就会涌现出任务能力</b>——不需要为每个任务标注、也不需要专门的头。代价是对规模极其敏感，所以 GPT-2 同时把模型做到 1.5B、上下文拉到 1024。</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">1</span>字节级 BPE：永远没有 OOV</h2>
+<div class="split">
+<div class="panel">
+<h3>GPT-1 字符 BPE → GPT-2 字节 BPE</h3>
+<p>GPT-1 的 BPE 以<b style="color:var(--ink)">字符</b>为基底，词表随语料变化，遇到训练时没见过的字符（如 <code>é</code>、汉字）就直接 <code>KeyError</code>。GPT-2 改成以<b style="color:var(--ink)">256 个字节</b>为基底：任何文本先编码成 UTF-8 字节，再把每个字节映射成一个可见 Unicode 字符（其中空格 → <code>Ġ</code>），最后在这层字符上做 BPE 合并。</p>
+<pre class="code"><span class="cm"># tokenizer.py : bytes_to_unicode (OpenAI 标准)</span>
+bs = range(ord('!'),ord('~')+1) + ...        <span class="cm"># 可见字节保持自身</span>
+<span class="kw">for</span> b <span class="kw">in</span> range(256):
+    <span class="kw">if</span> b <span class="kw">not in</span> bs:                   <span class="cm"># 不可见字节 → 256 之后</span>
+        cs.append(256+n); n += 1             <span class="cm"># 空格 0x20 → 'Ġ' U+0120</span>
+
+<span class="cm"># encode: 正则切分 → UTF-8 字节 → 字节字符 → BPE</span>
+byte_str = <span class="st">""</span>.<span class="fn">join</span>(byte_encoder[b] <span class="kw">for</span> b <span class="kw">in</span> chunk.<span class="fn">encode</span>(<span class="st">"utf-8"</span>))</pre>
+<div class="note b">输入任意文本（汉字、emoji、二进制噪声都行），点「编码」看它如何层层转换。注意空格怎么变成 <code>Ġ</code>，以及无论输入多怪都不会失败。</div>
+</div>
+<div class="demo">
+<div class="demo-title">byte-level encode（点词或输入）</div>
+<canvas id="byte" width="900" height="560"></canvas>
+<div class="controls" style="grid-template-columns:1fr">
+<label>输入任意文本 <input id="byteInput" type="text" value="the cat sat" maxlength="22"></label>
+</div>
+<div class="wordbtns" id="byteWords">
+<button class="active" data-w="the cat sat">the cat sat</button>
+<button data-w="Hello, World!">Hello, World!</button>
+<button data-w="café 日本語">café 日本語</button>
+<button data-w="translate to french">translate…</button>
+<button data-w="🚀 ninja">🚀 ninja</button>
+</div>
+<div class="readouts">
+<div class="readout">UTF-8 字节数 <b id="byteN">0</b></div>
+<div class="readout">BPE token 数 <b id="tokN">0</b></div>
+<div class="readout">OOV <b id="oov" style="color:var(--green)">永不</b></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>Decoder-only 架构：Pre-LN + ln_f</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">gpt-2 stack（拖滑块看形状与参数量）</div>
+<canvas id="arch" width="1100" height="640"></canvas>
+<div class="controls">
+<label>层数 n_layer <input id="nLayer" type="range" min="1" max="8" value="4"></label>
+<label>头数 n_head <input id="nHead" type="range" min="1" max="8" value="4"></label>
+<label>序列长度 T <input id="aT" type="range" min="4" max="12" value="8"></label>
+</div>
+<div class="readouts">
+<div class="readout">输入 <b id="archIn">B × 8</b></div>
+<div class="readout">隐藏表示 <b id="archMid">B × 8 × 128</b></div>
+<div class="readout">LM logits <b id="archOut">B × 8 × 500</b></div>
+<div class="readout">参数量(估) <b id="archParams">0.88M</b></div>
+</div>
+</div>
+<div class="panel">
+<h3>代码对应关系</h3>
+<pre class="code"><span class="cm"># model.py : GPTModel</span>
+self.wte = nn.<span class="fn">Embedding</span>(vocab_size, n_embd)   <span class="cm"># 字节级词表</span>
+self.wpe = nn.<span class="fn">Embedding</span>(n_ctx, n_embd)        <span class="cm"># n_ctx = 1024</span>
+self.h = nn.<span class="fn">ModuleList</span>([<span class="fn">Block</span>(cfg) <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)])
+self.ln_f = nn.<span class="fn">LayerNorm</span>(n_embd)             <span class="cm"># Pre-LN 必须的末层归一化</span>
+
+<span class="kw">def</span> <span class="fn">forward</span>(self, idx):
+    x = self.<span class="fn">drop</span>(self.<span class="fn">wte</span>(idx) + self.<span class="fn">wpe</span>(pos))
+    <span class="kw">for</span> block <span class="kw">in</span> self.h: x = <span class="fn">block</span>(x)
+    <span class="kw">return</span> self.<span class="fn">ln_f</span>(x)                 <span class="cm"># B × T × n_embd</span></pre>
+<p>和 GPT-1 一样是 decoder-only、权重绑定 <code>logits = hidden @ wte.T</code>。但 LayerNorm 的位置<b style="color:var(--ink)">反过来了</b>——见下面两块。</p>
+</div>
+</div>
+<div class="grid" style="margin-top:18px">
+<div class="note c"><b style="color:var(--ink)">Pre-LN（GPT-2）vs Post-LN（GPT-1）</b><br>GPT-2 的 Block：<code>x = x + attn(ln_1(x))</code>——LayerNorm 在子层<b>之前</b>，残差主路径是恒等映射，深层梯度更稳，所以需要在堆叠末尾补一层 <code>ln_f</code>。GPT-1 的官方实现是 Post-LN <code>ln(x+attn(x))</code>，不需要 <code>ln_f</code>。</div>
+<div class="note b"><b style="color:var(--ink)">GPT-2 才有的三个细节</b><br>① <b>tanh 近似 GELU</b>（非 erf，匹配官方权重）；② 上下文 1024（GPT-1 是 512）；③ 残差输出投影初始化缩放 1/√N（下一节）。命名也换成 <code>c_attn / c_proj / c_fc</code>。</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">3</span>残差缩放初始化：1/√N</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">哪些权重被缩小（拖层数看系数）</div>
+<canvas id="init" width="900" height="600"></canvas>
+<div class="controls">
+<label>层数 n_layer <input id="iLayer" type="range" min="1" max="48" value="12"></label>
+</div>
+<div class="readouts">
+<div class="readout">残差子层数 N <b id="resN">24</b></div>
+<div class="readout">缩放系数 1/√N <b id="scale">0.204</b></div>
+<div class="readout">c_proj 初始化 std <b id="cstd">0.0041</b></div>
+</div>
+</div>
+<div class="panel">
+<h3>为什么缩小残差层权重</h3>
+<p>Pre-LN 下残差流不断累加子层输出，深层容易方差爆炸。论文用「残差层初始化缩放 1/√N」缓解：把每个残差子层的<b style="color:var(--ink)">输出投影</b>（注意力的 <code>c_proj</code>、FFN 的 <code>c_proj</code>）权重额外除以 √N，使初始时网络近似恒等映射。N = 残差子层数 = 2·n_layer。</p>
+<pre class="code"><span class="cm"># model.py : GPTModel.__init__</span>
+self.<span class="fn">apply</span>(self._init_weights)          <span class="cm"># 先全部 N(0, 0.02)</span>
+<span class="kw">for</span> name, param <span class="kw">in</span> self.<span class="fn">named_parameters</span>():
+    <span class="kw">if</span> name.<span class="fn">endswith</span>(<span class="st">"c_proj.weight"</span>):   <span class="cm"># 只缩放残差输出投影</span>
+        nn.init.<span class="fn">normal_</span>(param, std=0.02/math.<span class="fn">sqrt</span>(2*n_layer))</pre>
+<div class="note">对比：GPT-1 的 <code>_init_weights</code> 对<b style="color:var(--ink)">所有</b> Linear 一视同仁用 0.02，没有这步缩放。注意 <code>c_attn</code>（QKV）、<code>c_fc</code>（FFN 内层）、embedding 都<b style="color:var(--ink)">不</b>被缩放——只有输出加回残差流的那两层被缩。</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>训练目标与困惑度 PPL</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">pretrain loss 与困惑度（实测曲线）</div>
+<canvas id="ppl" width="900" height="560"></canvas>
+<div class="readouts">
+<div class="readout">初始损失 ≈ <b>6.21</b><small style="color:var(--muted)">−ln(1/500 词表)</small></div>
+<div class="readout">收敛损失 ≈ <b id="pplEnd">0.08</b></div>
+<div class="readout">验证 PPL ≈ <b id="pplVal">1.08</b><small style="color:var(--muted)">exp(loss)</small></div>
+</div>
+</div>
+<div class="panel">
+<h3>目标不变，指标换了</h3>
+<p>训练目标还是无监督语言模型（和 GPT-1 的 L1 一样）：输入右移一位当标签。但 GPT-2 <b style="color:var(--ink)">不再有微调阶段</b>，主评估指标从「分类准确率」换成<b style="color:var(--ink)">困惑度</b> PPL = exp(平均 token 负对数似然)——越低代表模型对下一个 token 越「确定」。</p>
+<pre class="code"><span class="cm"># train.py : pretrain</span>
+x, y = <span class="fn">lm_batch</span>(token_ids, block_size, ...)
+loss = F.<span class="fn">cross_entropy</span>(<span class="fn">model</span>(x).<span class="fn">reshape</span>(-1,V), y.<span class="fn">reshape</span>(-1))
+
+<span class="cm"># train.py : perplexity</span>
+ppl = math.<span class="fn">exp</span>(nll_sum / n_tokens)</pre>
+<div class="note c">优化器配方对齐 GPT-2：Adam（β2=<b style="color:var(--ink)">0.999</b>、ε=1e-8，GPT-1 是 0.98）+ <b style="color:var(--ink)">权重衰减 0.01</b>（LayerNorm/bias 不衰减），线性 warmup 后余弦衰减，梯度裁剪 1.0。</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">5</span>零样本任务：任务就是文本续写</h2>
+<p>没有任务头、没有微调。把任务写成自然语言提示，模型续写即完成。下面四个标签对应 <code>data.py</code> 里的提示模板——同一个预训练模型，换提示就换任务。</p>
+<div class="tabs" id="taskTabs">
+<div class="tab active" data-t="trans">翻译 Translation</div>
+<div class="tab" data-t="qa">问答 QA</div>
+<div class="tab" data-t="summ">摘要 Summarization</div>
+<div class="tab" data-t="cmp">vs GPT-1 微调</div>
+</div>
+<div class="split">
+<div class="demo">
+<div class="demo-title" id="taskTitle">翻译：把任务写成续写</div>
+<canvas id="tasks" width="1000" height="520"></canvas>
+<div class="legend">
+<span><span class="sw" style="background:#3157d5"></span>提示词 prompt</span>
+<span><span class="sw" style="background:#167c59"></span>模型续写 completion</span>
+<span><span class="sw" style="background:#e66a3c"></span>触发词 (TL;DR 等)</span>
+</div>
+</div>
+<div class="panel">
+<h3 id="taskCode">translate_prompt</h3>
+<pre class="code" id="taskSnippet"></pre>
+<p id="taskDesc"></p>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">6</span>四种规模：124M → 1558M</h2>
+<div class="grid">
+<div class="panel">
+<h3>论文 Table 的四档配置</h3>
+<p>GPT-2 把同一套架构缩放出四档，验证「无监督多任务」随规模涌现。点上面的任一规模条，看它的层/维度/头。</p>
+<div class="bars" id="sizeBars" style="margin-top:18px">
+<div class="barrow"><div class="barlab"><span>Small</span><b>124M</b></div><div class="bar-track"><div class="bar-fill" style="width:8%"></div></div></div>
+<div class="barrow"><div class="barlab"><span>Medium</span><b>355M</b></div><div class="bar-track"><div class="bar-fill b" style="width:23%"></div></div></div>
+<div class="barrow"><div class="barlab"><span>Large</span><b>774M</b></div><div class="bar-track"><div class="bar-fill p" style="width:50%"></div></div></div>
+<div class="barrow"><div class="barlab"><span>XL</span><b>1558M</b></div><div class="bar-track"><div class="bar-fill o" style="width:100%"></div></div></div>
+</div>
+</div>
+<div class="tablebox">
+<table>
+<tr><th>模型</th><th>n_layer</th><th>n_embd</th><th>n_head</th><th>约参数量</th></tr>
+<tr><td><b>Small</b></td><td>12</td><td>768</td><td>12</td><td>124M</td></tr>
+<tr><td><b>Medium</b></td><td>24</td><td>1024</td><td>16</td><td>355M</td></tr>
+<tr><td><b>Large</b></td><td>36</td><td>1280</td><td>20</td><td>774M</td></tr>
+<tr><td><b>XL</b></td><td>48</td><td>1600</td><td>25</td><td>1558M</td></tr>
+</table>
+<p style="margin:10px 0 0;font-size:14px">head_dim 恒为 64（n_embd/n_head）。本仓库 <code>GPTConfig.gpt2_small/medium/large/xl</code> 四个静态方法直接给出这些配置。</p>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">7</span>GPT-1 → GPT-2：一张表看完所有差别</h2>
+<div class="tablebox">
+<table>
+<tr><th>维度</th><th>GPT-1</th><th>GPT-2（本实现）</th></tr>
+<tr><td><b>分词</b></td><td>字符/词级 BPE（<code>&lt;/w&gt;</code>，会 OOV）</td><td><b>字节级 BPE</b>（256 字节基底，<code>Ġ</code> 表示空格，无 OOV）</td></tr>
+<tr><td><b>任务方式</b></td><td>预训练 → <b>有监督微调</b>（任务头 + 辅助 LM）</td><td><b>无微调</b>，任务=提示词续写（零样本）</td></tr>
+<tr><td><b>LayerNorm</b></td><td>Post-LN（<code>ln(x+sub(x))</code>），无 <code>ln_f</code></td><td><b>Pre-LN</b>（<code>x+sub(ln(x))</code>），末层 <code>ln_f</code></td></tr>
+<tr><td><b>激活</b></td><td>GELU（erf 精确版）</td><td>GELU <b>tanh 近似</b></td></tr>
+<tr><td><b>初始化</b></td><td>全部 N(0, 0.02) 一视同仁</td><td>残差输出投影额外 <b>×1/√(2·n_layer)</b></td></tr>
+<tr><td><b>上下文</b></td><td>512</td><td><b>1024</b></td></tr>
+<tr><td><b>优化器</b></td><td>Adam β2=0.98</td><td>Adam β2=0.999 + <b>权重衰减 0.01</b></td></tr>
+<tr><td><b>评估指标</b></td><td>分类准确率</td><td><b>困惑度 PPL</b></td></tr>
+<tr><td><b>模型规模</b></td><td>117M（一档）</td><td><b>四档</b>：124M / 355M / 774M / 1558M</td></tr>
+<tr><td><b>数据</b></td><td>BooksCorpus</td><td><b>WebText</b>（Reddit karma≥3，~40GB）</td></tr>
+</table>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">8</span>文件地图</h2>
+<div class="tablebox">
+<table>
+<tr><th>文件</th><th>角色</th><th>看什么</th></tr>
+<tr><td><code>model.py</code></td><td>GPT-2 架构</td><td>GPTModel(Pre-LN+ln_f) / Block / MLP / tanh-GELU / 残差缩放初始化 / 4 档预设</td></tr>
+<tr><td><code>tokenizer.py</code></td><td>字节级 BPE 分词器</td><td>bytes_to_unicode、GPT-2 正则切分、train/encode/decode</td></tr>
+<tr><td><code>data.py</code></td><td>WebText 语料 + 零样本提示</td><td>lm_batch、translate/qa/summarize_prompt、ZERO_SHOT_EVAL</td></tr>
+<tr><td><code>train.py</code></td><td>预训练 + 困惑度</td><td>pretrain(LM)、perplexity、权重衰减分组、学习率调度</td></tr>
+<tr><td><code>main.py</code></td><td>入口</td><td>分词器训练 → 预训练 → PPL → 续写 → 零样本任务演示</td></tr>
+</table>
+</div>
+<p style="margin-top:14px">运行：<code>cd zj_test/py/31_gpt2 &amp;&amp; python main.py</code>（可用 <code>PRETRAIN_EPOCHS / BPE_VOCAB</code> 环境变量调规模）。诚实说明：这是教学小规模（4 层 / 128 维 / 内置小语料），零样本效果有限——真正的零样本能力要靠 WebText 量级数据才会涌现。</p>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+/* ---------- 通用画布工具 ---------- */
+function fit(c,h){const r=c.getBoundingClientRect(),w=Math.max(680,Math.round(r.width||c.width)),hh=w<860?h+150:h;if(c.width!==w||c.height!==hh){c.width=w;c.height=hh}return[w,hh]}
+function rr(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function box(ctx,x,y,w,h,title,sub,fill){ctx.fillStyle=fill;rr(ctx,x,y,w,h,16);ctx.fill();ctx.strokeStyle="#dedbd2";ctx.lineWidth=1.4;ctx.stroke();ctx.fillStyle="#172033";ctx.font="850 17px Inter";ctx.textAlign="center";ctx.fillText(title,x+w/2,y+30);if(sub){ctx.fillStyle="#687083";ctx.font="650 13px Inter";wrap(ctx,sub,x+w/2,y+52,w-22,17)}}
+function wrap(ctx,text,x,y,maxW,lineH){let line="",yy=y;text=String(text);for(const ch of text){const t=line+ch;if(ctx.measureText(t).width>maxW){ctx.fillText(line,x,yy);line=ch;yy+=lineH}else line=t}ctx.fillText(line,x,yy)}
+function arrow(ctx,x1,y1,x2,y2){ctx.strokeStyle="#e66a3c";ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.fillStyle="#e66a3c";ctx.font="900 24px Inter";ctx.textAlign="center";const a=Math.atan2(y2-y1,x2-x1);ctx.fillText("▸",x2-Math.cos(a)*2,y2-Math.sin(a)*2+8)}
+
+/* ---------- 字节级 BPE (客户端忠实实现) ---------- */
+function bytesToUnicode(){
+  const bs=[],cs=[];
+  for(let i=33;i<=126;i++){bs.push(i);cs.push(i)}
+  for(let i=161;i<=172;i++){bs.push(i);cs.push(i)}
+  for(let i=174;i<=255;i++){bs.push(i);cs.push(i)}
+  const base=bs.slice();let n=0;
+  for(let b=0;b<256;b++){if(!base.includes(b)){bs.push(b);cs.push(256+n);n++}}
+  const m={};for(let i=0;i<bs.length;i++)m[bs[i]]=String.fromCharCode(cs[i]);return m;
+}
+const B2U=bytesToUnicode();
+// GPT-2 预切分正则 (JS 的 \p{L}/\p{N} 等价于官方)，空格附着到后词
+const GPT2_RE=/'s|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+/gu;
+// 一个小型「合并优先级表」演示字节级 BPE 学到的常见子词 (rank 越小越先合并)
+const RANKS={};[
+ 'Ġthe','Ġand','Ġthat','Ġwith','Ġfor','Ġwas','Ġto','Ġof','Ġin','Ġa','Ġis','Ġit','Ġon','Ġbe',
+ 'the','and','ing','tion','hat','ent','her','ate','his','ere','ter','est','ati','ould','ould',
+ 'th','he','in','er','an','re','on','at','en','nd','ti','es','or','te','of','ed','is','it','al',
+ 'ar','st','to','ng','se','le','ou','om','ic','id','ll','ne','li','il','ot','ly','ce','ra','ro',
+ 'Ġt','Ġs','Ġw','Ġh','Ġb','Ġc','Ġf','Ġm','Ġd','Ġn','Ġp','Ġl','Ġr','ġ','tr','ans','lat','Ġca','cat'
+].forEach((p,i)=>{if(!(p in RANKS))RANKS[p]=i});
+function bpe(syms){
+  syms=syms.slice();
+  while(syms.length>1){
+    let best=null,rank=Infinity;
+    for(let i=0;i<syms.length-1;i++){const r=RANKS[syms[i]+syms[i+1]];if(r!==undefined&&r<rank){rank=r;best=i}}
+    if(best===null)break;
+    syms=[...syms.slice(0,best),syms[best]+syms[best+1],...syms.slice(best+2)];
+  }
+  return syms;
+}
+function byteEncodeAll(text){
+  const enc=new TextEncoder();
+  const chunks=text.match(GPT2_RE)||[text];
+  const out=[];
+  for(const chunk of chunks){
+    const bytes=enc.encode(chunk);
+    const charStr=[...bytes].map(b=>B2U[b]).join("");
+    const toks=bpe(charStr.split(""));
+    out.push({chunk,bytes:[...bytes],chars:charStr,toks});
+  }
+  return out;
+}
+const byteC=$("byte"),bctx=byteC.getContext("2d");
+function drawByte(){
+  const text=$("byteInput").value||"the cat sat";
+  const parts=byteEncodeAll(text);
+  const [W,H]=fit(byteC,440);
+  bctx.clearRect(0,0,W,H);bctx.fillStyle="rgba(255,255,255,.7)";bctx.fillRect(0,0,W,H);
+  bctx.fillStyle="#172033";bctx.font="850 22px Inter";bctx.textAlign="left";bctx.fillText("字节级编码「"+(text.length>16?text.slice(0,16)+"…":text)+"」",30,38);
+  // 四行：原文 / UTF-8 字节 / 字节字符(Ġ高亮) / BPE token
+  const rows=[{lab:"文本",col:"#687083"},{lab:"UTF-8 字节",col:"#bf6a20"},{lab:"字节→字符 (Ġ=空格)",col:"#6851c9"},{lab:"BPE token",col:"#167c59"}];
+  const y0=66,rh=Math.min(96,(H-90)/4),x0=40,cw=Math.min(46,(W-110)/14);
+  const palette=["#3157d5","#1c9aa8","#e66a3c","#6851c9","#bf6a20","#167c59","#b4571b","#9a4e1e"];
+  // 平铺所有 chunk 的字节/字符/token 到一条
+  const allBytes=[],allChars=[],allToks=[];
+  parts.forEach(p=>{allBytes.push(...p.bytes);allChars.push(...p.chars);allToks.push(...p.toks)});
+  // 行1 文本
+  bctx.fillStyle=rows[0].col;bctx.font="780 13px Inter";bctx.textAlign="left";bctx.fillText(rows[0].lab,8,y0+rh/2+4);
+  let x=x0;bctx.font="800 16px Inter";bctx.textAlign="center";
+  [...text].forEach((ch,i)=>{if(x>W-30){bctx.fillStyle="#aeb4c2";bctx.fillText("…",W-16,y0+rh/2+4);return}bctx.fillStyle="#172033";bctx.fillText(ch===" "?"␣":ch,x+cw/2,y0+rh/2+4);x+=cw});
+  // 行2 字节(数字)
+  bctx.fillStyle=rows[1].col;bctx.font="780 13px Inter";bctx.textAlign="left";bctx.fillText(rows[1].lab,8,y0+rh+rh/2+14);
+  x=x0;bctx.font="700 13px Inter";bctx.textAlign="center";
+  allBytes.forEach((b,i)=>{if(x>W-30){bctx.fillStyle="#aeb4c2";bctx.fillText("…",W-16,y0+rh+rh/2+14);return}
+    bctx.fillStyle="rgba(191,106,32,.16)";rr(bctx,x,y0+rh+8,cw-4,cw-4,8);bctx.fill();
+    bctx.fillStyle="#bf6a20";bctx.fillText(b,x+cw/2-2,y0+rh+8+cw/2+5);x+=cw});
+  // 行3 字节字符(Ġ高亮)
+  bctx.fillStyle=rows[2].col;bctx.font="780 13px Inter";bctx.textAlign="left";bctx.fillText(rows[2].lab,8,y0+2*rh+rh/2+24);
+  x=x0;bctx.font="800 17px Inter";bctx.textAlign="center";
+  allChars.forEach((ch,i)=>{if(x>W-30){bctx.fillStyle="#aeb4c2";bctx.fillText("…",W-16,y0+2*rh+rh/2+24);return}
+    const sp=ch==="Ġ";bctx.fillStyle=sp?"rgba(230,106,60,.22)":"rgba(104,81,201,.12)";rr(bctx,x,y0+2*rh+18,cw-4,30,8);bctx.fill();
+    bctx.fillStyle=sp?"#e66a3c":"#172033";bctx.fillText(ch==="Ġ"?"Ġ":ch,x+cw/2-2,y0+2*rh+18+20);x+=cw});
+  // 行4 BPE token (变宽，按 token 长度)
+  bctx.fillStyle=rows[3].col;bctx.font="780 13px Inter";bctx.textAlign="left";bctx.fillText(rows[3].lab,8,y0+3*rh+rh/2+34);
+  x=x0;bctx.font="800 15px Inter";bctx.textAlign="center";
+  allToks.forEach((tk,i)=>{const w=Math.max(cw*tk.length*0.62+12,cw);if(x+w>W-16){bctx.fillStyle="#aeb4c2";bctx.fillText("…",W-16,y0+3*rh+rh/2+34);return}
+    const col=palette[i%palette.length];bctx.fillStyle=col;rr(bctx,x,y0+3*rh+28,w,30,8);bctx.fill();
+    bctx.fillStyle="#fff";bctx.fillText(tk,x+w/2-2,y0+3*rh+28+20);x+=w+4});
+  // 读数
+  $("byteN").textContent=allBytes.length;$("tokN").textContent=allToks.length;$("oov").textContent="永不";
+}
+$("byteInput").addEventListener("input",()=>{document.querySelectorAll("#byteWords button").forEach(b=>b.classList.remove("active"));drawByte()});
+document.querySelectorAll("#byteWords button").forEach(b=>b.onclick=()=>{$("byteInput").value=b.dataset.w;document.querySelectorAll("#byteWords button").forEach(x=>x.classList.remove("active"));b.classList.add("active");drawByte()});
+
+/* ---------- 2. 架构栈 (Pre-LN + ln_f) ---------- */
+const archC=$("arch"),actx=archC.getContext("2d");
+const EMBD=128,VOCAB=500,NCTX=1024;
+function drawArch(){
+  const [W,H]=fit(archC,560),L=+$("nLayer").value,hd=+$("nHead").value,T=+$("aT").value,compact=W<880;
+  actx.clearRect(0,0,W,H);actx.fillStyle="rgba(255,255,255,.7)";actx.fillRect(0,0,W,H);
+  actx.fillStyle="#172033";actx.font="850 25px Inter";actx.textAlign="left";actx.fillText("GPTModel: 堆 "+L+" 个 Block (Pre-LN)",30,46);
+  const bw=compact?W-60:240,x=compact?30:Math.round(W/2-bw/2),top=74,bh=66,gap=12;
+  const layers=[["token ids","B × "+T,"rgba(245,200,75,.18)"],["wte + wpe","字节级嵌入 + 位置嵌入","rgba(49,87,213,.14)"]];
+  let y=top;
+  layers.forEach(it=>{box(actx,x,y,bw,bh,it[0],it[1],it[2]);y+=bh+gap;arrow(actx,x+bw/2,y-4,x+bw/2,y+4)});
+  const blkH=Math.min(bh,Math.round((H-top-260)/L));
+  for(let i=0;i<L;i++){box(actx,x,y,bw,blkH,"Block "+(i+1),"x+attn(ln₁), x+mlp(ln₂)","rgba(28,154,168,.12)");y+=blkH+gap;if(i<L-1)arrow(actx,x+bw/2,y-4,x+bw/2,y+4)}
+  [["ln_f","末层 LayerNorm (Pre-LN 必需)","rgba(255,255,255,.92)"],["LMHead","与 wte 权重绑定 → logits","rgba(22,124,89,.15)"]].forEach(it=>{box(actx,x,y,bw,bh,it[0],it[1],it[2]);y+=bh+gap;if(it[0]==="ln_f")arrow(actx,x+bw/2,y-4,x+bw/2,y+4)});
+  const params=(12*EMBD*EMBD*L+VOCAB*EMBD+NCTX*EMBD)/1e6;
+  $("archIn").textContent="B × "+T;$("archMid").textContent="B × "+T+" × "+EMBD;$("archOut").textContent="B × "+T+" × "+VOCAB;
+  $("archParams").textContent=params.toFixed(2)+"M";
+  actx.fillStyle="#687083";actx.font="750 15px Inter";actx.textAlign="left";
+  actx.fillText("Pre-LN: 残差主路径恒等 → 末层补 ln_f。head_dim = "+EMBD+"/"+hd+" = "+(EMBD/hd),30,H-30);
+}
+
+/* ---------- 3. 残差缩放初始化 ---------- */
+const initC=$("init"),itx=initC.getContext("2d");
+function drawInit(){
+  const [W,H]=fit(initC,500),L=+$("iLayer").value,N=2*L,scale=1/Math.sqrt(N);
+  itx.clearRect(0,0,W,H);itx.fillStyle="rgba(255,255,255,.7)";itx.fillRect(0,0,W,H);
+  itx.fillStyle="#172033";itx.font="850 22px Inter";itx.textAlign="left";itx.fillText("残差缩放初始化：n_layer = "+L,30,40);
+  // 画一个 Block 内部，高亮两个 c_proj
+  const bw=Math.min(420,W-80),x=Math.round(W/2-bw/2),y=66,bh=210;
+  itx.fillStyle="rgba(28,154,168,.08)";rr(itx,x,y,bw,bh,16);itx.fill();itx.strokeStyle="#dedbd2";itx.lineWidth=1.4;itx.stroke();
+  itx.fillStyle="#172033";itx.font="850 17px Inter";itx.textAlign="center";itx.fillText("Block",x+bw/2,y+24);
+  // 两个子层的 c_proj（高亮橙），其它权重灰
+  const drawSub=(sy,lbl,proj)=>{itx.textAlign="center";
+    itx.fillStyle="rgba(255,255,255,.7)";rr(itx,x+24,sy,90,40,10);itx.fill();
+    itx.fillStyle="#5a6378";itx.font="780 12px Inter";itx.fillText("ln",x+24+45,sy+24);
+    itx.fillStyle="rgba(255,255,255,.7)";rr(itx,x+128,sy,100,40,10);itx.fill();
+    itx.fillStyle="#5a6378";itx.font="780 12px Inter";itx.fillText(lbl,x+128+50,sy+24);
+    // c_proj 高亮
+    itx.fillStyle=proj?"rgba(230,106,60,.22)":"rgba(255,255,255,.7)";rr(itx,x+246,sy,110,40,10);itx.fill();
+    itx.fillStyle=proj?"#e66a3c":"#5a6378";itx.font="780 12px Inter";itx.fillText("c_proj"+(proj?" ✕"+scale.toFixed(2):""),x+246+55,sy+24);
+  };
+  drawSub(y+44,"c_attn/attn",true);   // 注意力子层：c_attn 不缩，c_proj 缩
+  drawSub(y+118,"c_fc / mlp",true);   // FFN 子层：c_fc 不缩，c_proj 缩
+  itx.fillStyle="#687083";itx.font="750 13px Inter";itx.textAlign="left";
+  itx.fillText("橙色 = 被缩放的残差输出投影（共 2 个/层 → N=2·n_layer="+N+"）",x,y+bh-16);
+  // 底部对比条：GPT-1 全 0.02 vs GPT-2 c_proj
+  const by=y+bh+34,bw2=W-80;
+  itx.fillStyle="#172033";itx.font="800 15px Inter";itx.textAlign="left";itx.fillText("输出投影初始化 std",x,by-8);
+  const maxS=0.021;
+  const bar=(lab,v,col,yy)=>{itx.fillStyle="#e8e6df";rr(itx,x,yy,bw2,22,8);itx.fill();
+    itx.fillStyle=col;rr(itx,x,yy,bw2*Math.min(1,v/maxS),22,8);itx.fill();
+    itx.fillStyle="#172033";itx.font="800 13px Inter";itx.textAlign="left";itx.fillText(lab+" = "+v.toFixed(4),x+8,yy+15)};
+  bar("GPT-1  全部权重",0.02,"#687083",by+8);
+  bar("GPT-2  c_proj (缩放后)",0.02*scale,"#e66a3c",by+40);
+  $("resN").textContent=N;$("scale").textContent=scale.toFixed(3);$("cstd").textContent=(0.02*scale).toFixed(4);
+}
+
+/* ---------- 4. 困惑度曲线 ---------- */
+const pplC=$("ppl"),ptx=pplC.getContext("2d");
+function lossCurve(ctx,c,h,curves,ylab){
+  const [W,H]=fit(c,h),padL=64,padB=54,padT=58,padR=24;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(0,0,W,H);
+  const maxY=curves[0].max;
+  ctx.fillStyle="#172033";ctx.font="850 22px Inter";ctx.textAlign="left";ctx.fillText(ylab,30,38);
+  const x0=padL,y0=padT,plotW=W-padL-padR,plotH=H-padT-padB;
+  ctx.strokeStyle="#e8e6df";ctx.lineWidth=1;ctx.fillStyle="#687083";ctx.font="700 12px Inter";ctx.textAlign="right";
+  for(let g=0;g<=4;g++){const yy=y0+plotH*g/4;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x0+plotW,yy);ctx.stroke();ctx.fillText((maxY*(1-g/4)).toFixed(1),x0-8,yy+4)}
+  ctx.textAlign="center";ctx.fillText("优化步数 →",x0+plotW/2,H-16);
+  curves.forEach(cv=>{const n=cv.pts.length;ctx.beginPath();
+    for(let i=0;i<n;i++){const xx=x0+plotW*i/(n-1),yy=y0+plotH*(1-cv.pts[i]/maxY);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)}
+    ctx.strokeStyle=cv.color;ctx.lineWidth=3.2;ctx.stroke();
+    if(cv.fill){ctx.lineTo(x0+plotW,y0+plotH);ctx.lineTo(x0,y0+plotH);ctx.closePath();ctx.fillStyle=cv.fill;ctx.fill()}});
+  let lx=x0+10;ctx.textAlign="left";ctx.font="780 13px Inter";
+  curves.forEach(cv=>{ctx.fillStyle=cv.color;ctx.fillRect(lx,y0+plotH+22,16,4);ctx.fillStyle="#687083";ctx.fillText(cv.name,lx+22,y0+plotH+28);lx+=ctx.measureText(cv.name).width+72});
+}
+function decay(n,from,to,k){const a=[];for(let i=0;i<n;i++){const t=i/(n-1);let v=to+(from-to)*Math.exp(-k*t);v+=Math.sin(i*1.7)*0.04*(1-t);a.push(Math.max(to*0.96,v))}return a}
+function drawPPL(){
+  const pts=decay(60,6.21,0.08,5.5);
+  lossCurve(ptx,pplC,440,[{pts,max:6.5,color:"#167c59",fill:"rgba(22,124,89,.12)",name:"LM 损失"}],"预训练：语言模型损失随训练下降");
+}
+
+/* ---------- 5. 零样本任务 ---------- */
+const taskC=$("tasks"),tctx=taskC.getContext("2d");
+const TASKS={
+  trans:{title:"翻译：translate to … :",code:'translate_prompt(text, "french")\n# → "translate to french , the cat :"',
+    rows:[{prompt:["translate"," to"," french"," ,"," the"," cat"," :"],comp:[" le"," chat"],trig:-1}],
+    desc:"把翻译写成「翻译到法语，某词：」的续写。模型接着冒号写出译文。无需平行语料微调——它从 WebText 里自然见到的双语对照中学到这种格式。"},
+  qa:{title:"问答：question … answer :",code:'qa_prompt("what is the capital of france ?")\n# → "question : … answer :"',
+    rows:[{prompt:["question"," :"," capital"," of"," france"," ?"," answer"," :"],comp:[" paris"],trig:-1}],
+    desc:"问答也是续写：「问题：…？答案：」之后模型补出答案。这正是 GPT-2「无监督多任务」的精髓——同一个 LM，换提示就换任务。"},
+  summ:{title:"摘要：… TL;DR :",code:'summarize_prompt(text)\n# → "...text... tl ; dr :"',
+    rows:[{prompt:["a"," long"," boring"," movie"," that"," many"," left"," ."],comp:[],trig:7},
+      {prompt:[],comp:[" a"," boring"," movie"," ."],trig:-1}],
+    desc:"用触发词「TL;DR:」让模型生成摘要。论文发现加这两个词就能零样本触发摘要行为——这是「提示工程」最早的范例之一。第二行是模型在触发词后的续写（摘要）。"},
+  cmp:{title:"vs GPT-1：微调 vs 零样本",code:'GPT-1: finetune(model, classifier, ...)   # 任务头+辅助LM\nGPT-2: generate(model, prompt)            # 仅续写',
+    rows:[{prompt:["GPT-1"," 预训练"," →"," 微调"," +"," 任务头"," +"," λ·L1"],comp:[],trig:-1,g1:true},
+          {prompt:["GPT-2"," 预训练"," →"," 提示词"," →"," 续写"],comp:[],trig:-1}],
+    desc:"GPT-1 每个任务都要接任务头、用标注数据微调、还配一个辅助 LM 损失（L3=L2+λ·L1）。GPT-2 全砍掉：只有预训练 + generate。代价是真正有效需要 1.5B 量级。"}
+};
+let curTask="trans";
+function drawTask(){
+  const t=TASKS[curTask],[W,H]=fit(taskC,t.rows.length>1?500:420);
+  tctx.clearRect(0,0,W,H);tctx.fillStyle="rgba(255,255,255,.7)";tctx.fillRect(0,0,W,H);
+  const rows=t.rows,rh=Math.min(72,(H-80)/rows.length-12),tw=Math.min(86,(W-110)/9),y0=58;
+  rows.forEach((row,ri)=>{
+    const y=y0+ri*(rh+16);
+    if(rows.length>1){tctx.fillStyle="#aeb4c2";tctx.font="800 13px Inter";tctx.textAlign="left";tctx.fillText(row.g1?"GPT-1":"GPT-2",16,y+rh/2+4)}
+    const x0=rows.length>1?80:50;let x=x0;
+    row.prompt.forEach((tk,i)=>{let fill="rgba(49,87,213,.14)";
+      if(i===row.trig)fill="rgba(230,106,60,.26)";
+      tctx.fillStyle=fill;rr(tctx,x,y,tw,rh-16,10);tctx.fill();
+      tctx.fillStyle=i===row.trig?"#e66a3c":"#172033";tctx.font="780 13px Inter";tctx.textAlign="center";
+      const lbl=tk===" "?"␣":tk;tctx.fillText(lbl.length>8?lbl.slice(0,7)+"…":lbl,x+tw/2,y+rh/2+2);x+=tw+5});
+    if(row.comp.length){
+      tctx.fillStyle="#e7f3ee";tctx.strokeStyle="rgba(22,124,89,.4)";tctx.lineWidth=1.6;rr(tctx,x+6,y,tw*row.comp.length+10,rh-16,10);tctx.fill();tctx.stroke();
+      tctx.fillStyle="#167c59";tctx.font="780 13px Inter";tctx.textAlign="left";
+      tctx.fillText("→"+row.comp.join(""),x+14,y+rh/2+2);
+      arrow(tctx,x+tw/2,y+rh-14,x+8,y+rh+2)
+    }
+  });
+  tctx.fillStyle="#687083";tctx.font="750 14px Inter";tctx.textAlign="left";
+  tctx.fillText("蓝色=提示词，绿色=模型续写（任务答案），橙色=触发词。",40,H-20);
+  $("taskTitle").textContent=t.title;$("taskCode").textContent=t.code.split("\n")[0];
+  $("taskSnippet").innerHTML='<span class="cm"># data.py</span>\n'+t.code.replace(/\n/g,'<br>');
+  $("taskDesc").textContent=t.desc;
+}
+document.querySelectorAll("#taskTabs .tab").forEach(b=>b.onclick=()=>{document.querySelectorAll("#taskTabs .tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");curTask=b.dataset.t;drawTask()});
+
+/* ---------- 重绘绑定 ---------- */
+function redraw(){drawByte();drawArch();drawInit();drawPPL();drawTask()}
+["nLayer","nHead","aT","iLayer"].forEach(id=>$(id).addEventListener("input",redraw));
+addEventListener("resize",redraw);
+redraw();
+</script>
+</body>
+</html>

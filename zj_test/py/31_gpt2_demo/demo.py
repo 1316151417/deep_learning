@@ -14,7 +14,11 @@
     HF_ENDPOINT=https://hf-mirror.com python demo.py    # 国内镜像加速下载
 首次运行会从 HuggingFace 下载模型 (~400MB) 到 ~/.cache/huggingface。
 """
+import logging
 import os
+
+os.environ.setdefault("TQDM_DISABLE", "1")   # 关掉权重加载进度条 (须在 import transformers 前设)
+logging.disable(logging.WARNING)             # 压制 transformers/HF 的告警噪声 (bos/eos、LOAD REPORT、未鉴权提示)；ERROR 仍可见
 
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM

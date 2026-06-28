@@ -1,0 +1,179 @@
+{
+  "id": "2026-06-28-212612",
+  "generated_at": "2026-06-28T13:26:12.20666Z",
+  "language": "zh",
+  "pages": [
+    {
+      "slug": "1-xiang-mu-zong-lan-gpt-2-wu-jian-du-duo-ren-wu-xue-xi-de-he-xin-si-xiang",
+      "title": "项目总览：GPT-2 无监督多任务学习的核心思想",
+      "file": "1-xiang-mu-zong-lan-gpt-2-wu-jian-du-duo-ren-wu-xue-xi-de-he-xin-si-xiang.md",
+      "section": "快速入门",
+      "level": "Beginner"
+    },
+    {
+      "slug": "2-kuai-su-qi-dong-huan-jing-zhun-bei-yu-jian-yun-xing",
+      "title": "快速启动：环境准备与一键运行",
+      "file": "2-kuai-su-qi-dong-huan-jing-zhun-bei-yu-jian-yun-xing.md",
+      "section": "快速入门",
+      "level": "Beginner"
+    },
+    {
+      "slug": "3-gpt-2-yu-gpt-1-de-he-xin-qu-bie-su-cha-biao",
+      "title": "GPT-2 与 GPT-1 的核心区别速查表",
+      "file": "3-gpt-2-yu-gpt-1-de-he-xin-qu-bie-su-cha-biao.md",
+      "section": "快速入门",
+      "level": "Beginner"
+    },
+    {
+      "slug": "4-yun-xing-shu-chu-jie-du-cong-fen-ci-dao-ling-yang-ben-ren-wu-de-wan-zheng-yan-shi-liu-cheng",
+      "title": "运行输出解读：从分词到零样本任务的完整演示流程",
+      "file": "4-yun-xing-shu-chu-jie-du-cong-fen-ci-dao-ling-yang-ben-ren-wu-de-wan-zheng-yan-shi-liu-cheng.md",
+      "section": "快速入门",
+      "level": "Beginner"
+    },
+    {
+      "slug": "5-jie-ma-qi-transformer-zheng-ti-jia-gou-qian-ru-block-dui-die-yu-mo-ceng-gui-hua",
+      "title": "解码器 Transformer 整体架构：嵌入、Block 堆叠与末层归一化",
+      "file": "5-jie-ma-qi-transformer-zheng-ti-jia-gou-qian-ru-block-dui-die-yu-mo-ceng-gui-hua.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "6-duo-tou-yin-guo-zi-zhu-yi-li-qkv-rong-he-tou-ying-yin-guo-yan-ma-yu-can-chai-suo-fang",
+      "title": "多头因果自注意力：QKV 融合投影、因果掩码与残差缩放",
+      "file": "6-duo-tou-yin-guo-zi-zhu-yi-li-qkv-rong-he-tou-ying-yin-guo-yan-ma-yu-can-chai-suo-fang.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "7-qian-kui-wang-luo-yu-tanh-jin-si-gelu-ji-huo-han-shu",
+      "title": "前馈网络与 tanh 近似 GELU 激活函数",
+      "file": "7-qian-kui-wang-luo-yu-tanh-jin-si-gelu-ji-huo-han-shu.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "8-can-chai-lu-jing-suo-fang-chu-shi-hua-1-2-n_layer-de-zuo-yong-yu-yuan-li",
+      "title": "残差路径缩放初始化：1/√(2·n_layer) 的作用与原理",
+      "file": "8-can-chai-lu-jing-suo-fang-chu-shi-hua-1-2-n_layer-de-zuo-yong-yu-yuan-li.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "9-yu-yan-mo-xing-tou-yu-token-qian-ru-quan-zhong-bang-ding-ji-zhi",
+      "title": "语言模型头与 Token 嵌入权重绑定机制",
+      "file": "9-yu-yan-mo-xing-tou-yu-token-qian-ru-quan-zhong-bang-ding-ji-zhi.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "10-si-chong-mo-xing-gui-mo-yu-she-small-medium-large-xl-pei-zhi-xiang-jie",
+      "title": "四种模型规模预设：Small / Medium / Large / XL 配置详解",
+      "file": "10-si-chong-mo-xing-gui-mo-yu-she-small-medium-large-xl-pei-zhi-xiang-jie.md",
+      "section": "深度解析",
+      "group": "模型架构",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "11-bytes_to_unicode-ying-she-kong-ge-wei-he-bian-cheng-g",
+      "title": "bytes_to_unicode 映射：空格为何变成 Ġ",
+      "file": "11-bytes_to_unicode-ying-she-kong-ge-wei-he-bian-cheng-g.md",
+      "section": "深度解析",
+      "group": "字节级 BPE 分词器",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "12-bpe-xun-lian-liu-cheng-zheng-ze-yu-qie-fen-pin-lu-he-bing-yu-ci-biao-gou-jian",
+      "title": "BPE 训练流程：正则预切分、频率合并与词表构建",
+      "file": "12-bpe-xun-lian-liu-cheng-zheng-ze-yu-qie-fen-pin-lu-he-bing-yu-ci-biao-gou-jian.md",
+      "section": "深度解析",
+      "group": "字节级 BPE 分词器",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "13-bian-ma-yu-jie-ma-cong-wen-ben-dao-token-id-de-wu-sun-wang-fan",
+      "title": "编码与解码：从文本到 Token ID 的无损往返",
+      "file": "13-bian-ma-yu-jie-ma-cong-wen-ben-dao-token-id-de-wu-sun-wang-fan.md",
+      "section": "深度解析",
+      "group": "字节级 BPE 分词器",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "14-wu-jian-du-yu-yan-mo-xing-yu-xun-lian-xun-huan-mu-biao-han-shu-yu-pi-ci-cai-yang",
+      "title": "无监督语言模型预训练循环：目标函数与批次采样",
+      "file": "14-wu-jian-du-yu-yan-mo-xing-yu-xun-lian-xun-huan-mu-biao-han-shu-yu-pi-ci-cai-yang.md",
+      "section": "深度解析",
+      "group": "训练与评估",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "15-adam-you-hua-qi-pei-zhi-quan-zhong-shuai-jian-fen-zu-yu-b2-0-999-de-xuan-ze",
+      "title": "Adam 优化器配置：权重衰减分组与 β2=0.999 的选择",
+      "file": "15-adam-you-hua-qi-pei-zhi-quan-zhong-shuai-jian-fen-zu-yu-b2-0-999-de-xuan-ze.md",
+      "section": "深度解析",
+      "group": "训练与评估",
+      "level": "Advanced"
+    },
+    {
+      "slug": "16-xue-xi-lu-diao-du-xian-xing-warmup-yu-yu-xian-shuai-jian-ce-lue",
+      "title": "学习率调度：线性 Warmup 与余弦衰减策略",
+      "file": "16-xue-xi-lu-diao-du-xian-xing-warmup-yu-yu-xian-shuai-jian-ce-lue.md",
+      "section": "深度解析",
+      "group": "训练与评估",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "17-kun-huo-du-perplexity-gpt-2-de-he-xin-ping-gu-zhi-biao-ji-suan-fang-fa",
+      "title": "困惑度（Perplexity）：GPT-2 的核心评估指标计算方法",
+      "file": "17-kun-huo-du-perplexity-gpt-2-de-he-xin-ping-gu-zhi-biao-ji-suan-fang-fa.md",
+      "section": "深度解析",
+      "group": "训练与评估",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "18-ling-yang-ben-ren-wu-ji-zhi-fan-yi-wen-da-yu-zhai-yao-de-ti-shi-ci-mo-ban-she-ji",
+      "title": "零样本任务机制：翻译、问答与摘要的提示词模板设计",
+      "file": "18-ling-yang-ben-ren-wu-ji-zhi-fan-yi-wen-da-yu-zhai-yao-de-ti-shi-ci-mo-ban-she-ji.md",
+      "section": "深度解析",
+      "group": "零样本多任务与生成",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "19-top-k-cai-yang-sheng-cheng-wen-du-suo-fang-yu-gai-lu-jie-duan-ce-lue",
+      "title": "Top-k 采样生成：温度缩放与概率截断策略",
+      "file": "19-top-k-cai-yang-sheng-cheng-wen-du-suo-fang-yu-gai-lu-jie-duan-ce-lue.md",
+      "section": "深度解析",
+      "group": "零样本多任务与生成",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "20-ling-yang-ben-ping-gu-fang-fa-yu-lambada-feng-ge-xia-ci-ming-zhong-lu",
+      "title": "零样本评估方法与 LAMBADA 风格下一词命中率",
+      "file": "20-ling-yang-ben-ping-gu-fang-fa-yu-lambada-feng-ge-xia-ci-ming-zhong-lu.md",
+      "section": "深度解析",
+      "group": "零样本多任务与生成",
+      "level": "Advanced"
+    },
+    {
+      "slug": "21-webtext-feng-ge-yu-liao-yu-ren-wu-fan-li-de-shu-ju-zu-zhi-fang-shi",
+      "title": "WebText 风格语料与任务范例的数据组织方式",
+      "file": "21-webtext-feng-ge-yu-liao-yu-ren-wu-fan-li-de-shu-ju-zu-zhi-fang-shi.md",
+      "section": "深度解析",
+      "group": "数据工程",
+      "level": "Beginner"
+    },
+    {
+      "slug": "22-yu-yan-mo-xing-pi-shu-ju-cai-yang-yu-xun-lian-yan-zheng-ji-qie-fen",
+      "title": "语言模型批数据采样与训练/验证集切分",
+      "file": "22-yu-yan-mo-xing-pi-shu-ju-cai-yang-yu-xun-lian-yan-zheng-ji-qie-fen.md",
+      "section": "深度解析",
+      "group": "数据工程",
+      "level": "Beginner"
+    }
+  ]
+}

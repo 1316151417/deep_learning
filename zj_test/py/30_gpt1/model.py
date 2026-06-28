@@ -4,7 +4,9 @@
   * 仅解码器 (decoder-only) Transformer：论文 12 层 / 768 维 / 12 头 (本文件可缩放为教学小规模)。
   * 学习的位置编码 (learned positional embeddings)，而非正弦。
   * GELU 激活的位置前馈网络，内层维度 = 4 * n_embd。
-  * Pre-LN 残差结构 (LayerNorm 在子层之前)，并在堆叠末尾再加一层 LayerNorm (ln_f)。
+  * Post-LN 残差结构 (LayerNorm 在「残差相加之后」，对齐原始 Transformer 与官方 block 实现)，
+    因此堆叠末尾不再需要额外的末层 LayerNorm (无 ln_f)。
+    注：GPT-2 才改为 Pre-LN (LayerNorm 在子层之前) 并新增末层 ln_f。
   * token 嵌入不乘以 sqrt(d_model) (与原始 Transformer 不同，GPT 不做缩放)。
   * 语言模型头与 token 嵌入权重绑定 (weight tying)。
 权重初始化：Linear/Embedding ~ N(0, 0.02)，bias 置 0，LayerNorm gamma=1 / beta=0。
@@ -91,10 +93,10 @@ class FeedForward(nn.Module):
 
 
 class Block(nn.Module):
-    """GPT 解码块 (Pre-LN)：
+    """GPT 解码块 (Post-LN，对齐官方 block：LayerNorm 在残差相加之后)：
 
-        x = x + attn(ln_1(x))     # 掩码自注意力子层
-        x = x + ffn(ln_2(x))      # 前馈子层
+        n = ln_1(x + attn(x))     # 注意力子层：先残差相加，再 LayerNorm
+        h = ln_2(n + ffn(n))      # 前馈子层：先残差相加，再 LayerNorm
     """
 
     def __init__(self, cfg: GPTConfig):
@@ -105,15 +107,16 @@ class Block(nn.Module):
         self.ffn = FeedForward(cfg)
 
     def forward(self, x):
-        x = x + self.attn(self.ln_1(x))
-        x = x + self.ffn(self.ln_2(x))
+        x = self.ln_1(x + self.attn(x))      # Post-LN：残差相加后再归一化
+        x = self.ln_2(x + self.ffn(x))
         return x
 
 
 class GPTModel(nn.Module):
-    """GPT 主体：token 嵌入 + 位置嵌入 → 多层 Block → 末层 LayerNorm。
+    """GPT 主体：token 嵌入 + 位置嵌入 → 多层 Block (Post-LN)。
 
-    forward 返回每个位置的隐藏向量 (B, T, n_embd)，供 LM 头或任务头使用。
+    Post-LN 下末层 Block 的输出已被其 ln_2 归一化，故无需额外的末层 LayerNorm
+    (GPT-2 的 Pre-LN 才需要末层 ln_f)。forward 返回 (B, T, n_embd) 隐藏向量。
     """
 
     def __init__(self, cfg: GPTConfig):
@@ -123,7 +126,6 @@ class GPTModel(nn.Module):
         self.wpe = nn.Embedding(cfg.n_ctx, cfg.n_embd)                 # 学习的位置嵌入
         self.drop = nn.Dropout(cfg.embd_pdrop)
         self.blocks = nn.ModuleList([Block(cfg) for _ in range(cfg.n_layer)])
-        self.ln_f = nn.LayerNorm(cfg.n_embd, eps=cfg.layer_norm_epsilon)
         self.apply(self._init_weights)
 
     @staticmethod
@@ -145,7 +147,7 @@ class GPTModel(nn.Module):
         x = self.drop(self.wte(idx) + self.wpe(pos))                   # 不缩放 token 嵌入
         for block in self.blocks:
             x = block(x)
-        return self.ln_f(x)                                           # (B, T, n_embd)
+        return x                                                      # (B, T, n_embd)，末层已归一化
 
 
 class LMHead(nn.Module):

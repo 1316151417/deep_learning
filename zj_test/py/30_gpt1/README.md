@@ -11,7 +11,7 @@
 
 | 论文要点 | 实现位置 | 说明 |
 | --- | --- | --- |
-| 仅解码器 Transformer（12 层/768 维/12 头） | `model.py: GPTModel` | Pre-LN 残差 + 末层 LayerNorm，可缩放 |
+| 仅解码器 Transformer（12 层/768 维/12 头） | `model.py: GPTModel` | **Post-LN 残差**（LayerNorm 在残差相加之后，对齐官方 `block`），无末层 ln_f |
 | 学习的位置编码 + GELU 前馈 | `model.py` | 非“Attention is All You Need”的正弦编码/ReLU |
 | 权重初始化 N(0, 0.02) | `GPTModel._init_weights` | 对齐 GPT 官方实现 |
 | LM 头与 token 嵌入权重绑定 | `model.py: LMHead` | `hidden @ wte.T` |

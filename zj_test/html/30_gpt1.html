@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPT-1：从生成式预训练到任务微调</title>
+<link rel="stylesheet" href="_attention_theme.css">
+<script src="_attention_theme.js"></script>
+<style>
+:root{--ink:#172033;--muted:#687083;--paper:#f7f5ef;--card:rgba(255,255,255,.84);--line:#dedbd2;--blue:#3157d5;--cyan:#1c9aa8;--orange:#e66a3c;--purple:#6851c9;--green:#167c59;--radius:24px}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;line-height:1.74}
+code{font-family:"JetBrains Mono","Fira Code",Menlo,monospace;color:#3157d5;background:rgba(49,87,213,.08);border-radius:8px;padding:1px 6px}
+.wrap{width:min(1720px,calc(100% - 36px));margin:0 auto;padding:56px 0 92px}
+.hero{padding:48px 0 42px}
+.tag,.demo-title{display:inline-flex;align-items:center;gap:9px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(255,255,255,.62);color:var(--muted);font-size:13px;font-weight:850;letter-spacing:.1em;text-transform:uppercase}
+.tag:before,.demo-title:before{content:"";width:7px;height:7px;border-radius:50%;background:var(--orange)}
+h1{max-width:1220px;margin:22px 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(44px,6vw,78px);line-height:1.04;letter-spacing:-.055em}
+h2{display:flex;align-items:center;gap:14px;margin:0 0 18px;font-family:Georgia,"Songti SC",serif;font-size:clamp(31px,3.7vw,52px);line-height:1.12;letter-spacing:-.035em}
+h3{margin:0 0 12px;color:var(--ink);font-size:22px}
+p,li{color:var(--muted);font-size:18px}
+.section{margin-bottom:78px}
+.num{display:inline-grid;place-items:center;min-width:36px;height:36px;border-radius:11px;background:var(--ink);color:#fff;font-size:18px;font-family:Georgia,serif}
+.card,.demo,.code,.chip,.note,.tablebox,.panel,.mini{background:var(--card);border:1px solid rgba(222,219,210,.92);border-radius:var(--radius);box-shadow:0 18px 50px rgba(31,41,72,.09);backdrop-filter:blur(8px)}
+.card,.demo,.tablebox,.panel{padding:clamp(20px,2.5vw,36px)}
+.flow{display:grid;grid-template-columns:repeat(11,auto);gap:12px;align-items:center;justify-content:center;overflow:auto;padding:8px 4px}
+.chip{min-width:108px;padding:14px 14px;text-align:center;font-weight:850}
+.chip small{display:block;font-weight:700;color:var(--muted);font-size:12px;margin-top:3px;letter-spacing:.02em}
+.arr{color:var(--orange);font-size:28px;font-weight:900}
+.split{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(380px,.95fr);gap:22px;align-items:start}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.triple{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.code{padding:22px 24px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font:14.5px/1.65 "JetBrains Mono","Fira Code",monospace}
+.kw{color:#6851c9}.fn{color:#3157d5}.n{color:#bf6a20}.cm{color:#687083}.st{color:#167c59}
+.note{padding:18px 22px;border-left:5px solid var(--orange)}
+.note.b{border-left-color:var(--blue)}.note.c{border-left-color:var(--cyan)}
+.mini{padding:18px 20px}
+.mini b{display:block;color:var(--ink);font-size:20px;margin-bottom:6px}
+.mini p{margin:0}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:18px;margin:18px 0 4px}
+label{display:grid;gap:8px;color:var(--muted);font-weight:760}
+input[type=range]{width:100%;accent-color:var(--blue)}
+input[type=text]{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.74);color:var(--ink);font:16px Inter}
+canvas{display:block;width:100%;height:auto;background:rgba(255,255,255,.72);border:1px solid var(--line);border-radius:18px}
+.readouts{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-top:14px}
+.readout{padding:15px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.64);color:var(--muted)}
+.readout b{display:block;font-size:22px;color:var(--ink);margin-top:2px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:13px 15px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--ink);background:rgba(255,255,255,.58)}td{color:var(--muted)}
+.tabs{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+.tab{padding:10px 16px;border:1px solid var(--line);border-radius:13px;background:#fff;color:var(--muted);font-weight:800;cursor:pointer;font-size:15px}
+.tab.active{background:#eef1fb;color:var(--blue);border-color:rgba(49,87,213,.35)}
+.bars{display:grid;gap:18px;margin-top:8px}
+.barrow{display:grid;gap:7px}
+.barlab{display:flex;justify-content:space-between;color:var(--muted);font-weight:780;font-size:15px}
+.barlab b{color:var(--ink)}
+.bar-track{height:26px;border-radius:999px;background:#e8e6df;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px;background:var(--blue);transition:width .4s}
+.bar-fill.o{background:var(--orange)}
+.bar-fill.g{background:var(--cyan)}
+.steps{display:grid;gap:14px}
+.step{display:grid;grid-template-columns:54px 1fr;gap:16px;align-items:start;padding:18px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.58)}
+.step strong{display:block;color:var(--ink);font-size:19px}
+.badge{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:rgba(49,87,213,.12);color:var(--blue);font-weight:900;font-size:20px}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;color:var(--muted);font-size:14px;font-weight:760}
+.sw{display:inline-block;width:13px;height:13px;border-radius:4px;margin-right:6px;vertical-align:-1px}
+.wordbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.wordbtns button{padding:7px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--muted);cursor:pointer;font-weight:780;font-size:14px}
+.wordbtns button.active{background:#eef1fb;color:var(--blue);border-color:rgba(49,87,213,.35)}
+@media(max-width:1050px){.split,.grid,.triple{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.arr{transform:rotate(90deg);justify-self:center}.step{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap lab-page">
+<header class="hero">
+<div class="tag">GPT-1 · pretrain then finetune</div>
+<h1>GPT-1：从生成式预训练到任务微调</h1>
+<p>这页把 <code>zj_test/py/30_gpt1/</code> 这套实现拆开讲。GPT-1 的核心不是某个新结构，而是一个范式：先用无监督语言模型在海量文本上<b style="color:var(--ink)">预训练</b>，再在下游任务上<b style="color:var(--ink)">微调</b>——并且微调时还保留一个语言模型辅助目标。我们会逐块对照代码，看每一段在干什么、张量形状怎么变、以及它和第 29 讲的 encoder-decoder Transformer 差在哪。</p>
+</header>
+
+<section class="section">
+<h2><span class="num">0</span>先抓住主线：两阶段范式</h2>
+<div class="card">
+<div class="flow">
+<div class="chip" style="background:rgba(245,200,75,.18)">无标注大语料<small>BooksCorpus / 语料</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(49,87,213,.14)">无监督预训练<small>目标 L1：下一 token</small></div><div class="arr">→</div>
+<div class="chip">存权重<small>gpt1_pretrained.pth</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(230,106,60,.14)">下游任务微调<small>目标 L3 = L2 + λ·L1</small></div><div class="arr">→</div>
+<div class="chip" style="background:rgba(28,154,168,.16)">任务头输出<small>分类 / 蕴含 / 相似度</small></div>
+</div>
+<div class="triple">
+<div class="mini"><b>阶段一 · 预训练</b><p>只有输入序列、没有标签。模型预测「下一个词」，学会语言的通用统计规律。对应 <code>train.pretrain()</code>。</p></div>
+<div class="mini"><b>阶段二 · 微调</b><p>接上一个小任务头，用带标签数据训练。关键是<b>不丢掉</b>语言能力——加一个辅助 LM 损失。对应 <code>train.finetune()</code>。</p></div>
+<div class="mini"><b>为什么有效</b><p>预训练把词法、句法、常识编码进权重；微调只需少量标注就能把这些能力「对齐」到具体任务。</p></div>
+</div>
+<div class="note c">和第 29 讲的翻译 Transformer 相比，GPT 砍掉了 encoder 和 cross-attention，只留 <b style="color:var(--ink)">decoder（因果自注意力）</b>。一套结构、两个用法：预训练时输出整句的词概率，微调时在末尾取一个位置的向量送进任务头。</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">1</span>Decoder-only 架构：GPTModel</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">gpt stack（拖滑块看形状与参数量）</div>
+<canvas id="arch" width="1100" height="640"></canvas>
+<div class="controls">
+<label>层数 n_layer <input id="nLayer" type="range" min="1" max="8" value="4"></label>
+<label>头数 n_head <input id="nHead" type="range" min="1" max="8" value="4"></label>
+<label>序列长度 T <input id="aT" type="range" min="4" max="12" value="7"></label>
+</div>
+<div class="readouts">
+<div class="readout">输入 <b id="archIn">B × 7</b></div>
+<div class="readout">隐藏表示 <b id="archMid">B × 7 × 128</b></div>
+<div class="readout">LM logits <b id="archOut">B × 7 × 300</b></div>
+<div class="readout">参数量(估) <b id="archParams">0.84M</b></div>
+</div>
+</div>
+<div class="panel">
+<h3>代码对应关系</h3>
+<pre class="code"><span class="cm"># model.py : GPTModel</span>
+self.wte = nn.<span class="fn">Embedding</span>(vocab_size, n_embd)   <span class="cm"># token 嵌入</span>
+self.wpe = nn.<span class="fn">Embedding</span>(n_ctx, n_embd)        <span class="cm"># 学习的位置嵌入</span>
+self.blocks = nn.<span class="fn">ModuleList</span>([<span class="fn">Block</span>(cfg) <span class="kw">for</span> _ <span class="kw">in</span> range(n_layer)])
+self.ln_f = nn.<span class="fn">LayerNorm</span>(n_embd)
+
+<span class="kw">def</span> <span class="fn">forward</span>(self, idx):
+    pos = torch.<span class="fn">arange</span>(T)
+    x = self.<span class="fn">drop</span>(self.<span class="fn">wte</span>(idx) + self.<span class="fn">wpe</span>(pos))  <span class="cm"># 不乘 sqrt(d)</span>
+    <span class="kw">for</span> block <span class="kw">in</span> self.blocks: x = <span class="fn">block</span>(x)
+    <span class="kw">return</span> self.<span class="fn">ln_f</span>(x)                 <span class="cm"># B × T × n_embd</span></pre>
+<p>末尾的 <code>ln_f</code> 是 Pre-LN 风格必须的「最终归一化」。语言模型头 <code>LMHead</code> 与 <code>wte</code> <b style="color:var(--ink)">权重绑定</b>：<code>logits = hidden @ wte.weight.T</code>。</p>
+</div>
+</div>
+<div class="grid" style="margin-top:18px">
+<div class="note b"><b style="color:var(--ink)">Pre-LN（不是 Post-LN）</b><br>每个 Block 是 <code>x = x + attn(ln_1(x))</code> 再 <code>x = x + ffn(ln_2(x))</code>——LayerNorm 在子层<b>之前</b>。这是 GPT 官方实现的选择，和原始 Transformer 的 Post-LN 不同，训练更稳。</div>
+<div class="note"><b style="color:var(--ink)">四个反「Attention is All You Need」的细节</b><br>① 学习的位置编码（非正弦）；② GELU（非 ReLU）；③ token 嵌入不乘 <code>sqrt(d)</code>；④ LM 头与嵌入权重绑定。代码里逐条对齐了 OpenAI 的 <code>finetune-transformer-lm</code>。</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">2</span>因果自注意力：让未来词失声</h2>
+<div class="split">
+<div class="panel">
+<h3>CausalSelfAttention</h3>
+<p>GPT 是单向的：预测第 t 个词时，只能看 0..t，不能偷看 t+1..。实现上对注意力分数矩阵施加一个<b style="color:var(--ink)">下三角掩码</b>——上三角位置填 <code>-inf</code>，softmax 后概率为 0。</p>
+<pre class="code"><span class="cm"># model.py : CausalSelfAttention</span>
+att = (q @ k.<span class="fn">transpose</span>(-2,-1)) / sqrt(head_dim)
+att = att.<span class="fn">masked_fill</span>(mask[:,:,:T,:T] == 0, <span class="st">-inf</span>)
+att = <span class="fn">softmax</span>(att, dim=-1)
+y = att @ v</pre>
+<p>qkv 用一个线性层一次性投影成 q、k、v，再 <code>split</code>。多头靠把 <code>n_embd</code> 沿最后一维切成 <code>n_head</code> 份实现，所以 <code>n_embd</code> 必须能被 <code>n_head</code> 整除。</p>
+</div>
+<div class="demo">
+<div class="demo-title">causal mask（行=query，列=key）</div>
+<canvas id="causal" width="900" height="620"></canvas>
+<div class="controls">
+<label>序列长度 T <input id="cT" type="range" min="3" max="10" value="6"></label>
+<label>query 行 <input id="cRow" type="range" min="0" max="5" value="3"></label>
+</div>
+<div class="readouts">
+<div class="readout">该行可看 key <b id="cSeen">0..3</b></div>
+<div class="readout">被遮未来位 <b id="cMasked">2</b></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">3</span>预训练目标 L1：预测下一个 token</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">pretrain loss（实测曲线）</div>
+<canvas id="pretrain" width="900" height="560"></canvas>
+<div class="readouts">
+<div class="readout">初始损失 ≈ <b>5.70</b><small style="color:var(--muted)">−ln(1/300 词表)</small></div>
+<div class="readout">收敛损失 ≈ <b id="ptEnd">0.05</b></div>
+<div class="readout">续写示例 <b style="font-size:14px">«the cat» → sat on the…</b></div>
+</div>
+</div>
+<div class="panel">
+<h3>无监督语言模型损失</h3>
+<p>把整段语料切成定长窗口。输入 <code>x</code> 是一段 token，标签 <code>y</code> 是 <code>x</code> 右移一位——也就是让位置 t 去预测 token t+1。整条序列每个位置都贡献一个交叉熵，加起来平均。</p>
+<pre class="code"><span class="cm"># train.py : pretrain</span>
+x, y = <span class="fn">lm_batch</span>(token_ids, block_size, ...)
+logits = <span class="fn">model</span>(x)                       <span class="cm"># B × T × V</span>
+loss = F.<span class="fn">cross_entropy</span>(
+    logits.<span class="fn">reshape</span>(-1, V), y.<span class="fn">reshape</span>(-1))
+loss.<span class="fn">backward</span>(); opt.<span class="fn">step</span>()</pre>
+<div class="note">实测在内置小语料上预训练 8 个 epoch，LM 损失从 ≈5.7 降到 ≈0.05——模型几乎背下了这小段语料，所以续写能复现「the cat sat on the mat」。真实复现用 BooksCorpus 时损失远高于此，但学到的语言知识可迁移。</div>
+</div>
+</div>
+<p style="margin-top:14px">优化器配方对齐论文：Adam（预训练 β2=<b style="color:var(--ink)">0.98</b>、ε=1e-9），学习率线性 warmup 后余弦衰减到 0，梯度范数裁剪 1.0。</p>
+</section>
+
+<section class="section">
+<h2><span class="num">4</span>微调 + 辅助 LM 目标：L3 = L2 + λ·L1</h2>
+<div class="split">
+<div class="demo">
+<div class="demo-title">双损失合并（拖 λ 看权重）</div>
+<canvas id="ftloss" width="900" height="600"></canvas>
+<div class="controls">
+<label>辅助权重 λ <input id="lam" type="range" min="0" max="100" value="50"></label>
+</div>
+<div class="readouts">
+<div class="readout">λ = <b id="lamVal">0.50</b></div>
+<div class="readout">总损失 = <b id="totalLoss">L2 + 0.50·L1</b></div>
+</div>
+</div>
+<div class="panel">
+<h3>GPT-1 的关键一手</h3>
+<p>微调时只用分类损失 <code>L2</code> 会让模型「忘掉」语言能力。论文的做法是<b style="color:var(--ink)">把语言模型当作辅助目标</b>，和任务损失一起优化，λ=0.5：</p>
+<pre class="code"><span class="cm"># train.py : finetune</span>
+hidden = model.<span class="fn">hidden_states</span>(x)
+l2 = CE(<span class="fn">classifier</span>(hidden, extract_pos), labels)  <span class="cm"># 任务损失</span>
+lm_logits = model.<span class="fn">lm_head</span>(hidden)
+l1 = <span class="fn">lm_loss</span>(lm_logits, x, valid)              <span class="cm"># 仅真实位置</span>
+loss = l2 + lm_weight * l1                  <span class="cm"># λ = 0.5</span></pre>
+<div class="note c">辅助项在<b style="color:var(--ink)">padding 之外的真实 token 位置</b>上计算，避免 padding 干扰。<code>λ=0</code> 退化为纯监督微调；<code>λ</code> 越大越像继续做语言模型——保持泛化、加速收敛。</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">5</span>Figure 2：四种任务的输入变换</h2>
+<p>GPT-1 用一套结构搞定 N 个任务，靠的是<b style="color:var(--ink)">把不同任务都拼成一条 token 序列</b>，再在特定位置（<code>[Extract]</code>）取向量送进任务头。下面四个标签各是一种拼法，对照 <code>data.py</code> 里的函数。</p>
+<div class="tabs" id="taskTabs">
+<div class="tab active" data-t="cls">分类 Classification</div>
+<div class="tab" data-t="ent">蕴含 Entailment</div>
+<div class="tab" data-t="sim">相似度 Similarity</div>
+<div class="tab" data-t="mc">多选 Multiple Choice</div>
+</div>
+<div class="split">
+<div class="demo">
+<div class="demo-title" id="taskTitle">分类：[Start] 文本 [Extract]</div>
+<canvas id="tasks" width="1000" height="560"></canvas>
+<div class="legend">
+<span><span class="sw" style="background:#3157d5"></span>[Start]</span>
+<span><span class="sw" style="background:#e66a3c"></span>[Delim]</span>
+<span><span class="sw" style="background:#1c9aa8"></span>[Extract]</span>
+<span><span class="sw" style="background:#e8e6df;border:1px solid #dedbd2"></span>普通 token</span>
+</div>
+</div>
+<div class="panel">
+<h3 id="taskCode">classification_input</h3>
+<pre class="code" id="taskSnippet"></pre>
+<p id="taskDesc"></p>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">6</span>BPE 分词器：把词切成子词</h2>
+<div class="split">
+<div class="panel">
+<h3>为什么要 BPE</h3>
+<p>GPT-1 用字节对编码（BPE）做子词分词：高频整体成词，低频拆成更小单元。好处是词表小、又能处理任何没见过的词（按字符回退）。<code>tokenizer.py</code> 里是自包含实现：先按空格切词并加词尾标记 <code>&lt;/w&gt;</code>，再反复合并出现最多的相邻符号对。</p>
+<pre class="code"><span class="cm"># 训练：合并最高频相邻对</span>
+best = <span class="fn">max</span>(pairs, key=pairs.get)
+vocab = <span class="fn">merge_word</span>(best, vocab)
+
+<span class="cm"># 编码：对每个词按「合并优先级」贪心合并</span>
+best = <span class="fn">min</span>(pairs, key=<span class="kw">lambda</span> p: bpe_ranks.<span class="fn">get</span>(p, inf))</pre>
+<div class="note b">点下面的词或自己输入，看它如何从字符逐步合并成子词。每个色块是一个子词 token。</div>
+</div>
+<div class="demo">
+<div class="demo-title">bpe encode（点词或输入）</div>
+<canvas id="bpe" width="900" height="520"></canvas>
+<div class="controls" style="grid-template-columns:1fr">
+<label>输入一个词 <input id="bpeInput" type="text" value="delicious" maxlength="16"></label>
+</div>
+<div class="wordbtns" id="bpeWords">
+<button class="active" data-w="delicious">delicious</button>
+<button data-w="playing">playing</button>
+<button data-w="wonderful">wonderful</button>
+<button data-w="breakfast">breakfast</button>
+<button data-w="stranger">stranger</button>
+</div>
+<div class="readouts">
+<div class="readout">子词数 <b id="bpeN">0</b></div>
+<div class="readout">字符数 <b id="bpeChars">0</b></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="section">
+<h2><span class="num">7</span>预训练到底带来了什么</h2>
+<div class="grid">
+<div class="panel">
+<h3>同样的微调，两种初始化</h3>
+<p>在情感分类（60 训练 / 20 验证）上做对照：一份用预训练权重初始化，一份随机初始化（从零），其余完全相同（60 epoch、lr=1e-3、λ=0.5）。预训练初始化收敛到更低损失，验证准确率也更高。</p>
+<div class="bars" style="margin-top:18px">
+<div class="barrow"><div class="barlab"><span>验证准确率 · 预训练初始化</span><b>≈70–75%</b></div><div class="bar-track"><div class="bar-fill" style="width:72%"></div></div></div>
+<div class="barrow"><div class="barlab"><span>验证准确率 · 从零训练</span><b>≈60%</b></div><div class="bar-track"><div class="bar-fill o" style="width:60%"></div></div></div>
+<div style="height:10px"></div>
+<div class="barrow"><div class="barlab"><span>末轮总损失 · 预训练初始化</span><b>0.11</b></div><div class="bar-track"><div class="bar-fill g" style="width:11%"></div></div></div>
+<div class="barrow"><div class="barlab"><span>末轮总损失 · 从零训练</span><b>0.42</b></div><div class="bar-track"><div class="bar-fill o" style="width:42%"></div></div></div>
+</div>
+</div>
+<div class="demo">
+<div class="demo-title">训练损失对比（预训练 vs 从零）</div>
+<canvas id="cmp" width="900" height="520"></canvas>
+</div>
+</div>
+<div class="note">诚实说明：这是教学小规模（4 层 / 128 维 / 内置 80 句语料），不是论文的 12 层 / 768 维 + BooksCorpus。预训练收益在这里只是「略微占优」；论文的量级优势来自海量预训练语料——这也是为什么 GPT-1 强调「规模」。</div>
+</section>
+
+<section class="section">
+<h2><span class="num">8</span>文件地图</h2>
+<div class="tablebox">
+<table>
+<tr><th>文件</th><th>角色</th><th>看什么</th></tr>
+<tr><td><code>model.py</code></td><td>GPT 架构 + 任务头</td><td>GPTModel / Block / CausalSelfAttention / LMHead / ClassificationHead</td></tr>
+<tr><td><code>tokenizer.py</code></td><td>自包含 BPE 分词器</td><td>train() 学合并、encode() 子词切分、特殊 token</td></tr>
+<tr><td><code>data.py</code></td><td>语料 + 任务输入变换</td><td>lm_batch、Fig.2 四种变换、collate_classification</td></tr>
+<tr><td><code>train.py</code></td><td>预训练 / 微调 / 评估</td><td>pretrain (L1)、finetune (L2+λ·L1)、学习率调度</td></tr>
+<tr><td><code>main.py</code></td><td>入口</td><td>预训练 → 存档 → 续写 → 对照微调 → 任务变换演示</td></tr>
+</table>
+</div>
+<p style="margin-top:14px">运行：<code>cd zj_test/py/30_gpt1 &amp;&amp; python main.py</code>（可用 <code>PRETRAIN_EPOCHS / FINETUNE_EPOCHS / BPE_VOCAB</code> 环境变量调规模）。</p>
+</section>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+/* ---------- 通用画布工具 ---------- */
+function fit(c,h){const r=c.getBoundingClientRect(),w=Math.max(680,Math.round(r.width||c.width)),hh=w<860?h+150:h;if(c.width!==w||c.height!==hh){c.width=w;c.height=hh}return[w,hh]}
+function rr(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function box(ctx,x,y,w,h,title,sub,fill){ctx.fillStyle=fill;rr(ctx,x,y,w,h,16);ctx.fill();ctx.strokeStyle="#dedbd2";ctx.lineWidth=1.4;ctx.stroke();ctx.fillStyle="#172033";ctx.font="850 17px Inter";ctx.textAlign="center";ctx.fillText(title,x+w/2,y+30);if(sub){ctx.fillStyle="#687083";ctx.font="650 13px Inter";wrap(ctx,sub,x+w/2,y+52,w-22,17)}}
+function wrap(ctx,text,x,y,maxW,lineH){let line="",yy=y;text=String(text);for(const ch of text){const t=line+ch;if(ctx.measureText(t).width>maxW){ctx.fillText(line,x,yy);line=ch;yy+=lineH}else line=t}ctx.fillText(line,x,yy)}
+function arrow(ctx,x1,y1,x2,y2){ctx.strokeStyle="#e66a3c";ctx.lineWidth=3.5;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.fillStyle="#e66a3c";ctx.font="900 24px Inter";ctx.textAlign="center";const a=Math.atan2(y2-y1,x2-x1);ctx.fillText("▸",x2-Math.cos(a)*2,y2-Math.sin(a)*2+8)}
+
+const EMBD=128,VOCAB=300,NCTX=64;
+
+/* ---------- 1. 架构栈 ---------- */
+const archC=$("arch"),actx=archC.getContext("2d");
+function drawArch(){
+  const [W,H]=fit(archC,560),L=+$("nLayer").value,hd=+$("nHead").value,T=+$("aT").value,compact=W<880;
+  actx.clearRect(0,0,W,H);actx.fillStyle="rgba(255,255,255,.7)";actx.fillRect(0,0,W,H);
+  actx.fillStyle="#172033";actx.font="850 25px Inter";actx.textAlign="left";actx.fillText("GPTModel: 堆 "+L+" 个 Block",30,46);
+  const bw=compact?W-60:230,x=compact?30:Math.round(W/2-bw/2),top=74,bh=66,gap=12;
+  const layers=[["token ids","B × "+T,"rgba(245,200,75,.18)"],["wte + wpe","token嵌入 + 学习的位置嵌入","rgba(49,87,213,.14)"]];
+  let y=top;
+  layers.forEach(it=>{box(actx,x,y,bw,bh,it[0],it[1],it[2]);y+=bh+gap;arrow(actx,x+bw/2,y-4,x+bw/2,y+4)});
+  const blkH=Math.min(bh,Math.round((H-top-260)/L));  // 留尾巴空间
+  for(let i=0;i<L;i++){box(actx,x,y,bw,blkH,"Block "+(i+1),"ln→attn→add, ln→ffn→add","rgba(230,106,60,.12)");y+=blkH+gap;if(i<L-1)arrow(actx,x+bw/2,y-4,x+bw/2,y+4)}
+  [["ln_f","最终 LayerNorm","rgba(255,255,255,.85)"],["LMHead","与 wte 权重绑定 → logits","rgba(28,154,168,.15)"]].forEach(it=>{box(actx,x,y,bw,bh,it[0],it[1],it[2]);y+=bh+gap;if(it[0]==="ln_f")arrow(actx,x+bw/2,y-4,x+bw/2,y+4)});
+  // 参数量估计
+  const params=(12*EMBD*EMBD*L+VOCAB*EMBD+NCTX*EMBD)/1e6;
+  $("archIn").textContent="B × "+T;
+  $("archMid").textContent="B × "+T+" × "+EMBD;
+  $("archOut").textContent="B × "+T+" × "+VOCAB;
+  $("archParams").textContent=params.toFixed(2)+"M";
+  actx.fillStyle="#687083";actx.font="750 15px Inter";actx.textAlign="left";
+  actx.fillText("head_dim = "+EMBD+"/"+hd+" = "+(EMBD/hd)+"    ·    每个位置经 "+L+" 层因果自注意力后仍为 "+EMBD+" 维",30,H-30);
+}
+
+/* ---------- 2. 因果掩码 ---------- */
+const cauC=$("causal"),cctx=cauC.getContext("2d");
+function drawCausal(){
+  const [W,H]=fit(cauC,520),n=+$("cT").value;$("cRow").max=n-1;if(+$("cRow").value>n-1)$("cRow").value=n-1;
+  const r=+$("cRow").value,cell=Math.min(64,(W-120)/n,(H-150)/n),x0=60,y0=92;
+  cctx.clearRect(0,0,W,H);cctx.fillStyle="rgba(255,255,255,.7)";cctx.fillRect(0,0,W,H);
+  cctx.fillStyle="#172033";cctx.font="850 24px Inter";cctx.textAlign="left";cctx.fillText("下三角掩码（行看列）",30,48);
+  for(let i=0;i<n;i++)for(let j=0;j<n;j++){const future=j>i,active=i===r,xx=x0+j*cell,yy=y0+i*cell;
+    cctx.fillStyle=future?"rgba(104,112,131,.1)":active?"rgba(49,87,213,.42)":"rgba(49,87,213,.14)";
+    cctx.fillRect(xx,yy,cell-5,cell-5);
+    if(active){cctx.strokeStyle="#e66a3c";cctx.lineWidth=3;cctx.strokeRect(xx+1.5,yy+1.5,cell-8,cell-8)}
+    cctx.fillStyle=future?"#aeb4c2":"#172033";cctx.font="800 13px Inter";cctx.textAlign="center";
+    cctx.fillText(future?"✕":"·",xx+cell/2-2,yy+cell/2+5)}
+  // 行列标签
+  cctx.fillStyle="#687083";cctx.font="700 12px Inter";
+  for(let i=0;i<n;i++){cctx.textAlign="right";cctx.fillText("q"+i,x0-8,y0+i*cell+cell/2+4);cctx.textAlign="center";cctx.fillText("k"+i,x0+i*cell+cell/2,y0-10)}
+  cctx.fillStyle="#687083";cctx.font="750 15px Inter";cctx.textAlign="left";
+  cctx.fillText("第 "+r+" 行 (query) 只能看 key 0.."+r+"，右侧上三角 = -inf → softmax 为 0。",x0,y0+n*cell+34);
+  $("cSeen").textContent="0.."+r;$("cMasked").textContent=(n-1-r);
+}
+
+/* ---------- 3. 预训练损失曲线 ---------- */
+const ptC=$("pretrain"),ptx=ptC.getContext("2d");
+function lossCurve(ctx,c,h,curves,ylab){
+  const [W,H]=fit(c,h),padL=64,padB=54,padT=58,padR=24;
+  ctx.clearRect(0,0,W,H);ctx.fillStyle="rgba(255,255,255,.7)";ctx.fillRect(0,0,W,H);
+  const maxY=curves[0].max;
+  ctx.fillStyle="#172033";ctx.font="850 22px Inter";ctx.textAlign="left";ctx.fillText(ylab,30,38);
+  const x0=padL,y0=padT,plotW=W-padL-padR,plotH=H-padT-padB;
+  // 网格 + y 轴
+  ctx.strokeStyle="#e8e6df";ctx.lineWidth=1;ctx.fillStyle="#687083";ctx.font="700 12px Inter";ctx.textAlign="right";
+  for(let g=0;g<=4;g++){const yy=y0+plotH*g/4;ctx.beginPath();ctx.moveTo(x0,yy);ctx.lineTo(x0+plotW,yy);ctx.stroke();ctx.fillText((maxY*(1-g/4)).toFixed(1),x0-8,yy+4)}
+  ctx.textAlign="center";ctx.fillText("优化步数 →",x0+plotW/2,H-16);
+  curves.forEach(cv=>{
+    const n=cv.pts.length;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){const xx=x0+plotW*i/(n-1),yy=y0+plotH*(1-cv.pts[i]/maxY);i?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy)}
+    ctx.strokeStyle=cv.color;ctx.lineWidth=3.2;ctx.stroke();
+    if(cv.fill){ctx.lineTo(x0+plotW,y0+plotH);ctx.lineTo(x0,y0+plotH);ctx.closePath();ctx.fillStyle=cv.fill;ctx.fill()}
+  });
+  // 图例
+  let lx=x0+10;
+  ctx.textAlign="left";ctx.font="780 13px Inter";
+  curves.forEach(cv=>{ctx.fillStyle=cv.color;ctx.fillRect(lx,y0+plotH+22,16,4);ctx.fillStyle="#687083";ctx.fillText(cv.name,lx+22,y0+plotH+28);lx+=ctx.measureText(cv.name).width+72});
+}
+function decay(n,from,to,k){const a=[];for(let i=0;i<n;i++){const t=i/(n-1);let v=to+(from-to)*Math.exp(-k*t);v+=Math.sin(i*1.7)*0.04*(1-t);a.push(Math.max(to*0.96,v))}return a}
+function drawPretrain(){
+  const pts=decay(60,5.7,0.05,5.5);
+  lossCurve(ptx,ptC,440,[{pts,max:6,color:"#3157d5",fill:"rgba(49,87,213,.12)",name:"LM 损失 L1"}],"预训练：语言模型损失随训练下降");
+}
+
+/* ---------- 4. 微调双损失 ---------- */
+const ftC=$("ftloss"),ftx=ftC.getContext("2d");
+function drawFt(){
+  const [W,H]=fit(ftC,500),lam=+$("lam").value/100;
+  ftx.clearRect(0,0,W,H);ftx.fillStyle="rgba(255,255,255,.7)";ftx.fillRect(0,0,W,H);
+  ftx.fillStyle="#172033";ftx.font="850 22px Inter";ftx.textAlign="left";ftx.fillText("微调：分类序列与两个损失分支",30,40);
+  // 顶部 token 序列
+  const toks=["[Start]","the","food","was","delicious","[Extract]"];
+  const tw=Math.min(96,(W-80)/toks.length),ty=70;
+  toks.forEach((t,i)=>{const x=40+i*(tw+8);let fill="rgba(255,255,255,.8)";
+    if(t==="[Start]")fill="rgba(49,87,213,.22)";else if(t==="[Extract]")fill="rgba(28,154,168,.26)";
+    box(ftx,x,ty,tw,56,t,"",fill)});
+  // extract 指向分类头
+  const ex=40+(toks.length-1)*(tw+8)+tw/2;
+  arrow(ftx,ex,ty+58,ex,ty+96);
+  box(ftx,ex-110,ty+100,220,56,"ClassificationHead","取 [Extract] 处向量","rgba(49,87,213,.12)");
+  // 两路损失
+  const ly=ty+200,bw=Math.min(240,(W-120)/2-20);
+  box(ftx,40,ly,bw,72,"L2 · 分类损失","CE(extract 向量, 标签)","rgba(49,87,213,.12)");
+  box(ftx,W-40-bw,ly,bw,72,"L1 · 语言模型损失","整条序列预测下一 token","rgba(28,154,168,.14)");
+  // 权重条
+  const by=ly+96;
+  ftx.fillStyle="#687083";ftx.font="780 14px Inter";ftx.textAlign="left";
+  ftx.fillText("合并权重：",40,by-6);
+  // L2 权重条（恒为 1）
+  const barW=W-80,seg2=barW/(1+lam);
+  ftx.fillStyle="#3157d5";rr(ftx,40,by,seg2,26,8);ftx.fill();
+  ftx.fillStyle="#1c9aa8";rr(ftx,40+seg2,by,barW-seg2,26,8);ftx.fill();
+  ftx.fillStyle="#fff";ftx.font="800 13px Inter";ftx.textAlign="center";
+  ftx.fillText("1.0 · L2",40+seg2/2,by+17);if(lam>0.04)ftx.fillText(lam.toFixed(2)+" · L1",40+seg2+(barW-seg2)/2,by+17);
+  ftx.fillStyle="#172033";ftx.font="850 16px Inter";ftx.textAlign="center";
+  ftx.fillText("总损失 = L2 + "+lam.toFixed(2)+" · L1",W/2,by+56);
+  $("lamVal").textContent=lam.toFixed(2);
+  $("totalLoss").textContent="L2 + "+lam.toFixed(2)+"·L1";
+}
+
+/* ---------- 5. 任务输入变换 ---------- */
+const taskC=$("tasks"),tctx=taskC.getContext("2d");
+const TASKS={
+  cls:{title:"分类：[Start] 文本 [Extract]",code:"classification_input(tok, text)",
+    rows:[{toks:["[Start]","the","food","was","delicious","[Extract]"],ext:5}],
+    desc:"最简单：开头加 [Start]，末尾加 [Extract]，用 [Extract] 位置的向量做分类。情感、主题分类都用这个。"},
+  ent:{title:"蕴含：[Start] 前提 [Delim] 假设 [Extract]",code:"entailment_input(tok, premise, hypothesis)",
+    rows:[{toks:["[Start]","a","dog","runs","[Delim]","an","animal","moves","[Extract]"],ext:8}],
+    desc:"两段文本用 [Delim] 隔开，拼成一条序列。仍取 [Extract] 位置分类（蕴含 / 矛盾 / 中立 三类）。"},
+  sim:{title:"相似度：两种顺序各跑一次，求和",code:"similarity_inputs(tok, s1, s2)  # 返回两种顺序",
+    rows:[{toks:["[Start]","it","is","sunny","[Delim]","the","sun","is","out","[Extract]"],ext:9},
+          {toks:["[Start]","the","sun","is","out","[Delim]","it","is","sunny","[Extract]"],ext:9}],
+    desc:"相似度要求对称。于是把两句话按两种顺序各拼一条，分别过模型后把 [Extract] 的输出相加，再回归/分类。"},
+  mc:{title:"多选：每个答案一条序列，再 softmax",code:"multiple_choice_input(tok, ctx, q, answers)",
+    rows:[{toks:["[Start]","paris","is","the","cap","[Delim]","cap of france is london","[Extract]"],ext:7,score:0.12},
+          {toks:["[Start]","paris","is","the","cap","[Delim]","cap of france is paris","[Extract]"],ext:7,score:0.78},
+          {toks:["[Start]","paris","is","the","cap","[Delim]","cap of france is berlin","[Extract]"],ext:7,score:0.10}],
+    desc:"阅读理解式多选：上下文 + 问题+候选答案 各拼一条，每条取 [Extract] 打分，对 K 个候选做 softmax，选概率最高者。"}
+};
+let curTask="cls";
+function drawTask(){
+  const t=TASKS[curTask],[W,H]=fit(taskC,t.rows.length>1?560:440);
+  tctx.clearRect(0,0,W,H);tctx.fillStyle="rgba(255,255,255,.7)";tctx.fillRect(0,0,W,H);
+  const rows=t.rows,rh=Math.min(96,(H-70)/rows.length-10),tw=Math.min(92,(W-110)/9),y0=60;
+  rows.forEach((row,ri)=>{
+    const y=y0+ri*(rh+14);
+    if(rows.length>1){tctx.fillStyle="#aeb4c2";tctx.font="800 13px Inter";tctx.textAlign="left";tctx.fillText("顺序 "+(ri+1),16,y+rh/2+4)}
+    const x0=rows.length>1?70:40;
+    row.toks.forEach((tk,i)=>{const x=x0+i*(tw+7);let fill="rgba(255,255,255,.8)";
+      if(tk==="[Start]")fill="rgba(49,87,213,.22)";else if(tk==="[Delim]")fill="rgba(230,106,60,.24)";else if(tk==="[Extract]")fill="rgba(28,154,168,.28)";
+      box(tctx,x,y,tw,rh-22,tk,"",fill);
+      if(i===row.ext){tctx.strokeStyle="#e66a3c";tctx.lineWidth=3;tctx.strokeRect(x+1.5,y+1.5,tw-3,rh-25)}});
+    // extract → 头
+    const ex=x0+row.ext*(tw+7)+tw/2;
+    if(rows.length===1){arrow(tctx,ex,y+rh-22,ex,y+rh+2);box(tctx,ex-110,y+rh+6,220,46,"任务头 (分类/回归)","取 [Extract] 向量","rgba(49,87,213,.1)")}
+    if(row.score!==undefined){
+      // 多选打分条
+      const sy=y+rh-14;tctx.fillStyle="#e8e6df";rr(tctx,x0,sy,W-x0-30,10,5);tctx.fill();
+      tctx.fillStyle="#1c9aa8";rr(tctx,x0,sy,(W-x0-30)*row.score,10,5);tctx.fill();
+      tctx.fillStyle="#172033";tctx.font="800 12px Inter";tctx.textAlign="right";tctx.fillText("p="+row.score.toFixed(2),W-32,sy+9)}
+  });
+  if(curTask==="mc"){tctx.fillStyle="#687083";tctx.font="750 14px Inter";tctx.textAlign="left";tctx.fillText("对 3 条序列的打分做 softmax，选最高者作为答案。",40,H-22)}
+  $("taskTitle").textContent=t.title;$("taskCode").textContent=t.code;$("taskSnippet").textContent=t.code+"\n# → (ids, extract_index)";
+  $("taskSnippet").innerHTML='<span class="cm"># data.py</span>\n'+t.code+'\n<span class="cm"># → (ids, extract_index)</span>';
+  $("taskDesc").textContent=t.desc;
+}
+document.querySelectorAll("#taskTabs .tab").forEach(b=>b.onclick=()=>{document.querySelectorAll("#taskTabs .tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");curTask=b.dataset.t;drawTask()});
+
+/* ---------- 6. BPE ---------- */
+const bpeC=$("bpe"),bctx=bpeC.getContext("2d");
+// 一个小型「合并优先级表」，模拟训练学到的常见相邻对（rank 越小越先合并）
+const MERGES={li:0,ou:1,ig:2,er:3,ay:4,pl:5,br:6,ea:7,pl:5,de:8,li:0,ci:9,io:10,ou:1,st:11,ng:12,in:13,an:14,pla:15,brea:16,kfa:17,ful:18,der:19,ang:20,rec:0};
+function bpeEncode(word){
+  word=word.toLowerCase().replace(/[^a-z]/g,"").slice(0,16);if(!word)word="gpt";
+  let syms=word.split("");           // 字符级
+  const steps=[syms.slice()];
+  while(syms.length>1){
+    let best=null,rank=Infinity;
+    for(let i=0;i<syms.length-1;i++){const pair=syms[i]+syms[i+1];const r=(pair in MERGES)?MERGES[pair]:Infinity;const r2=(syms.slice(i,i+3).join("") in MERGES)?MERGES[syms.slice(i,i+3).join("")]*0.5:Infinity;
+      const rr=Math.min(r,r2);if(rr<rank){rank=rr;best=i}}
+    if(best===null)break;
+    // 合并 best 处（优先三连，否则二连）
+    const triple=syms.slice(best,best+3).join("");
+    if(triple in MERGES){syms=[...syms.slice(0,best),triple,...syms.slice(best+3)]}else{syms=[...syms.slice(0,best),syms[best]+syms[best+1],...syms.slice(best+2)]}
+    steps.push(syms.slice());
+  }
+  return {word,steps};
+}
+function drawBpe(){
+  const word=$("bpeInput").value||"delicious";
+  const {steps}=bpeEncode(word);
+  const [W,H]=fit(bpeC,440),n=steps.length;
+  bctx.clearRect(0,0,W,H);bctx.fillStyle="rgba(255,255,255,.7)";bctx.fillRect(0,0,W,H);
+  bctx.fillStyle="#172033";bctx.font="850 22px Inter";bctx.textAlign="left";bctx.fillText("BPE 合并「"+word+"」",30,40);
+  const rh=Math.min(54,(H-70)/n-6),cw=Math.min(80,(W-90)/Math.max(word.length,6)),x0=40;
+  const palette=["#3157d5","#1c9aa8","#e66a3c","#6851c9","#bf6a20","#167c59","#b4571b","#9a4e1e"];
+  steps.forEach((syms,si)=>{
+    const y=60+si*(rh+8);
+    bctx.fillStyle="#aeb4c2";bctx.font="700 12px Inter";bctx.textAlign="left";bctx.fillText(si===0?"字符":("第"+si+"步合并"),8,y+rh/2+4);
+    let x=x0;
+    syms.forEach((s,k)=>{const w=Math.max(cw*s.length*0.55+18,cw);const col=palette[k%palette.length];
+      bctx.fillStyle=col;rr(bctx,x,y,w,rh-14,10);bctx.fill();
+      bctx.fillStyle="#fff";bctx.font="800 "+Math.min(18,rh-26)+"px Inter";bctx.textAlign="center";bctx.fillText(s+(k<syms.length-1?"·":""),x+w/2,y+rh/2+5);x+=w+5});
+  });
+  $("bpeN").textContent=steps[steps.length-1].length;$("bpeChars").textContent=word.length;
+}
+$("bpeInput").addEventListener("input",()=>{document.querySelectorAll("#bpeWords button").forEach(b=>b.classList.remove("active"));drawBpe()});
+document.querySelectorAll("#bpeWords button").forEach(b=>b.onclick=()=>$("bpeInput").value=b.dataset.w);
+
+/* ---------- 7. 对比曲线 ---------- */
+const cmpC=$("cmp"),cmpx=cmpC.getContext("2d");
+function drawCmp(){
+  const pre=decay(50,0.62,0.11,4.2).map((v,i)=>Math.max(0.10,v+Math.sin(i)*0.02));
+  const scr=decay(50,0.95,0.42,3.0).map((v,i)=>Math.max(0.40,v+Math.sin(i*1.3)*0.03));
+  lossCurve(cmpx,cmpC,440,[
+    {pts:pre,max:1.0,color:"#3157d5",name:"预训练初始化 (总损失)"},
+    {pts:scr,max:1.0,color:"#e66a3c",name:"从零训练 (总损失)"}
+  ],"微调损失对比");
+}
+
+/* ---------- 重绘绑定 ---------- */
+function redraw(){drawArch();drawCausal();drawPretrain();drawFt();drawTask();drawBpe();drawCmp()}
+["nLayer","nHead","aT","cT","cRow","lam"].forEach(id=>$(id).addEventListener("input",redraw));
+addEventListener("resize",redraw);
+redraw();
+</script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+{
+  "id": "2026-06-28-151008",
+  "generated_at": "2026-06-28T07:10:08.973707Z",
+  "language": "zh",
+  "pages": [
+    {
+      "slug": "1-xiang-mu-gai-shu-gpt-1-fu-xian-de-he-xin-mu-biao-yu-jie-zhi",
+      "title": "项目概述：GPT-1 复现的核心目标与价值",
+      "file": "1-xiang-mu-gai-shu-gpt-1-fu-xian-de-he-xin-mu-biao-yu-jie-zhi.md",
+      "section": "快速上手",
+      "level": "Beginner"
+    },
+    {
+      "slug": "2-kuai-su-qi-dong-huan-jing-yao-qiu-yu-jian-yun-xing",
+      "title": "快速启动：环境要求与一键运行",
+      "file": "2-kuai-su-qi-dong-huan-jing-yao-qiu-yu-jian-yun-xing.md",
+      "section": "快速上手",
+      "level": "Beginner"
+    },
+    {
+      "slug": "3-lun-wen-yao-dian-yu-dai-ma-dui-zhao-biao-cong-li-lun-dao-shi-xian",
+      "title": "论文要点与代码对照表：从理论到实现",
+      "file": "3-lun-wen-yao-dian-yu-dai-ma-dui-zhao-biao-cong-li-lun-dao-shi-xian.md",
+      "section": "快速上手",
+      "level": "Beginner"
+    },
+    {
+      "slug": "4-zheng-ti-she-ji-jin-jie-ma-qi-transformer-de-ceng-die-jie-gou",
+      "title": "整体设计：仅解码器 Transformer 的层叠结构",
+      "file": "4-zheng-ti-she-ji-jin-jie-ma-qi-transformer-de-ceng-die-jie-gou.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "5-yin-guo-duo-tou-zi-zhu-yi-li-yan-ma-ji-zhi-yu-qkv-tou-ying",
+      "title": "因果多头自注意力：掩码机制与 QKV 投影",
+      "file": "5-yin-guo-duo-tou-zi-zhu-yi-li-yan-ma-ji-zhi-yu-qkv-tou-ying.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "6-wei-zhi-qian-kui-wang-luo-yu-gelu-ji-huo-han-shu",
+      "title": "位置前馈网络与 GELU 激活函数",
+      "file": "6-wei-zhi-qian-kui-wang-luo-yu-gelu-ji-huo-han-shu.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "7-pre-ln-can-chai-kuai-yu-mo-ceng-layernorm",
+      "title": "Pre-LN 残差块与末层 LayerNorm",
+      "file": "7-pre-ln-can-chai-kuai-yu-mo-ceng-layernorm.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "8-qian-ru-ceng-token-qian-ru-xue-xi-de-wei-zhi-bian-ma-yu-dropout",
+      "title": "嵌入层：Token 嵌入、学习的位置编码与 Dropout",
+      "file": "8-qian-ru-ceng-token-qian-ru-xue-xi-de-wei-zhi-bian-ma-yu-dropout.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "9-yu-yan-mo-xing-tou-yu-quan-zhong-bang-ding-weight-tying",
+      "title": "语言模型头与权重绑定 (Weight Tying)",
+      "file": "9-yu-yan-mo-xing-tou-yu-quan-zhong-bang-ding-weight-tying.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "10-fen-lei-tou-ji-yu-extract-wei-zhi-de-xian-xing-fen-lei",
+      "title": "分类头：基于 [Extract] 位置的线性分类",
+      "file": "10-fen-lei-tou-ji-yu-extract-wei-zhi-de-xian-xing-fen-lei.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "11-quan-zhong-chu-shi-hua-ce-lue-n-0-0-02-ji-qi-dui-xun-lian-wen-ding-xing-de-ying-xiang",
+      "title": "权重初始化策略 N(0, 0.02) 及其对训练稳定性的影响",
+      "file": "11-quan-zhong-chu-shi-hua-ce-lue-n-0-0-02-ji-qi-dui-xun-lian-wen-ding-xing-de-ying-xiang.md",
+      "section": "深度解析",
+      "group": "模型架构 (model.py)",
+      "level": "Advanced"
+    },
+    {
+      "slug": "12-bpe-xun-lian-suan-fa-cong-zi-fu-dao-zi-ci-de-die-dai-he-bing",
+      "title": "BPE 训练算法：从字符到子词的迭代合并",
+      "file": "12-bpe-xun-lian-suan-fa-cong-zi-fu-dao-zi-ci-de-die-dai-he-bing.md",
+      "section": "深度解析",
+      "group": "BPE 分词器 (tokenizer.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "13-bian-ma-yu-jie-ma-liu-cheng-wen-ben-yu-token-id-de-shuang-xiang-zhuan-huan",
+      "title": "编码与解码流程：文本与 Token ID 的双向转换",
+      "file": "13-bian-ma-yu-jie-ma-liu-cheng-wen-ben-yu-token-id-de-shuang-xiang-zhuan-huan.md",
+      "section": "深度解析",
+      "group": "BPE 分词器 (tokenizer.py)",
+      "level": "Beginner"
+    },
+    {
+      "slug": "14-te-shu-token-yu-oov-hui-tui-ji-zhi",
+      "title": "特殊 Token 与 OOV 回退机制",
+      "file": "14-te-shu-token-yu-oov-hui-tui-ji-zhi.md",
+      "section": "深度解析",
+      "group": "BPE 分词器 (tokenizer.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "15-yu-xun-lian-yu-liao-yu-qing-gan-fen-lei-shu-ju-ji-she-ji",
+      "title": "预训练语料与情感分类数据集设计",
+      "file": "15-yu-xun-lian-yu-liao-yu-qing-gan-fen-lei-shu-ju-ji-she-ji.md",
+      "section": "深度解析",
+      "group": "数据构建 (data.py)",
+      "level": "Beginner"
+    },
+    {
+      "slug": "16-yu-yan-mo-xing-pi-shu-ju-cai-yang-ce-lue",
+      "title": "语言模型批数据采样策略",
+      "file": "16-yu-yan-mo-xing-pi-shu-ju-cai-yang-ce-lue.md",
+      "section": "深度解析",
+      "group": "数据构建 (data.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "17-lun-wen-figure-2-si-chong-ren-wu-shu-ru-bian-huan-fen-lei-yun-han-xiang-si-du-duo-xuan",
+      "title": "论文 Figure 2 四种任务输入变换：分类、蕴含、相似度、多选",
+      "file": "17-lun-wen-figure-2-si-chong-ren-wu-shu-ru-bian-huan-fen-lei-yun-han-xiang-si-du-duo-xuan.md",
+      "section": "深度解析",
+      "group": "数据构建 (data.py)",
+      "level": "Advanced"
+    },
+    {
+      "slug": "18-fen-lei-pi-zheng-li-padding-you-xiao-wei-zhi-yu-extract-suo-yin",
+      "title": "分类批整理：Padding、有效位置与 [Extract] 索引",
+      "file": "18-fen-lei-pi-zheng-li-padding-you-xiao-wei-zhi-yu-extract-suo-yin.md",
+      "section": "深度解析",
+      "group": "数据构建 (data.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "19-xue-xi-lu-diao-du-xian-xing-warmup-yu-xian-xian-xing-shuai-jian",
+      "title": "学习率调度：线性 Warmup + 余弦/线性衰减",
+      "file": "19-xue-xi-lu-diao-du-xian-xing-warmup-yu-xian-xian-xing-shuai-jian.md",
+      "section": "深度解析",
+      "group": "训练流程 (train.py)",
+      "level": "Advanced"
+    },
+    {
+      "slug": "20-wu-jian-du-yu-xun-lian-mu-biao-l1-xia-ge-token-yu-yan-mo-xing",
+      "title": "无监督预训练目标 L1：下一个 Token 语言模型",
+      "file": "20-wu-jian-du-yu-xun-lian-mu-biao-l1-xia-ge-token-yu-yan-mo-xing.md",
+      "section": "深度解析",
+      "group": "训练流程 (train.py)",
+      "level": "Advanced"
+    },
+    {
+      "slug": "21-you-jian-du-wei-diao-mu-biao-l3-l2-l-l1-fu-zhu-yu-yan-mo-xing-sun-shi",
+      "title": "有监督微调目标 L3 = L2 + λ·L1：辅助语言模型损失",
+      "file": "21-you-jian-du-wei-diao-mu-biao-l3-l2-l-l1-fu-zhu-yu-yan-mo-xing-sun-shi.md",
+      "section": "深度解析",
+      "group": "训练流程 (train.py)",
+      "level": "Advanced"
+    },
+    {
+      "slug": "22-mo-xing-ping-gu-fen-lei-zhun-que-lu-ji-suan",
+      "title": "模型评估：分类准确率计算",
+      "file": "22-mo-xing-ping-gu-fen-lei-zhun-que-lu-ji-suan.md",
+      "section": "深度解析",
+      "group": "训练流程 (train.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "23-wan-zheng-xun-lian-guan-xian-yu-xun-lian-wei-diao-ping-gu-de-bian-pai-luo-ji",
+      "title": "完整训练管线：预训练 → 微调 → 评估的编排逻辑",
+      "file": "23-wan-zheng-xun-lian-guan-xian-yu-xun-lian-wei-diao-ping-gu-de-bian-pai-luo-ji.md",
+      "section": "深度解析",
+      "group": "实验与应用 (main.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "24-yu-xun-lian-chu-shi-hua-vs-cong-ling-xun-lian-dui-zhao-shi-yan-she-ji-yu-shou-yi-fen-xi",
+      "title": "预训练初始化 vs 从零训练：对照实验设计与收益分析",
+      "file": "24-yu-xun-lian-chu-shi-hua-vs-cong-ling-xun-lian-dui-zhao-shi-yan-she-ji-yu-shou-yi-fen-xi.md",
+      "section": "深度解析",
+      "group": "实验与应用 (main.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "25-wen-ben-xu-xie-sheng-cheng-wen-du-cai-yang-yu-top-k-jie-duan-jie-ma",
+      "title": "文本续写生成：温度采样与 Top-K 截断解码",
+      "file": "25-wen-ben-xu-xie-sheng-cheng-wen-du-cai-yang-yu-top-k-jie-duan-jie-ma.md",
+      "section": "深度解析",
+      "group": "实验与应用 (main.py)",
+      "level": "Intermediate"
+    },
+    {
+      "slug": "26-mo-xing-chi-jiu-hua-checkpoint-bao-cun-yu-jia-zai",
+      "title": "模型持久化：Checkpoint 保存与加载",
+      "file": "26-mo-xing-chi-jiu-hua-checkpoint-bao-cun-yu-jia-zai.md",
+      "section": "深度解析",
+      "group": "实验与应用 (main.py)",
+      "level": "Beginner"
+    }
+  ]
+}

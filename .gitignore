@@ -22,3 +22,10 @@ uv.lock
 # data/
 data/
 *.pth
+
+# Audio (binary, often too large for git — e.g. >100MB breaks GitHub push)
+*.mp3
+*.m4a
+*.wav
+*.flac
+*.aac

@@ -17,7 +17,7 @@ import glob
 # ============================ CONFIG ============================
 # Pick the model here. Larger = more accurate but slower. All auto-download on
 # first run from the HuggingFace Hub.
-MODEL = "large-v3"          # <— change me. Options:
+MODEL = "base"          # <— change me. Options:
 #   "large-v3"         : best quality, slowest. ~2.5-4h for 3.5h audio on M4 CPU.
 #   "distil-large-v3"  : near-large quality (English, nearly lossless), ~1.7x
 #                        faster. RECOMMENDED for long English audio.

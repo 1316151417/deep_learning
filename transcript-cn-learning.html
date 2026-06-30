@@ -1,0 +1,1723 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM 学习可视化 | transcript-cn</title>
+  <style>
+    :root {
+      --bg: #f7f8f7;
+      --paper: #ffffff;
+      --ink: #18211f;
+      --muted: #60706b;
+      --line: #d9e0dc;
+      --green: #2d6a56;
+      --blue: #2d5f87;
+      --coral: #b85b4c;
+      --gold: #a67a28;
+      --violet: #66558a;
+      --mint: #e8f3ee;
+      --sky: #e9f1f8;
+      --rose: #f8ece9;
+      --wheat: #f6efd9;
+      --lav: #efedf7;
+      --shadow: 0 18px 55px rgba(24, 33, 31, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(90deg, rgba(45, 106, 86, 0.04), transparent 28%, rgba(184, 91, 76, 0.04) 72%, transparent),
+        var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .wrap {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+    }
+
+    .hero {
+      position: relative;
+      padding: 54px 0 32px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(45, 95, 135, 0.10), rgba(45, 106, 86, 0.05) 40%, rgba(184, 91, 76, 0.08)),
+        #fbfcfb;
+      overflow: hidden;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto 0 0;
+      height: 8px;
+      background: linear-gradient(90deg, var(--green), var(--blue), var(--coral), var(--gold), var(--violet));
+    }
+
+    .kicker {
+      margin: 0 0 12px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 880px;
+      margin: 0;
+      font-size: clamp(34px, 6vw, 70px);
+      line-height: 1.03;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 820px;
+      margin: 20px 0 0;
+      color: #33403d;
+      font-size: 18px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero-panel {
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(217, 224, 220, 0.9);
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      min-height: 84px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 24px;
+      line-height: 1.1;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid var(--line);
+      background: rgba(247, 248, 247, 0.92);
+      backdrop-filter: blur(14px);
+    }
+
+    .toolbar-inner {
+      display: grid;
+      grid-template-columns: minmax(180px, 340px) 1fr auto;
+      gap: 14px;
+      align-items: center;
+      min-height: 66px;
+    }
+
+    .search {
+      width: 100%;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      color: var(--ink);
+      background: var(--paper);
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(45, 95, 135, 0.12);
+    }
+
+    .nav-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 8px 0;
+      scrollbar-width: thin;
+    }
+
+    .nav-strip a {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.75);
+      color: #33403d;
+      font-size: 13px;
+    }
+
+    .nav-strip a.active {
+      border-color: rgba(45, 106, 86, 0.35);
+      background: var(--mint);
+      color: var(--green);
+    }
+
+    .nav-strip span {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      min-height: 40px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: rgba(45, 95, 135, 0.35);
+      background: var(--sky);
+    }
+
+    .progress {
+      height: 3px;
+      background: transparent;
+    }
+
+    .progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), var(--blue), var(--coral));
+    }
+
+    main {
+      padding-bottom: 72px;
+    }
+
+    .overview {
+      padding: 34px 0 22px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .section-title {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+
+    .section-title p {
+      max-width: 620px;
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stage-card {
+      position: relative;
+      min-height: 188px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      box-shadow: 0 10px 30px rgba(24, 33, 31, 0.05);
+    }
+
+    .stage-card::before {
+      content: "";
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      top: 0;
+      height: 5px;
+      border-radius: 0 0 8px 8px;
+      background: var(--green);
+    }
+
+    .stage-card:nth-child(2)::before { background: var(--blue); }
+    .stage-card:nth-child(3)::before { background: var(--coral); }
+    .stage-card:nth-child(4)::before { background: var(--violet); }
+
+    .stage-card strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 22px;
+    }
+
+    .stage-card span,
+    .stage-card em,
+    .stage-card b {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .stage-card b {
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .model-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .model-map section {
+      min-height: 210px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      padding: 18px;
+    }
+
+    .model-map h3 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .flow div {
+      min-height: 74px;
+      padding: 11px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+
+    .flow strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--green);
+    }
+
+    .memory {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .memory div {
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+
+    .memory strong {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .chapter {
+      display: grid;
+      grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+      gap: 34px;
+      padding: 42px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .chapter.hidden { display: none; }
+
+    .chapter-meta {
+      position: sticky;
+      top: 88px;
+      align-self: start;
+      padding-left: max(20px, calc((100vw - 1180px) / 2));
+    }
+
+    .chapter-meta h2 {
+      margin: 8px 0 12px;
+      font-size: 24px;
+      line-height: 1.22;
+      letter-spacing: 0;
+    }
+
+    .chapter-meta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .chapter-index {
+      color: var(--coral);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .mini-link {
+      display: inline-block;
+      margin-top: 16px;
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .chapter-body {
+      width: min(860px, calc(100vw - 360px));
+      padding-right: max(20px, calc((100vw - 1180px) / 2));
+    }
+
+    .thesis {
+      margin-bottom: 16px;
+      padding: 18px;
+      border: 1px solid rgba(45, 106, 86, 0.22);
+      border-radius: 8px;
+      background: var(--mint);
+    }
+
+    .thesis span {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--green);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .thesis p {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.48;
+    }
+
+    .learning-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .learning-block {
+      min-height: 238px;
+      padding: 17px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .learning-block h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    .learning-block ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .learning-block li {
+      margin: 7px 0;
+      color: #30403c;
+    }
+
+    .definition-list {
+      padding-left: 0 !important;
+      list-style: none;
+    }
+
+    .definition-list li {
+      margin: 9px 0;
+    }
+
+    .definition-list strong {
+      display: block;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .definition-list span {
+      display: block;
+      color: var(--muted);
+    }
+
+    .accent-a { background: linear-gradient(180deg, var(--paper), var(--sky)); }
+    .accent-b { background: linear-gradient(180deg, var(--paper), var(--lav)); }
+    .accent-c { background: linear-gradient(180deg, var(--paper), var(--wheat)); }
+    .accent-d { background: linear-gradient(180deg, var(--paper), var(--rose)); }
+
+    .original {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+      overflow: hidden;
+    }
+
+    .original summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 54px;
+      padding: 0 16px;
+      cursor: pointer;
+      font-weight: 800;
+      list-style: none;
+    }
+
+    .original summary::-webkit-details-marker { display: none; }
+
+    .original small {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .original-text {
+      max-height: 520px;
+      overflow: auto;
+      padding: 0 16px 16px;
+      border-top: 1px solid var(--line);
+      background: #fcfdfc;
+    }
+
+    .original-paragraph {
+      margin: 16px 0;
+      color: #27332f;
+      font-size: 15px;
+    }
+
+    .line-no {
+      display: inline-block;
+      min-width: 44px;
+      margin-right: 10px;
+      color: var(--coral);
+      font-size: 12px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .glossary-section,
+    .review-section {
+      padding: 40px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .glossary {
+      columns: 3 260px;
+      column-gap: 24px;
+      margin: 0;
+    }
+
+    .glossary dt {
+      break-after: avoid;
+      margin: 0 0 4px;
+      font-weight: 850;
+      color: var(--green);
+    }
+
+    .glossary dd {
+      break-inside: avoid;
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .review-card {
+      min-height: 170px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--paper);
+    }
+
+    .review-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--blue);
+      font-size: 18px;
+    }
+
+    .review-card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .empty-state {
+      display: none;
+      padding: 28px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      background: var(--paper);
+      text-align: center;
+    }
+
+    .empty-state.show { display: block; }
+
+    @media (max-width: 980px) {
+      .hero-grid,
+      .model-map,
+      .chapter,
+      .learning-grid,
+      .review-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar-inner {
+        grid-template-columns: 1fr;
+        padding: 10px 0;
+      }
+
+      .toolbar-actions {
+        justify-content: stretch;
+      }
+
+      .toolbar-actions button {
+        flex: 1;
+      }
+
+      .pipeline {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .chapter-meta {
+        position: static;
+        padding: 0 20px;
+      }
+
+      .chapter-body {
+        width: auto;
+        padding: 0 20px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .wrap {
+        width: min(100% - 28px, 1180px);
+      }
+
+      .hero {
+        padding-top: 36px;
+      }
+
+      .lead {
+        font-size: 16px;
+      }
+
+      .stats,
+      .pipeline,
+      .flow,
+      .memory {
+        grid-template-columns: 1fr;
+      }
+
+      .chapter {
+        gap: 14px;
+        padding: 30px 0;
+      }
+
+      .chapter-meta h2 {
+        font-size: 22px;
+      }
+
+      .thesis p {
+        font-size: 16px;
+      }
+
+      .learning-block {
+        min-height: auto;
+      }
+
+      .original summary {
+        align-items: start;
+        flex-direction: column;
+        justify-content: center;
+        padding: 10px 14px;
+      }
+    }
+  </style>
+</head>
+<body id="top">
+  <header class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="kicker">字幕可视化学习页</p>
+        <h1>大语言模型从预训练到思考模型</h1>
+        <p class="lead">基于 <strong>transcript-cn.txt</strong> 生成的学习版 HTML：把长字幕拆成章节，把每章整理成原文、观点、定义、示例和复习问题。</p>
+      </div>
+      <div class="hero-panel">
+        <h2>学习材料概览</h2>
+        <div class="stats">
+          <div class="stat"><strong>12</strong><span>个章节</span></div>
+          <div class="stat"><strong>164</strong><span>段原文</span></div>
+          <div class="stat"><strong>68,024</strong><span>个中文字符左右</span></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="wrap toolbar-inner">
+      <input class="search" id="search" type="search" placeholder="搜索章节、概念或原文" />
+      <nav class="nav-strip" id="navStrip" aria-label="章节导航">
+        <a href="#opening"><span>01</span>开场</a>
+<a href="#data"><span>02</span>预训练第一步</a>
+<a href="#tokenization"><span>03</span>分词</a>
+<a href="#training"><span>04</span>训练与推理</a>
+<a href="#compute"><span>05</span>规模</a>
+<a href="#base-model"><span>06</span>基座模型</a>
+<a href="#sft"><span>07</span>监督微调</a>
+<a href="#psychology"><span>08</span>LLM 心理学</a>
+<a href="#rl"><span>09</span>强化学习</a>
+<a href="#rlhf"><span>10</span>RLHF</a>
+<a href="#future"><span>11</span>未来与使用入口</a>
+<a href="#wrap"><span>12</span>回到起点</a>
+      </nav>
+      <div class="toolbar-actions">
+        <button id="expandAll" type="button">展开原文</button>
+        <button id="collapseAll" type="button">收起原文</button>
+      </div>
+    </div>
+    <div class="progress"><span id="progressBar"></span></div>
+  </div>
+
+  <main>
+    <section class="overview">
+      <div class="wrap">
+        <div class="section-title">
+          <h2>一张学习地图</h2>
+          <p>把整支视频压缩成四个动作：先学互联网文本，再学对话，接着在可验证任务上练习，最后用偏好反馈补齐主观任务。</p>
+        </div>
+        <div class="pipeline">
+          
+            <a class="stage-card" href="#data">
+              <strong>预训练</strong>
+              <span>互联网文档</span>
+              <em>预测下一个 token</em>
+              <b>基座模型</b>
+            </a>
+            
+
+            <a class="stage-card" href="#sft">
+              <strong>SFT</strong>
+              <span>对话样本</span>
+              <em>模仿理想助手回复</em>
+              <b>普通助手</b>
+            </a>
+            
+
+            <a class="stage-card" href="#rl">
+              <strong>RL</strong>
+              <span>练习题与奖励</span>
+              <em>试错并强化有效路径</em>
+              <b>思考模型</b>
+            </a>
+            
+
+            <a class="stage-card" href="#rlhf">
+              <strong>RLHF</strong>
+              <span>人类偏好排序</span>
+              <em>训练奖励模型再优化</em>
+              <b>偏好对齐</b>
+            </a>
+            
+        </div>
+        <div class="model-map">
+          <section>
+            <h3>从文本框到回答</h3>
+            <div class="flow">
+              <div><strong>1. 分词</strong><span>用户输入变成一维 token 序列。</span></div>
+              <div><strong>2. 协议</strong><span>user / assistant 等结构被特殊 token 标记。</span></div>
+              <div><strong>3. 采样</strong><span>固定网络反复预测并追加下一个 token。</span></div>
+            </div>
+          </section>
+          <section>
+            <h3>两种“知识”</h3>
+            <div class="memory">
+              <div><strong>参数里的知识</strong><span>像模糊回忆，来自预训练，有损、概率性、可能幻觉。</span></div>
+              <div><strong>上下文里的知识</strong><span>像工作记忆，模型当前可直接读取，适合摘要、核查和工具结果。</span></div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <div class="empty-state" id="emptyState">没有找到匹配内容，换个关键词试试。</div>
+    </div>
+
+    
+    <section class="chapter" id="opening">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 01 章</div>
+        <h2>开场：问题不是魔法，而是心智模型</h2>
+        <p>这支视频要回答一个朴素但关键的问题：你在 ChatGPT 文本框里按下回车后，背后到底发生了什么。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>这支视频要回答一个朴素但关键的问题：你在 ChatGPT 文本框里按下回车后，背后到底发生了什么。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>理解 LLM 最重要的不是背术语，而是建立能解释优点、局限和风险的心智模型。</li>
+<li>模型既能令人惊叹，也有很多“锋利边缘”，学习时要同时看能力和失效模式。</li>
+<li>整条主线会沿着“如何构建一个类似 ChatGPT 的系统”展开。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>LLM</strong><span>Large Language Model，大语言模型；以词元序列为输入和输出的神经网络模型。</span></li>
+<li><strong>心智模型</strong><span>帮助你预测系统行为的一组简化理解，比如“它在预测下一个词元”。</span></li>
+<li><strong>锋利边缘</strong><span>看起来很强但容易误用的边界条件，如幻觉、心算错误、过度自信。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>同一个文本框可以输入问题、文章、代码或指令，但模型看到的最终都是一串词元。</li>
+<li>“返回给你的文字是什么？”这个问题会贯穿预训练、SFT、RL 和工具调用。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>当你把 LLM 当成“会补全文字的系统”时，哪些使用习惯会自然改变？</li>
+<li>你目前最想解释的现象是：幻觉、推理、翻译，还是写代码？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 1-1，1 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L1</span>大家好，这个视频我想做已经有一段时间了。它是对 ChatGPT 这类大语言模型（LLM）的一个全面但面向大众的入门介绍。在这个视频里，我希望帮助大家建立一些心智模型，去理解这个工具到底是什么。它在某些方面显然是神奇而令人惊叹的——有些事情它做得非常好，另一些事情却不怎么样，而且还有很多需要注意的&quot;锋利边缘&quot;。那么，这个文本框背后到底是什么？你可以往里面放任何东西然后按回车。但你到底应该往里面放什么？返回给你的这些文字又是怎么回事？这一切是如何运作的，你究竟在和什么东西对话？我希望在这个视频里把所有这些话题都讲清楚。我们会走完构建这些东西的整个流程，但我会把所有内容都讲得让普通大众也能听懂。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="data">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 02 章</div>
+        <h2>预训练第一步：把互联网变成高质量文本</h2>
+        <p>预训练不是把整个互联网原封不动塞进模型，而是先抓取、清洗、过滤、去重，得到大规模高质量文本。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>预训练不是把整个互联网原封不动塞进模型，而是先抓取、清洗、过滤、去重，得到大规模高质量文本。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>数据质量和数据多样性共同决定基座模型能学到什么。</li>
+<li>语言过滤是一个产品取舍：保留什么语言，未来模型就更擅长什么语言。</li>
+<li>“44 TB 文本”听起来大，但相对整个互联网并不夸张，因为文本很轻且经过大量过滤。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>FineWeb</strong><span>Hugging Face 构建的高质量网页文本数据集，视频中作为生产级数据处理的代表例子。</span></li>
+<li><strong>Common Crawl</strong><span>从 2007 年起抓取互联网网页的组织，很多训练语料的原始来源之一。</span></li>
+<li><strong>URL 过滤</strong><span>用黑名单等规则剔除恶意、垃圾、营销、成人等不想纳入的数据来源。</span></li>
+<li><strong>文本抽取</strong><span>从网页 HTML 中提取正文，丢掉导航、样式、脚本等非正文内容。</span></li>
+<li><strong>PII 移除</strong><span>移除个人身份信息，如地址、社会安全号码等。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>FineWeb 只保留英语占比超过 65% 的页面，因此偏英语能力。</li>
+<li>最终数据里可能同时有龙卷风报道、医学介绍等非常不同的网页。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>如果你要训练一个中文很强的模型，数据过滤策略应该和 FineWeb 有什么不同？</li>
+<li>为什么“更多数据”不一定等于“更好数据”？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 3-17，8 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L3</span>那么，让我们先来看看如何构建一个类似 ChatGPT 的东西。在此过程中，我还会谈谈这些工具带来的一些认知和心理层面的影响。好，我们来看 ChatGPT。这会分为多个按顺序排列的阶段。第一个阶段叫做预训练阶段。而预训练阶段的第一步，是下载并处理互联网。</p>
+<p class="original-paragraph"><span class="line-no">L5</span>要大致了解这是什么样子，我推荐大家看看这个网址。有一家叫 Hugging Face 的公司收集并创建了一个叫做 FineWeb 的数据集。他们在博客文章里详细介绍了是如何构建 FineWeb 数据集的。所有主要的大语言模型提供商，比如 OpenAI、Anthropic、Google 等等，内部都会有类似 FineWeb 数据集的等价物。那么我们在这里大致想达成什么目标呢？我们想从互联网、从公开来源获取大量文本。我们想要海量的、质量极高的文档。我们还希望文档的种类具有非常大的多样性，因为我们希望这些模型里蕴含丰富的知识。所以我们想要大量多样化的高质量文档，而且要非常多。要实现这一点是相当复杂的，正如你在这里看到的，要做好需要经过多个阶段。我们一会儿会看看其中一些阶段是什么样子。目前，我只想指出，例如 FineWeb 数据集——它在生产级应用中相当具有代表性——最终大约只占用 44 TB 的磁盘空间。你很容易就能买到 1 TB 的 U 盘；我觉得今天这数据几乎能装进一块硬盘里。所以归根结底这并不是一个特别大的数据量。尽管互联网非常非常大，但我们处理的是文本，而且还在积极地做过滤，所以在这个例子中我们最终得到大约 44 TB。</p>
+<p class="original-paragraph"><span class="line-no">L7</span>那么，让我们看看这些数据长什么样，以及其中一些阶段是什么。很多这类工作的起点——也是最终贡献了大部分数据的东西——是来自 Common Crawl 的数据。Common Crawl 是一个组织，从 2007 年起就一直在抓取互联网。例如到 2024 年，Common Crawl 已经索引了 27 亿个网页，他们有各种各样的爬虫在互联网上四处游走。你做的事情基本上是这样的：从几个种子网页开始，然后跟随所有的链接，不停地跟着链接走，不停地索引所有信息，随着时间的推移就积累了大量互联网数据。这通常是很多这类工作的起点。</p>
+<p class="original-paragraph"><span class="line-no">L9</span>现在这些 Common Crawl 数据相当原始，会通过许许多多不同的方式进行过滤。这里他们记录了——这是同一张图——他们记录了这些阶段中发生的一些处理。第一样东西叫做 URL 过滤。它指的是一些黑名单，基本上就是一些你不希望从中获取数据的 URL 或域名。通常这包括恶意软件网站、垃圾网站、营销网站、种族主义网站、成人网站等等。所以这些不同类型的网站在这个阶段会被直接剔除，因为我们不希望它们出现在数据集里。</p>
+<p class="original-paragraph"><span class="line-no">L11</span>第二部分是文本抽取。要记住，所有这些网页——爬虫保存的是这些网页的原始 HTML。所以当我点击检查的时候，原始 HTML 实际上长这样。你会注意到它包含大量像列表之类的标记，还有 CSS 等等。所以这几乎就是这些网页的计算机代码。但我们真正想要的只是这段文字，对吧？我们只要这个网页的文本，不要导航之类的东西。所以这里有大量的过滤、处理和启发式规则，用来恰当地滤出这些网页里好的内容。</p>
+<p class="original-paragraph"><span class="line-no">L13</span>下一个阶段是语言过滤。例如，FineWeb 使用一个语言分类器来过滤。他们尝试猜测每一个网页是什么语言，然后只保留英语占比超过 65% 的网页。于是你能感受到，这是一种设计决策，不同公司可以自己决定。我们要在数据集中包含多少比例的各种语言？因为举例来说，如果我们把所有的西班牙语都过滤掉，那你可能会想象，我们的模型以后在西班牙语上不会很好，因为它从来没见过那么多这种语言的数据。所以不同公司可以在多大程度上专注于多语言性能，是有差异的。FineWeb 相当专注于英语，所以他们最终训练出的语言模型在英语上会非常强，但其他语言可能就不怎么样。</p>
+<p class="original-paragraph"><span class="line-no">L15</span>语言过滤之后，还有几个其他的过滤步骤，以及去重等等，最后以 PII 移除（个人身份信息移除）收尾。这指的是个人可识别信息，比如地址、社会安全号码等等，你会尝试检测并把这类网页从数据集中过滤掉。所以这里有很多阶段，我就不一一详述了，但它是预处理中相当庞大的一部分，最终得到比如 FineWeb 数据集。当你点进去看，能看到一些它最终长什么样的例子，任何人都可以在 Hugging Face 网页上下载这些数据。这里有一些最终进入训练集的文本示例。这是一篇关于 2012 年龙卷风的文章——2020 年和 2012 年发生了一些龙卷风，以及发生了什么。下一条是说，你知道吗，你身体里有两个小小的、9 伏电池大小的黄色肾上腺腺体？好吧，这算是一篇有点古怪的医学文章。所以基本上把这些看作互联网上的网页，只是以各种方式过滤出了文本。现在我们有了一大堆文本，40 TB 之多。这就是这个阶段下一步的起点。</p>
+<p class="original-paragraph"><span class="line-no">L17</span>我想给大家一个直观的感受，我们现在处于什么位置。我取了这里的前 200 个网页——记住我们还有很多很多——把所有这些文本全部拼接到一起。最终就是这样：我们得到的就是这种原始文本，原始的互联网文本。即便在这 200 个网页里，文本量也非常大。我可以继续缩小视图，我们有这一大片文本数据织成的巨幅画卷。这些文本数据里有各种各样的模式。我们现在要做的是，开始在这些数据上训练神经网络。这样神经网络就能内化、并建模这段文本是如何流动的，对吧？我们拥有这一大片文本，现在我们想要神经网络去模仿它。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="tokenization">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 03 章</div>
+        <h2>分词：把文本压成有限符号序列</h2>
+        <p>神经网络不能直接吃“文字意义”，它吃的是一维 token 序列；分词是在词表大小和序列长度之间做权衡。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>神经网络不能直接吃“文字意义”，它吃的是一维 token 序列；分词是在词表大小和序列长度之间做权衡。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>比特序列太长，字节序列短一些，BPE 继续把常见片段合并，让序列更短。</li>
+<li>token ID 只是符号编号，不要把它当成有大小意义的数字。</li>
+<li>分词会影响模型的拼写、计数、多语言表现，以及上下文窗口的使用效率。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>UTF-8</strong><span>把文本编码成计算机可存储的比特序列的一种标准。</span></li>
+<li><strong>字节</strong><span>8 个比特组成的单位，共有 256 种可能取值。</span></li>
+<li><strong>BPE</strong><span>Byte Pair Encoding，字节对编码；不断合并常见相邻符号，得到更大的词表和更短的序列。</span></li>
+<li><strong>token</strong><span>词元；模型实际处理的最小符号单元，可以是字、词、空格加词、标点或更奇怪的片段。</span></li>
+<li><strong>词表</strong><span>模型允许出现的所有 token 集合。GPT-4 相关分词器约有 10 万个符号。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>“hello world”在 GPT-4 的 CL100K base 分词器中可被切成两个 token。</li>
+<li>大小写、空格数量变化会改变分词结果，所以“Hello world”和“hello world”不一定一样。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么上下文窗口宝贵时，我们愿意用更大的词表换更短的 token 序列？</li>
+<li>中文、英文、代码在分词上可能有什么不同体验？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 19-29，6 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L19</span>好，在把文本塞进神经网络之前，我们必须决定如何表示这段文本，以及如何把它喂进去。我们这项技术中这些神经网络的工作方式是：它们期望一个一维的符号序列，并且要求可能的符号是一个有限集合。所以我们必须决定这些符号是什么，然后把我们的数据表示成由这些符号构成的一维序列。现在我们拥有的是一段一维的文本序列。它从这里开始，到这里，然后到这里，依此类推。所以这是一维序列——尽管在我的显示器上，它当然是以二维方式铺开的——但它是从左到右、从上到下，对吧？所以这是一段一维的文本序列。</p>
+<p class="original-paragraph"><span class="line-no">L21</span>既然这是计算机，当然这里有一种底层的表示。如果我对这段文本做所谓的 UTF-8 编码，我就能得到计算机中对应这段文本的原始比特。它长这样。结果发现，例如这里第一条就是前 8 个比特（作为例子）。那这是什么东西呢？这就是我们在这种情况下要寻找的表示：我们恰好有两种可能的符号——0 和 1，而且有非常长的一段序列。事实证明，这个序列长度在我们的神经网络里会是一种非常有限而宝贵的资源，我们其实并不想要只有两种符号的超长序列。相反，我们想要在词表的符号数量与所得的序列长度之间做权衡。所以我们不想要只有两种符号和极长的序列，我们会想要更多符号、更短的序列。</p>
+<p class="original-paragraph"><span class="line-no">L23</span>好，压缩或缩短我们序列长度的一种朴素办法，是基本上把一些连续的比特分成一组——比如 8 个比特——归并成一个所谓的字节。因为这些比特要么开要么关，如果取一组 8 个比特，结果发现这些比特的开/关组合只有 256 种可能。因此我们可以把这段序列重新表示成一个字节序列。这个字节序列会短 8 倍，但现在我们有 256 种可能的符号，所以这里每个数字从 0 到 255。我真的鼓励大家不要把这些当成数字，而是当成唯一的 ID 或者独一无二的符号。也许更好的方式是把每一个都换成一个独一无二的 emoji。你会得到类似这样的东西：我们基本上得到一段 emoji 序列，有 256 种可能的 emoji，你可以这么理解。</p>
+<p class="original-paragraph"><span class="line-no">L25</span>事实证明，在生产中对于最先进的语言模型，你其实想走得更远。你希望继续缩短序列长度——因为这仍然是一种宝贵资源——代价是词表里有更多符号。这是通过运行所谓的字节对编码（BPE）算法来完成的。它的工作方式是：我们基本上在寻找非常常见的连续字节或符号。例如，序列 116 后面跟着 32 是相当常见的，出现得非常频繁。所以我们要做的就是把这个对子归并成一个新符号。我们会铸造一个 ID 为 256 的新符号，并把每一个 116 和 32 的对子都改写成这个新符号。然后我们可以把这个算法迭代任意多次。每次铸造一个新符号时，我们就缩短了长度，并增大了符号集合。实践中发现，词表大小一个相当好的设定大概是大约 10 万个可能的符号。具体而言，GPT-4 使用 100,277 个符号。而这个从原始文本转换成这些符号——也就是我们所说的词元（token）——的过程，叫做分词（tokenization）。</p>
+<p class="original-paragraph"><span class="line-no">L27</span>现在我们来看看 GPT-4 是如何进行分词的：如何从文本转成 token、又如何从 token 转回文本，以及它实际是什么样子。我喜欢用来探索这些 token 表示的一个网站叫 tiktokenizer。我们来到下拉菜单，选择 CL100K base，这是 GPT-4 基础模型的分词器。在左边，你可以输入文本，它会显示这段文本的分词结果。比如 &quot;hello world&quot;（hello 空格 world）。结果发现 &quot;hello world&quot; 正好是两个 token：&quot;hello&quot; 这个 token，ID 是 15339；以及 &quot; space world&quot;（空格 world）这个 token，是 1917。所以是 hello 空格 world。如果我把这两个连起来，比如这样，我又会得到两个 token：是 &quot;h&quot; 这个 token，后面跟着 &quot;ello world&quot;（不带 h 的 ellow world）。如果我在 hello 和 world 之间放两个空格，分词又不一样了，这里出现了一个新 token 220。所以你可以玩玩这个，看看会发生什么。另外要注意，这是区分大小写的——如果这里是个大写 H，那就是别的东西了；如果是 &quot;Hello world&quot;，那实际上会变成三个 token 而不是两个。所以你可以玩玩它，对 token 大概是怎么回事建立一点直觉。我们在视频后面还会回过头来讲分词。现在我只是想给你看看这个网站，并且想让你看到这段文本——归根结底，比如我取这里的一行，这就是 GPT-4 会看到的样子。这段文本会是一个长度为 62 的序列。就是这个序列。而这些文本块就是这样对应到这些符号的。再说一次，有 100,277 种可能的符号。现在我们有了一维的符号序列。所以我们还会回到分词，但目前我们就在这里。</p>
+<p class="original-paragraph"><span class="line-no">L29</span>好，我现在做的，是拿我们数据集里的这段文本序列，用我们的分词器把它表示成一个 token 序列。现在它长这样。例如，当我们回到 FineWeb 数据集时，他们提到这不仅是 44 TB 的磁盘空间，还是这个数据集里大约 15 万亿（15 trillion）token 的序列。这里看到的只是这个数据集最前面的第 1、第 2、第 3 或者说几千个 token——但要记住总共有 15 万亿。还要再提醒一次：所有这些都代表一小段一小段的文本块，它们都是这些序列里不可再分的原子，而这里的数字没有任何含义，它们只是唯一 ID。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="training">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 04 章</div>
+        <h2>训练与推理：预测下一个词元</h2>
+        <p>LLM 训练的核心任务非常朴素：给一段上下文，预测真实数据里接下来的 token，并不断调参数降低错误。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>LLM 训练的核心任务非常朴素：给一段上下文，预测真实数据里接下来的 token，并不断调参数降低错误。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>训练不是写规则，而是通过海量例子调整参数，让输出概率符合数据统计。</li>
+<li>Transformer 是一个巨大数学函数，输入 token 和固定参数混合后输出下一个 token 的概率分布。</li>
+<li>推理时模型不会学习新参数，它只是反复采样 token，把结果接回上下文继续预测。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>上下文</strong><span>当前喂给模型的一段 token 序列，长度有最大限制。</span></li>
+<li><strong>标签</strong><span>训练数据中真实出现的下一个 token。</span></li>
+<li><strong>参数/权重</strong><span>神经网络里可被训练调整的数字，可理解成大量旋钮。</span></li>
+<li><strong>损失</strong><span>衡量预测与真实 token 不一致程度的指标，训练目标是让它下降。</span></li>
+<li><strong>推理</strong><span>模型训练完后，用固定参数生成输出的过程。</span></li>
+<li><strong>采样</strong><span>根据概率分布随机选出下一个 token，因此同一输入可得到不同答案。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>给 4 个 token 的窗口，模型输出 100,277 个概率，表示每个 token 成为下一个 token 的可能性。</li>
+<li>如果真实下一个 token 是“post”，训练会让“post”的概率稍微上升，让其他 token 概率稍微下降。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么同一个问题问两次，模型可能给出不同答案？</li>
+<li>如果模型只是在预测下一个 token，它为什么还能表现得像“懂知识”？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 31-47，9 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L31</span>现在我们进入有趣的部分，也就是神经网络训练。这是训练这些神经网络时计算上真正出重活的地方。我们在这一步要做的，是建模这些 token 在序列中如何相互跟随的统计关系。我们走进数据，从中取一些 token 窗口。我们从这个数据里相当随机地取一个 token 窗口。窗口长度可以从 0 个 token 一直到某个我们决定的最大值。例如实践中你会看到比如 8,000 个 token 的窗口。原则上我们可以用任意窗口长度，但处理非常长的窗口序列在计算上会非常昂贵。所以我们就决定，比如 8,000 是个好数字，或者 4,000 或者 16,000，就在那里截断。在这个例子里，我取前 4 个 token，这样一切都能很好地放下。这些 token，我们取一个 4 个 token 的窗口：这个 bar view、hing 和 &quot; single&quot;（空格 single），就是这些 token ID。现在我们要做的，是预测序列中下一个 token 是什么。3962 是接下来那个，对吧？那我们现在做的，是把这个叫做上下文。这 4 个 token 是上下文，喂给神经网络，这是神经网络的输入。我稍后会讲神经网络里面到底是什么。目前重要的是理解这个神经网络的输入和输出。输入是变长 token 序列，长度在 0 到某个最大值之间，比如 8,000。输出则是对接下来是什么的预测。因为我们的词表有 100,277 个可能的 token，神经网络会输出正好那么多个数字，所有这些数字都对应于那个 token 作为序列中下一个出现的概率。它在猜接下来是什么。</p>
+<p class="original-paragraph"><span class="line-no">L33</span>在最开始，这个神经网络是随机初始化的。我们一会儿会看到那意味着什么。但它是一种随机的变换。所以在训练最开始，这些概率也会是随机的那种。这里我有三个例子，但要记住这里有 10 万个数字。所以这个 token（&quot; direction&quot; 空格 direction）的概率，神经网络说目前是 4%。11,799 是 2%。然后 3962（也就是 &quot;post&quot;）的概率是 30%。当然，我们是从数据集里采样出这个窗口的，所以我们知道接下来是什么。我们知道——而这就是标签——正确答案就是 3962 确实是序列中下一个。所以现在我们有了一个对神经网络进行更新的数学过程。我们有一种调节它的方法，一会儿会稍微讲点细节。但基本上我们知道，这里这个 3% 的概率，我们希望它更高，而所有其他 token 的概率我们希望更低。于是我们有一种数学方法来计算如何调整和更新神经网络，使得正确答案有略微更高的概率。如果我现在对神经网络做一次更新，下一次我把这串 4 个 token 喂进去时，神经网络已经被略微调整了，它会说，好吧，&quot;post&quot; 也许变成 4%，&quot;case&quot; 也许变成 1%，&quot;direction&quot; 也许变成 2% 之类的。所以我们有办法轻轻地推动、略微更新这个神经网络，从而给序列中正确的下一个 token 更高的概率。还要记住，这个过程不仅发生在这一处（这 4 个喂进去预测这一个），这个过程同时对整个数据集里所有这些 token 同步发生。所以实践中我们采样一些小窗口、小批量的窗口，然后在每一个 token 上都调整我们的神经网络，使得该 token 的概率略微变高。这一切都并行发生在大量批次的这些 token 上。这就是训练神经网络的过程——一系列的更新，使它的预测与训练集中实际发生的统计相吻合，使它的概率与这些 token 在数据中如何相互跟随的统计模式相一致。</p>
+<p class="original-paragraph"><span class="line-no">L35</span>我们简要地走进这些神经网络的内部，给大家一个感觉里面有什么。神经网络内部。如我所说，我们有这些输入，也就是 token 序列。这里是有 4 个输入 token，但可以是 0 到比如 1,000 个 token。原则上这可以是无穷多个 token，只是处理无穷多个 token 在计算上太昂贵了。所以我们就在某个长度上截断，这成为该模型的最大上下文长度。现在，这些输入 x，与这些神经网络的参数（或称权重）一起，在一个巨大的数学表达式里被搅拌混合。这里我展示了 6 个示例参数和它们的取值。但实践中，这些现代神经网络会有数十亿这样的参数。而最开始，这些参数是完全随机设置的。在参数随机设置下，你可能会预期这个神经网络会做出随机预测——它确实如此。在最开始是完全随机的预测。但正是通过这个迭代更新网络的过程——我们称之为训练神经网络——这些参数的取值得到调整，使得神经网络的输出与我们训练集中看到的模式相一致。所以把这些参数想象成 DJ 调音台上的旋钮。当你拧动这些旋钮时，每种可能的 token 序列输入都会得到不同的预测。而训练神经网络就只是发现一组参数取值，它看起来与训练集的统计相一致。让我给你一个这种巨大数学表达式长什么样的例子，只是给你个感觉。现代网络是含有大概数万亿项的巨大表达式。但让我给你看一个简单的例子。它大概是这样的——我是说就是这类表达式，只是想说明它并不可怕。我们有输入 x，比如 x1、x2，这里两个示例输入，它们和网络的权重 w0、w1、2、3 等等搅拌在一起。而这种混合就是简单的乘法、加法、指数、除法等等。设计有效的数学表达式是神经网络架构研究的课题——这些表达式要有很多便利的特性：有表达力、可优化、可并行化等等。但归根结底，这些都不是复杂的表达式，它们基本上就是把输入和参数混合起来做出预测，而我们在优化这个神经网络的参数，使得预测结果与训练集一致。</p>
+<p class="original-paragraph"><span class="line-no">L37</span>现在，我想给大家看一个这些神经网络在生产中实际是什么样子的例子。为此，我推荐你去这个网站，它有一个对这类网络的非常漂亮的可视化。这就是你在那个网站上会看到的。这里这个用于生产环境的神经网络有一种特殊的结构。这种网络叫做 Transformer。作为一个例子，这一个大约有 85,000 个参数。在上面这里，我们取输入，也就是 token 序列。然后信息流经神经网络直到输出——这里输出的是 logits 和 softmax——但这就是对接下来是什么、下一个 token 是什么的预测。然后这里有一系列变换，以及在这个数学表达式内部产生的所有这些中间值，随着它预测接下来是什么。例如，这些 token 被嵌入（embedded）成一种所谓的分布式表示。每个可能的 token 在神经网络内部都有一个表示它的向量。所以我们先把 token 嵌入，然后这些数值就沿着这张图流动。而这些单独来看都是非常简单的数学表达式。我们有 layer norm、矩阵乘法、softmax 等等。这里是这个 Transformer 的注意力（attention）块，然后信息流进多层感知机（MLP）块，依此类推。这里所有的数字都是这个表达式的中间值。你几乎可以把这些想象成这些合成神经元的发放率。但我要提醒你，不要把它想得太过像神经元，因为与你大脑中的神经元相比，这些是极其简单的神经元。你的生物神经元是非常复杂的动力学过程，有记忆等等。而这个表达式里没有记忆。它是从输入到输出的一个固定的数学表达式，没有记忆，它是无状态的。所以与生物神经元相比，这些都是非常简单的神经元，但你仍然可以大概把它想象成一块合成的脑组织，如果你愿意这么想的话。所以信息流过所有这些神经元，它们发放，直到我们得到预测。</p>
+<p class="original-paragraph"><span class="line-no">L39</span>我其实不会过多停留在所有这些变换的精确数学细节上。说实话，我觉得深入那些并不那么重要。真正重要的是理解这是一个数学函数，它由某个固定的参数集合参数化，比如 85,000 个参数。它是一种把输入变换成输出的方式。当我们拧动这些参数时，我们就得到不同种类的预测。然后我们需要找到一组好的参数取值，使得预测大致与训练集中看到的模式相吻合。这就是 Transformer。</p>
+<p class="original-paragraph"><span class="line-no">L41</span>好，我已经给你看了神经网络的内部，我们也谈了训练它的过程。我还想讲一个使用这些网络的主要阶段，那就是叫做推理（inference）的阶段。在推理中，我们要做的是从模型生成新数据。我们想看看它在自己的网络参数里内化了哪些模式。从模型生成其实相当直接。我们从一些 token 开始，这些基本上是你的前缀，也就是你想从什么开始。假设我们想从 token 91 开始。我们把它喂进网络——记住网络会给我们概率，对吧？它给我们这里的这个概率向量。所以现在我们可以做的是，基本上抛一枚有偏的硬币。我们可以根据这个概率分布来采样一个 token。模型给出高概率的那些 token，在你抛这枚有偏硬币时更有可能被采样到，你可以这样理解。我们从分布中采样，得到一个独一无二的 token。例如，token 860 是下一个。所以 860 在这种情况下，当我们从模型生成时，可以是接下来的那个。860 是一个相对比较可能的 token。在这种情况下它可能不是唯一可能的 token——本来可能还有很多其他 token 被采样到。但我们可以看到，作为一个例子，860 是一个相对比较可能的 token，而确实在我们的训练例子里，860 跟在 91 之后。</p>
+<p class="original-paragraph"><span class="line-no">L43</span>我们继续这个过程。91 之后是 860，我们把它接上，然后再次问：第三个 token 是什么？我们采样，比方说就是 287，正好和这里一样。我们再来一次。再进来，现在我们有了一个 3 个的序列，我们问，可能的第四个 token 是什么？我们从中采样，得到这个。现在我们再做一个，假设再做一次。我们拿这 4 个，采样，得到这个。而这个 13659——这其实不是我们之前看到的 3962——这个 token 是 &quot; article&quot;（空格 article）。所以是 &quot;viewing a single article&quot;（查看单篇文章）。所以在这种情况下，我们并没有精确复现训练数据里看到的那个序列。要记住，这些系统是随机的（stochastic）。我们在采样，在抛硬币，有时候我们走运，复现出训练集里的一小段文本，但有时候我们会得到一个并非训练数据中任何文档逐字出现的 token。所以我们会得到训练集中所见数据的某种&quot;混搭&quot;重混，因为在每一步上我们都可能抛到略微不同的 token，而一旦那个 token 进来了，你再采样下一个，依此类推，你很快就会开始生成与训练文档中出现的 token 流非常不同的 token 流。</p>
+<p class="original-paragraph"><span class="line-no">L45</span>从统计上看，它们会具有类似的性质，但并不与训练数据完全相同。它们更像是受到训练数据启发而来的。所以在这个例子中，我们得到了一个略有不同的序列。那为什么会得到 &quot;article&quot;（冠词）这个词呢？你可以想象，在 bar、viewing、single 这样的上下文里，article 是一个相对可能出现的词元（token），你也能想象在某份训练文档中的某个地方，article 这个词在某种程度上跟在这个上下文窗口之后，而我们恰好在这个阶段采样到了它。所以基本上，推理（inference）就是一次一个地从这些概率分布中做预测，我们不断把词元反馈回去，再获取下一个词元。我们一直在抛这些&quot;硬币&quot;，根据我们运气的不同，或者根据我们从这些概率分布中采样的方式，可能会得到截然不同的模式。这就是推理。</p>
+<p class="original-paragraph"><span class="line-no">L47</span>在大多数常见场景中，你只需做一次的事情是：把互联网下载下来，并作为预处理步骤进行分词（tokenization）。一旦你拿到了词元序列，我们就可以开始训练神经网络了。在实际中，你会尝试训练许多不同的网络，使用各种不同的设置、不同的结构和不同的规模，因此你会做大量的神经网络训练。然后，一旦你有了一个训练好的神经网络，并且你对某一组特定的参数感到满意，你就可以拿这个模型去做推理了，你甚至可以从模型中生成数据。当你在 ChatGPT 上与模型对话时，那个模型是早就训练好的，可能是 OpenAI 在几个月前就训练好的。他们有一组表现不错的特定权重。当你和模型对话时，这一切都只是推理而已，已经没有再训练了。那些参数被固定下来，你基本上只是在和模型对话——你给它一些词元，它就在补全词元序列。这就是你在 ChatGPT 上使用模型时所看到的生成内容。所以那个模型就只做推理。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="compute">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 05 章</div>
+        <h2>规模：GPT-2、GPU 与训练成本</h2>
+        <p>简单目标乘上海量数据、参数和 GPU 并行计算，就变成了现代 AI 的基础设施竞赛。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>简单目标乘上海量数据、参数和 GPU 并行计算，就变成了现代 AI 的基础设施竞赛。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>GPT-2 是现代 LLM 技术栈的早期代表；今天同类训练成本已大幅下降。</li>
+<li>GPU 适合矩阵乘法并行计算，所以成为训练神经网络的核心硬件。</li>
+<li>数据中心里的大量 GPU，本质上都在协同优化“预测下一个 token”。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>GPT-2</strong><span>OpenAI 2019 年发布的语言模型，视频中用来展示训练与推理的具体过程。</span></li>
+<li><strong>GPU</strong><span>图形处理器，擅长大规模并行矩阵运算。</span></li>
+<li><strong>H100</strong><span>NVIDIA 的高端数据中心 GPU，视频中用作训练算力例子。</span></li>
+<li><strong>节点</strong><span>一台含多块 GPU 的训练机器；多个节点可组成更大的训练集群。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>视频里复现 GPT-2 的 lm.c 项目，约一天训练，成本约 600 美元。</li>
+<li>8 块 H100 组成一个节点，多个节点通过网络协同训练更大的模型。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么模型训练的突破常常依赖硬件、数据和软件效率同时进步？</li>
+<li>如果训练更大模型，瓶颈可能出现在算力、数据、通信还是成本？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 49-59，6 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L49</span>现在让我们来看一个训练和推理的具体例子，让你感受一下这些模型在被训练时到底是什么样子。我想用的、也是我特别喜欢的一个例子，是 OpenAI 的 GPT-2。GPT 代表&quot;生成式预训练 Transformer&quot;（generatively pre-trained transformer），这是 OpenAI 推出的 GPT 系列的第二个版本。今天你在和 ChatGPT 对话时，支撑那一切魔力的底层模型是 GPT-4，也就是该系列的第四代。而 GPT-2 是 OpenAI 在 2019 年发表的，就在我手上的这篇论文里。我喜欢 GPT-2 的原因是，它是首次把一套可辨识为&quot;现代&quot;的技术栈整合在一起。GPT-2 的所有组成部分以今天的标准来看都还是可辨识的，只不过一切都变得更大了。当然，我没法完整地讲解这篇论文，因为这是一篇技术性的出版物，但我想强调的几个细节如下。GPT-2 是一个 Transformer 神经网络，就像你今天会用到的神经网络一样。它有 16 亿个参数，对吧？也就是我们刚才看过的那些参数，它有 16 亿个。而今天现代的 Transformer 大概会有接近一万亿或几千亿个参数。这里的最大上下文长度是 1,024 个词元。也就是说，当我们从数据集中采样词元片段或窗口时，我们绝不会取超过 1,024 个词元。所以当你试图预测序列中的下一个词元时，你的上下文里永远不会有超过 1,024 个词元来做出这个预测。而这也是以现代标准来看极小的。今天的上下文长度大概接近几十万，甚至上百万，所以你有更多的上下文、更多历史词元，从而能更好地预测序列中的下一个词元。最后，GPT-2 大约是在 1,000 亿个词元上训练的，这以现代标准来看也相当小。前面提到过，我们看过的那个 FineWeb 数据集，最终的数据库有 15 万亿个词元，所以 1,000 亿确实很小。</p>
+<p class="original-paragraph"><span class="line-no">L51</span>实际上，我曾作为 lm.c 这个项目的一部分，试着为了好玩去复现 GPT-2。你可以在 GitHub 上 lm.c 仓库的这篇帖子里看到我写的过程。具体来说，2019 年训练 GPT-2 的成本估计大约是 40,000 美元，但今天你可以做得比这好得多。具体而言，我大概花了一天时间和大约 600 美元，而且我还没怎么费力去优化。我觉得今天你完全能把它压到大约 100 美元。那为什么成本会降这么多呢？第一，这些数据集变得好多了。我们筛选、提取和准备数据的方式都精细了许多，所以数据集的整体质量高了很多，这是一方面。但真正的最大差别在于，从硬件角度来看，我们的计算机快得多，我们待会儿会看到这一点。而且用于运行这些模型、尽可能从硬件中榨取速度的软件也好了很多，因为大家都在专注研究这些模型、努力让它们跑得非常快。我没法完整讲透这次 GPT-2 的复现，这是一篇很长的技术帖子，但我还是想给你一点直观的感受：作为一名研究者，实际训练这样一个模型是什么样子——你在看什么？它长什么样？感觉如何？让我稍微给你讲讲。</p>
+<p class="original-paragraph"><span class="line-no">L53</span>好，这就是它的样子，让我把它挪过来。我现在正在训练一个 GPT-2 模型。这里发生的每一行——比如这一行——都是对模型的一次更新。还记得吧，我们在这里基本上是在让每一个词元的预测变得更好，并更新神经网络里的这些权重或参数。所以这里的每一行都是对神经网络的一次更新，我们稍微改动一下它的参数，让它能更好地预测序列中的下一个词元。具体来说，这里的每一行都在改善训练集中一百万个词元的预测。也就是说，我们基本上是从这个数据集里取出一百万个词元，并尝试同时改善这一百万个词元作为&quot;序列中下一个出现&quot;的预测，而在每一步中，我们都会为此对网络做一次更新。这里要密切关注的数字是叫做损失（loss）的这个数。损失是一个单一的数字，告诉你你的神经网络此刻表现如何。它是这样设计的：损失越低越好。你会看到，随着我们对神经网络做更多更新，损失在下降，这对应着对序列中下一个词元做出了更好的预测。所以损失就是你作为神经网络研究者要盯着的那个数字。你基本就是在等待、百无聊赖地打发时间、喝着咖啡，确保这一切看起来都正常——每一次更新后损失都在改善，网络在预测上越来越好。这里你能看到，我们每次更新处理一百万个词元，每次更新大约耗时七秒左右。而这里我们总共要做大约 32,000 步优化。32,000 步乘以每次一百万个词元，大约是我们要处理的 330 亿个词元。我们目前只到第 420 步左右，32,000 步中的第 420 步。所以我们才完成了刚过 1% 一点点，因为我只跑了大概十或十五分钟之类的时间。</p>
+<p class="original-paragraph"><span class="line-no">L55</span>每 20 步，我配置了这个优化过程去做一次推理。所以你在这里看到的是，模型在预测序列中的下一个词元。你基本上是从某个随机起点开始，然后不断把词元喂进去，我们就这样运行这个推理步骤。这就是模型在某种程度上预测序列中下一个词元的过程，你每次看到有东西冒出来，那就是一个新的词元。我们就来看一下，你能看到它现在还很不连贯，而且要记住，这还只完成了训练的 1%。所以模型在预测下一个词元上还不够好，输出的东西其实有点像胡言乱语，对吧？但它还是有一点局部的连贯性。&quot;since she is mine, it&#x27;s a part of the information should discuss my father, great companions, Gordon showed me sitting over it&quot;等等。我知道它看起来不怎么样，但让我们往上滚动，看看我在开始优化时它是什么样子。也就是这里的第一步。在优化进行到第 20 步之后，你能看到我们得到的输出看起来完全是随机的。当然，这是因为模型的参数只更新了 20 次，所以它给你的是一段随机文本，因为它本身就是一个随机的网络。所以你能看到，相比之下，模型已经开始做得好多了。而如果我们等满全部 32,000 步，模型会改进到足以生成相当连贯的英语，词元流会变得正确，它们组合起来更像是真正的英语了。这现在还要再跑个一两天，所以在这个阶段，我们只要确保损失在下降、一切看起来正常，然后就是等。</p>
+<p class="original-paragraph"><span class="line-no">L57</span>现在，让我转到所需算力这个故事上来，因为我当然不是在自己的笔记本上跑这个优化的。那会贵得离谱，因为我们要运行这个神经网络、要改进它，还需要所有这些数据等等。你没法在自己的电脑上很好地跑这个，因为网络实在太大了。所以这一切都跑在云端的某台计算机上。我想讲讲训练这些模型时算力这一面，看看它是什么样子。我们来看一下。</p>
+<p class="original-paragraph"><span class="line-no">L59</span>好，我跑这个优化所用的计算机，是这样一个 8xH100 的节点。一个单节点、也就是一台单机里有八块 H100。我是租的这台机器，它在云端的某个地方，其实我也不确定它物理上究竟在哪。我喜欢租的那家叫 Lambda，不过还有很多其他公司也提供这种服务。往下翻，你能看到他们对装有这些 H100——也就是 GPU——的计算机有一些按需定价，我待会儿会给你看它们长什么样。按需的话，一台八块 NVIDIA H100 GPU 的机器，比如每小时每块 GPU 3 美元。你可以租下它们，然后就得到云上的一台机器，登进去就能训练这些模型。而这些 GPU 长这样。这是一块 H100 GPU，大致就是这个样子，你把它插到你的计算机里。GPU 是训练神经网络的完美之选，因为训练的计算量极大，但计算中又展现出大量的并行性。所以你可以让许多独立的工作单元同时工作，去求解训练这些神经网络背后的矩阵乘法。这只是其中一块 H100，但实际上你会把多块组合起来。你可以把八块堆叠进一个单节点，然后把多个节点堆叠成整个数据中心、一整套系统。当我们去看一个数据中心时，我们就会看到这样的东西：一块 GPU，到八块 GPU，到一套系统，再到许多套系统。这些就是更大的数据中心，当然也昂贵得多。而正在发生的事情是，所有大型科技公司都极度渴望这些 GPU，以便训练他们所有的语言模型，因为它们实在太强大了。从根本上说，这就是 NVIDIA 的股价今天能达到 3.4 万亿美元、并一路爆发的驱动力。这就是一场&quot;淘金热&quot;。淘金热就是要拿到 GPU、拿到足够多的 GPU，让它们能协同完成这种优化。它们都在干什么呢？它们都在协同地、在像 FineWeb 这样的数据集上预测下一个词元。这就是极其昂贵的算力开销。你拥有的 GPU 越多，能尝试去预测并改进的词元就越多，你处理这个数据集就越快，迭代就越快，也就能训练更大的网络，如此循环。这就是所有那些机器在做的事，也正是为什么这一切如此了不得。比如，这是一篇大约一个月前的文章，这就是为什么它是一件大事。比方说，Elon Musk 正在一个单一数据中心里部署十万块 GPU。所有这些 GPU 都极其昂贵、会消耗巨量电力，而它们全都在试图预测序列中的下一个词元，并以此改进网络，而且大概率会比你在这里看到的更快地得到连贯得多的文本。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="base-model">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 06 章</div>
+        <h2>基座模型：互联网文档模拟器</h2>
+        <p>预训练产物是基座模型，它像互联网文本的有损压缩包；它会续写文档，但还不是可靠助手。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>预训练产物是基座模型，它像互联网文本的有损压缩包；它会续写文档，但还不是可靠助手。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>基座模型拥有大量知识，但这些知识是模糊、概率性、统计性的回忆。</li>
+<li>它会记忆高频或重复出现的文本，也会在未知事实上生成“平行宇宙”。</li>
+<li>只靠提示词也能诱导基座模型做任务，但本质仍是续写符合上下文模式的 token。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>基座模型</strong><span>只经过预训练、尚未被系统训练成对话助手的模型。</span></li>
+<li><strong>有损压缩</strong><span>参数保留了互联网文本的整体统计印象，但不是逐字可查的数据库。</span></li>
+<li><strong>幻觉</strong><span>模型在缺乏可靠知识时生成看似合理但不真实的内容。</span></li>
+<li><strong>少样本提示</strong><span>在提示词中给几个输入输出例子，让模型在上下文里学会模式。</span></li>
+<li><strong>上下文学习</strong><span>模型在当前上下文中识别模式并临时按模式续写的能力。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>问基座模型“2+2 等于几”，它可能只是补全网页式文本，不稳定地回答。</li>
+<li>给几个英文到韩语的词对，再写 teacher:，模型可以续写出韩语翻译。</li>
+<li>把提示词写成人类和 AI 助手的对话，基座模型会继续扮演助手。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么“会回答问题”和“被训练成助手”不是一回事？</li>
+<li>你能想到哪些任务适合少样本提示？哪些不适合？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 61-73，7 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L61</span>好，很遗憾，我没有几千万或上亿美元去训练这样一个超大模型，但幸运的是，我们可以转向一些大型科技公司——他们 routinely 地训练这些模型，并在训练完成后发布其中的一部分。他们花了海量算力去训练这个网络，然后在优化结束时把网络发布出来。这非常有用，因为它已经替你做了大量计算。有很多公司 routinely 地训练这些模型，但其实没有几家会发布所谓的基座模型（base model）。在这里最后产出的模型就叫做基座模型。什么是基座模型？它是一个词元模拟器，对吧？它是一个互联网文本词元模拟器。所以它本身还并不好用，因为我们想要的是所谓的助手（assistant）——我们想提问并让它回答。而这些模型做不到，它们只是在对互联网做各种&quot;混搭&quot;重混，它们在做的是&quot;梦到&quot;互联网页面。所以基座模型很少被发布，因为它们只是通往助手之路上还要走的几步中的第一步。不过，还是有过几次发布。举个例子，GPT-2 模型在 2019 年发布了那个 16 亿——抱歉，是 15 亿参数的模型。这个 GPT-2 模型就是一个基座模型。那么，什么是&quot;发布模型&quot;？发布这些模型是什么样子？这是 GitHub 上的 GPT-2 仓库。要发布模型，你基本上需要两样东西。第一，通常需要 Python 代码，详细描述他们在模型中所做的那一系列操作。如果你还记得那个 Transformer，这个神经网络里所执行的每一步，正是被这段代码描述出来。所以这段代码实现的就是这个神经网络的所谓前向传播（forward pass）。我们需要他们究竟如何搭建那个神经网络的确切细节。这只是一些计算机代码，通常也就几百行，没那么夸张，全都是相当容易理解的，而且通常相当标准。不标准的，是那些参数——那才是真正的价值所在。这个神经网络的参数在哪？因为参数有 16 亿个，我们需要那个正确、或者非常好的设置。所以除了这份源代码之外，他们还发布了参数，在这里大约是 15 亿个参数。这些只是数字，一个包含 15 亿个数字的单一列表，是所有这些&quot;旋钮&quot;被精确调到恰到好处的设置，好让词元能漂亮地输出。所以要拿到一个基座模型的发布，你需要这两样东西。GPT-2 已经发布过了，但正如我所说，它其实是一个相当老的模型。所以我们接下来要转向的模型叫 Llama 3，这就是我接下来想给你看的那个。Llama 3——再说一遍，GPT-2 有 16 亿参数、在 1,000 亿个词元上训练；而 Llama 3 是一个大得多的、也现代得多的模型。它由 Meta 发布和训练，是一个 4,050 亿参数的模型，在 15 万亿个词元上训练而成，方式上基本一样，只是规模大了非常多。Meta 也对 Llama 3 做了发布，那是这篇论文的一部分。借助这篇详尽的论文，他们发布的最大的基座模型是 Llama 3.1 405B，也就是 4,050 亿参数的模型。这就是基座模型。而在基座模型之外，如果你看这里——为后面视频的四个章节埋个伏笔——他们还发布了指令模型（instruct model）。instruct 意味着这是一个助手，你可以向它提问，它会给你答案。这部分我们后面再讲。现在，先让我们看看这个基座模型、这个词元模拟器，玩一玩它，并试着想想：这东西到底是什么？它是怎么工作的？如果你让一个非常大的神经网络在大量数据上一直这样跑到优化结束，最后我们会得到什么？我最喜欢和基座模型互动的地方，是一家叫做 Hyperbolic 的公司，它基本上是在托管那个 405B 的 Llama 3.1 基座模型。当你打开网站时——我想你可能需要注册之类的——在模型里要确保你用的是 Llama 3.1 405B base，必须是基座模型。然后这里，比如 max tokens 就是我们要生成多少个词元。我们把它调小一点，免得浪费算力，我们只要接下来的 128 个词元，其他设置就先别动。我不打算在这里展开讲全部细节。从根本上说，这里发生的事情，和我们在推理时发生的事情完全一样。它就是在继续你给它的任何前缀的词元序列。我想先向你展示一下，这里的这个模型还不是助手。比如，你不能问它&quot;2 加 2 等于几？&quot;它不会告诉你&quot;哦，是 4，还有什么可以帮你的吗？&quot;它不会那样做。因为&quot;2 加 2 等于几&quot;会被分词，那些词元只是构成了一个前缀，而模型接下来做的，就是去获取下一个词元的概率。它不过是一个被神化了的自动补全，一个非常非常昂贵的自动补全，补出接下来会是什么，依据的是它的训练文档——基本上也就是各种网页——的统计规律。我们直接按回车，看看它会续出什么词元来。好，这次它还真就把问题答上了，然后开始往某种哲学领域跑偏。我们再试一次。我把它复制粘贴过来，从头再来一遍。&quot;2 加 2 等于几？&quot;好，它又跑偏了。还有一件事我想强调：这个系统，我觉得你每次输入，它都是从零开始。所以这个系统是随机的。对于同样的词元前缀，我们每次都得到不同的答案。原因就在于我们会得到一个概率分布，然后从中采样，每次都得到不同的样本，之后就总是走进不同的方向。这次我不知道它跑到哪里去了。我们再试一次。它就这么继续往下写。所以它做的就是在网上能看到的那些东西，对吧？它只不过是在复现那些统计模式。所以第一点，它还不是助手，它是个词元自动补全；第二，它是一个随机系统。</p>
+<p class="original-paragraph"><span class="line-no">L63</span>现在关键的一点是，尽管这个模型本身对很多应用来说暂时还没那么有用，但它仍然非常有价值，因为在预测序列中下一个词元这项任务里，模型已经学到了大量关于世界的知识，并且把所有这些知识都存进了网络的参数里。还记得吧，我们的文本看起来是这样的——互联网网页，而所有这些现在都被压缩进了网络的权重里。所以你可以把这 4,050 亿个参数看作是对互联网的一种压缩。你可以把这 4,050 亿个参数当成一个 zip 压缩包来看待，只不过它不是无损压缩，而是有损压缩。我们留下的是一种对互联网的整体印象，我们可以从中生成内容，对吧？现在，我们可以通过对基座模型给出相应的提示词（prompt）来引出其中的一些知识。比如，这里有一个可能奏效的提示词，能引出藏在参数里的一些知识：「Here&#x27;s my top 10 list of the top 10 marks to see in pairs.」我这样写，是为了给模型&quot;做引子&quot;，让它现在去续写这个清单。我们按回车看看行不行。好？你看它开始列了，并且现在大致给了我一些这样的地标。我注意到它在试图给出大量信息，不过你可能没法完全相信这里的一些信息。记住，这一切不过是对一些互联网文档的回忆。所以在互联网数据中出现频率很高的事物，相比那些极少出现的事物，更可能被正确地记住。所以你不能完全相信这里的一些信息，因为它只是对互联网文档的一种模糊回忆。因为这些信息并没有显式地存储在任何参数里，它们都只是回忆。所以我们确实得到了一些大致正确的东西。我其实也没有专业能力去核实它是否大体正确。但你能看到，我们引出了模型里的大量知识。而这些知识并不精确、并非确凿无疑，它们是模糊的、概率性的、统计性的；那些经常出现的事物，更可能被模型记住。现在，我想再给你看几个关于这个模型行为的例子。第一个我想给你看的是这个。我去了 Wikipedia 上关于斑马的词条页，让我就把头一两句话复制粘贴过来，放到这里。那么当我按回车时，会得到什么样的补全？让我直接按回车。&quot;There are three living species&quot;等等等等。模型在这里生成的，是对这条 Wikipedia 词条的精确复述。它纯粹是凭记忆在背诵这条 Wikipedia 词条，而这个记忆就存储在它的参数里。所以在这 512 个词元的某个时刻，模型有可能会偏离这条 Wikipedia 词条。但你能看到它把其中大段大段的内容都背了下来。让我看看，比如说这句话到这个时候还出现没有。好，我们对得上。让我查一下这里。好，还对得上。它最终会偏离。好，所以这东西在很大程度上就是在背诵，它最终会偏离，因为它没法记得分毫不差。之所以会出现这种情况，是因为这些模型在记忆方面可以极其出色。而通常这并不是你在最终模型里想要的东西，这被称为&quot;recursion&quot;（复读/逐字复述），把训练过的东西原封不动地复述出来，通常是不理想的。</p>
+<p class="original-paragraph"><span class="line-no">L65</span>之所以会出现这种情况，其实是因为对于很多文档来说——比如 Wikipedia——当这些文档被认为是非常高质量的来源时（例如 Wikipedia），在训练模型时往往会优先从这些来源中采样。所以基本上，模型大概对这些数据做了几个 epoch 的训练，也就是说它大概见过这个网页差不多 10 次左右。这其实和你很像：当你把一段文字读上很多很多遍，比如说读上一百遍，你就能把它背下来。对这个模型来说也非常相似。如果它看到某样东西的次数太多，它之后就能凭记忆把它复述出来。只不过这些模型在每次呈现时的效率可能比人类高得多。所以它也许只见过这条 Wikipedia 词条 10 次，但基本上已经把这篇文章一字不差地记在了它的参数里。</p>
+<p class="original-paragraph"><span class="line-no">L67</span>接下来我要给你看的东西，是模型在训练时绝对没有见过的。比如说，如果我们翻到论文，再找到预训练（pre-training）数据这一部分，会看到这个数据集的知识截止时间是 2023 年底。所以它不会见过这个时间点之后的文档，当然也就没有见过关于 2024 年选举及其结果的任何内容。现在，如果我们用来自未来的词元（token）来引导这个模型，它就会继续这个词元序列，并根据它自身参数中的知识做出最好的猜测。我们来看看那会是什么样子。所以&quot;共和党可能 Trump&quot;，好吧，&quot;2017 年起的美国总统&quot;，让我们看看它在这之后会说什么。比如，模型必须猜测竞选搭档是谁、对手是谁等等。我们按下回车。这里的结果是 Mike Pence 成了竞选搭档，而不是 JD Vance；而这个组合的对手是 Hillary Clinton 和 Tim Kaine。所以根据 Llama 模型的判断，这有点像是一个本可能发生的有趣的平行宇宙。我们再取一个不同的样本。同样的提示词（prompt），我们重新采样。这次竞选搭档是 Ron DeSantis，他们的对手是 Joe Biden 和 Kamala Harris。这又是一个不同的平行宇宙。所以模型会做出有根据的猜测，并基于这些知识继续这个词元序列。我们在这里看到的，其实就是所谓的幻觉（hallucination）。模型只是在以概率的方式做出它最好的猜测。</p>
+<p class="original-paragraph"><span class="line-no">L69</span>我想向你展示的下一件事是：即便这只是一个基座模型（base model），还不是一个助手模型（instruct model），只要你巧妙地设计提示词，它仍然可以被用在一些实际的应用中。这里有一个我们称之为少样本提示（few-shot prompt）的东西。它的内容是这样的：我有 10 个词，或者说 10 个词对。每个词对是一个英文单词，加一个冒号，然后是它的韩语翻译。我们一共有 10 个这样的对。而模型在这里要做的是：在最后，我们有&quot;teacher:&quot;，然后在这里我们要做一个补全，比如说只补几个词元。而这些模型具备我们所说的上下文学习（in-context learning）能力。这指的是，当它在阅读这段上下文时，它就在原地学到了我的数据中存在某种算法模式，并且知道要去延续这个模式。这就叫做上下文学习。于是它扮演起了翻译的角色，当我们按下补全时，会看到 teacher 的翻译是 Sonsanim，这是正确的。所以这就是你即便手头只有一个基座模型，也能通过巧妙地设计提示词来构建应用的方式。它依赖的就是我们所说的这种上下文学习能力，而它的实现方式就是构造一个所谓的少样本提示。</p>
+<p class="original-paragraph"><span class="line-no">L71</span>好，最后我还想给你看：其实有一种巧妙的办法，仅仅通过提示词就能直接打造出一个完整的语言模型助手。其中的诀窍在于，我们要把一段提示词（prompt）构造得像一个网页——一个乐于助人的 AI 助手和人类之间的对话——然后让模型去续写这段对话。事实上，为了写这段提示词，我求助了 ChatGPT 本身，这有点&quot;元&quot;。但我告诉它：我想创建一个全能助手，可我手头只有一个基座模型，能不能请你帮我写这段提示词？然后它给出了这个，其实相当不错。这里是一段 AI 助手和人类之间的对话。这个 AI 助手知识渊博、乐于助人，能回答各种各样的 IT 问题等等。而在这里，仅仅给它一段描述是不够的。如果你构造一个这样的少样本提示，效果会好得多。所以这里有几轮&quot;人类—助手、人类—助手&quot;的对话。我们安排了几轮对话。然后在最后这里，我们会放入自己真正想问的问题。让我把这段复制粘贴到基座模型的提示词里。现在，让我来写一行&quot;human:&quot;，这就是我们放入实际提示词的地方：为什么天空是蓝色的？然后我们来运行 assistant。天空看起来是蓝色的，这是由于一种叫做瑞利散射（Rayleigh scattering）的现象，等等等等。所以你可以看到，基座模型只是在继续这个序列。但因为这个序列看起来像是一段对话，它就扮演起了那个角色。不过这里有一点微妙，因为它结束了助手部分之后，就会凭空幻觉出人类提出的下一个问题，等等，就这样一直不停地继续下去。但你能看到，我们算是完成了一项任务。而如果你只是把&quot;为什么天空是蓝色的？&quot;这个问题——如果我们刷新一下，把它放在这里——那我们当然不指望这能在一个基座模型上奏效，对吧？天知道我们会得到什么。好吧，我们只会得到更多的问题。所以，这就是即便你可能只有一个基座模型，也能创建助手的一种方式。</p>
+<p class="original-paragraph"><span class="line-no">L73</span>好，以上就是我们在过去几分钟里所谈内容的简要总结。现在让我把视角拉远一点，这大致就是我们到目前为止所讲的内容。我们希望训练出像 ChatGPT 这样的 LLM 助手。我们已经讨论了其中的第一个阶段，也就是预训练阶段；我们看到它本质上其实就是：我们拿到互联网上的文档，把它们切分成一个个词元（token）——这些小块文本的&quot;原子&quot;——然后用神经网络去预测词元序列。这整个阶段的产物就是这个基座模型，也就是这个网络参数的设定。而这个基座模型，本质上就是一个在词元层面运作的&quot;互联网文档模拟器&quot;。所以它可以生成在统计特性上与互联网文档相似的词元序列。我们看到它可以用在某些应用中，但我们其实需要做得更好。我们想要一个助手；我们希望能提问，并让模型给我们答案。所以现在我们需要进入第二个阶段，它叫做后训练（post-training）阶段。于是我们拿过基座模型——我们这个&quot;互联网文档模拟器&quot;——把它交给后训练。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="sft">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 07 章</div>
+        <h2>监督微调：用对话样本塑造助手</h2>
+        <p>SFT 把训练数据从互联网文档换成对话数据，让模型模仿人类标注员写出的理想助手回复。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>SFT 把训练数据从互联网文档换成对话数据，让模型模仿人类标注员写出的理想助手回复。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>后训练的算法和预训练类似，关键变化是数据集变成了人类与助手的对话。</li>
+<li>助手不是用传统代码写出来的，而是通过大量示例被“编程”。</li>
+<li>你得到的普通聊天回答，可以理解成模型对标注员写作过程的统计模拟。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>后训练</strong><span>基座模型之后的训练阶段，用来塑造助手行为、推理习惯和安全边界。</span></li>
+<li><strong>SFT</strong><span>Supervised Fine-Tuning，监督微调；用理想对话回复继续训练模型。</span></li>
+<li><strong>标注指南</strong><span>告诉人类标注员什么回答更 helpful、truthful、harmless 的规则文档。</span></li>
+<li><strong>特殊词元</strong><span>用于标记对话结构的 token，如 im_start、im_end、user、assistant。</span></li>
+<li><strong>对话协议</strong><span>把多轮对话编码成一维 token 序列的一套格式规则。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>“2+2 等于几？”之后，助手应答“4”；遇到不该帮助的请求，则学习拒绝。</li>
+<li>InstructGPT 论文展示了早期用人工提示词和理想回复进行微调的方法。</li>
+<li>UltraChat 等现代数据集大量使用合成数据，再由人工编辑和筛选。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>如果标注指南改变，助手的“性格”会如何改变？</li>
+<li>为什么 SFT 通常比预训练便宜得多，却能显著改变用户体验？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 75-93，10 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L75</span>接下来我们要讨论几种对这些模型进行所谓后训练的方法。后训练中的这些阶段在计算上会便宜得多：绝大部分的计算工作、所有那些庞大的数据中心、所有那些重度计算和数以百万计的美元，都花在预训练阶段。但现在我们要进入一个稍便宜一些、却仍然极其重要的阶段，叫做后训练，在这里我们要把这个 LLM 模型变成一个助手。我们来看看，怎样才能让我们的模型不去采样互联网文档，而是去回答问题。换句话说，我们现在想做的是开始思考&quot;对话&quot;。这些对话可以是多轮的，也就是有多个回合。在最简单的情况下，它是一段人类和助手之间的对话。比如我们可以想象，对话可能是这样的：当人类说&quot;2 加 2 等于几&quot;时，助手应该回答类似&quot;2 加 2 等于 4&quot;。当人类接着追问&quot;如果那个加号换成星号呢？&quot;助手可以回答类似这样的内容。这里也是类似的，这是另一个例子，说明助手还可以带有某种性格，比如有点友善。然后在第三个例子里，我展示的是：当人类提出我们不想帮忙的事情时，我们可以产生一种所谓的拒绝（回答）（refusal），可以说我们无法帮忙处理这件事。换句话说，我们现在要做的是去思考一个助手应该如何与人类互动，我们要把助手及其在这些对话中的行为&quot;编程&quot;进去。</p>
+<p class="original-paragraph"><span class="line-no">L77</span>既然这是神经网络，我们就不会在代码里显式地编程——我们没法用那种方式去编程一个助手。因为这是神经网络，一切都是通过对数据集进行神经网络训练来完成的。正因如此，我们要通过创建对话数据集，来隐式地对助手进行编程。这就是一个数据集里三个独立的对话示例。一个真实的数据集——我等会儿会给你看例子——会大得多，可能包含数十万条多轮的、很长的对话，覆盖广泛多样的主题。但在这里我只展示了三个例子。顺便说一下，它的工作方式基本上是：助手是通过例子被&quot;编程&quot;的。那么这些数据是从哪来的呢？比如&quot;2 乘 2 等于 4，和 2 加 2 一样&quot;等等，这些是从哪来的？这来自人类标注员（human labeler）。我们基本上会给人类标注员一些对话上下文，然后请他们在这种情境下给出理想的助手回答。一个人类会针对任何情境，写出助手应当给出的理想回答；然后我们让模型基本上基于这些来训练，去模仿这类回答。于是它的工作方式就是：我们拿出在预训练阶段产出的基座模型。这个基座模型是在互联网文档上训练出来的。我们现在要拿走那个互联网文档数据集，把它丢掉，换上一个新的数据集——一个对话数据集。然后我们继续在这个对话数据集、这些对话上训练模型。结果是，模型会非常迅速地调整，去学习这个助手回应人类提问时的统计规律。之后在推理（inference）阶段，我们就能基本上引导这个助手、得到回答，而它会去模仿人类标注员在那种情境下会做的事——如果这么说你能明白的话。我们会看到一些这方面的例子，这也会变得更具体一些。我还想提一下，在这个后训练阶段我们基本上只是继续训练模型，但预训练阶段在实际中可能需要在数千台计算机上训练大约三个月。而后训练阶段通常要短得多，比如三个小时。这是因为我们在这里手工创建的对话数据集，比互联网上的文本数据集要小得多。所以这次训练会非常短，但从根本上说，我们只是拿过基座模型，继续训练——用完全相同的算法、完全相同的一切——只不过我们把数据集换成了对话。</p>
+<p class="original-paragraph"><span class="line-no">L79</span>那么现在的问题是：这些对话在哪里？我们怎么表示它们？我们怎么让模型看到的不再只是原始文本，而是对话？以及这种训练的结果是什么？当我们从某种心理学意义上谈论这个模型时，你得到的又是什么？我们现在就来看这些问题。我们先从对话的分词（tokenization）讲起。这些模型里的一切都必须被转换成词元（token），因为一切都只关乎词元序列。所以我们怎么把对话转换成词元序列呢？这就是问题所在。为此，我们需要设计某种编码方式。这有点像——如果你了解的话（不了解也没关系）——比如互联网上的 TCP/IP 数据包：对于如何表示信息、如何把所有东西组织到一起，都有着精确的规则和协议，以便所有这些数据都能以一种写在纸面上、大家都能达成一致的方式铺陈开来。所以在 LLM 里现在发生的是同样的事情：我们需要某种数据结构，也需要围绕这些数据结构（比如对话）如何与词元之间进行编码和解码，制定一些规则。现在我想给你看，我会如何在词元空间里重建这段对话。如果你打开 tiktokenizer，我可以把那段对话拿过来，这就是它在语言模型里被表示的样子。这里我们在一个两轮对话中交替出现一个 user 和一个 assistant。你在这里看到的，看起来很丑，但其实相对简单。它最终被转换成词元序列的方式有点复杂，但最终，这段 user 和 assistant 之间的对话变成了 49 个词元。它是一个由 49 个词元构成的一维序列，这些就是那些词元，好吗？而所有不同的 LLM 都会有一套略有不同的格式或协议，目前这有点像蛮荒的西部。不过举例来说，GPT-4o 是这样做的：你有一个叫做 im_start 的特殊词元，这是&quot;imaginary monologue of the start（想象的内心独白之始）&quot;的缩写。然后你必须指定——说实话我也不知道它为什么叫这个名字——你必须指定这一轮是谁的回合。比如 user，它对应词元 1、4、2、8。然后你有一个&quot;内心独白分隔符&quot;。接着就是问题本身，也就是问题的那些词元。然后你必须把它关闭，也就是 im_end，即&quot;想象的内心独白&quot;的结束。所以基本上，用户提出的&quot;2 加 2 等于几&quot;这个问题，最终就变成了由这些词元构成的词元序列。这里要强调的一点是，im_start 这并不是文本，对吧？im_start 是一个被加上去的特殊词元。它是一个新的词元。这个词元到目前为止从未被训练过——它是我们在后训练阶段创建并引入的一个新词元。于是这些特殊词元（比如 im_start 等等）被引入、穿插在文本之中，好让模型学到：嘿，这是一轮的开始——是谁的开始？是 user 的开始；然后这是 user 说的话，然后 user 结束。接着又是一轮新的开始，这次是 assistant 的；然后 assistant 说了什么？这些就是 assistant 所说话的词元，等等。于是这段对话就这样变成了这串词元序列。这里的具体细节其实并不重要。我想用具体方式向你说明的只是：我们把对话看作一种结构化的对象，而它最终通过某种编码，变成了一维的词元序列。既然它是一维的词元序列，我们就可以应用之前应用过的所有那些东西。现在它就是一个词元序列了，我们可以在它上面训练一个语言模型。我们依然是在预测序列中的下一个词元，就和之前一样，我们既能表示对话、也能在对话上训练。那么在测试时、在推理阶段，它又是什么样子呢？假设我们已经训练了一个模型，并且在这类对话数据集上训练过了。现在我们要做推理。那么当你在用 ChatGPT 时，推理是什么样子的？你来到 ChatGPT，跟它进行一段对话。它的工作方式大致是：假设这里已经被填好了——&quot;2 加 2 等于几&quot;&quot;2 加 2 等于 4&quot;。现在你发出&quot;如果换成乘号呢&quot;，im_end。而在 OpenAI 之类的服务器上，基本上发生的事情是：他们放上 im_start、assistant、im_set，然后就停在这里。他们构造出这段上下文，然后开始从模型里采样。正是在这个阶段，他们会去问模型：好吧，好的第一个序列是什么？好的第一个词元是什么？好的第二个词元是什么？好的第三个词元是什么？而这就是 LLM 接管、生成回答的地方。比如，一个看起来大概像这样的回答——它不一定和这个完全一样，但如果这类对话出现在数据集里，它就会带有这种&quot;风味&quot;。所以协议大致就是这么工作的，虽然协议的细节并不重要。再说一遍，我的目标只是让你看到：一切都最终只是一个一维的词元序列，所以我们可以应用已经见过的所有东西，只不过我们现在不只是训练对话，也基本上是在生成对话。</p>
+<p class="original-paragraph"><span class="line-no">L81</span>好，现在我想转到这些数据集在实践中长什么样。我想给你看的第一篇论文、也是这个方向上的第一个成果，是 OpenAI 在 2022 年的这篇论文。这篇论文叫做 InstructGPT，或者说他们开发的这项技术。这是 OpenAI 第一次比较系统地讲述：如何把语言模型在对话上进行微调（fine-tune）。所以这篇论文里有不少细节，我想带你过一遍。我想停下的第一站是 3.4 节，那里讲到了他们雇的人类承包商——在这种情况下，是通过 Upwork 或者通过 Scale AI 招来的——来构造这些对话。所以这里有专业的人类标注员参与，他们的工作就是创作这些对话。这些标注员被要求想出各种提示词，然后再被要求给出理想的助手回答。所以这些就是人们想出来的那类问题。这些是人类标注员。比如&quot;列出五个能让我重新对职业燃起热情的点子&quot;、&quot;接下来我该读的十大科幻小说有哪些？&quot;这里有各种不同类型的提示词，比如&quot;把这句话翻译成西班牙语&quot;等等。所以这里有人们想出来的很多东西。他们先想出提示词，然后又自己回答这个提示词，给出理想的助手回答。那他们怎么知道，对于这些提示词，他们应当写出怎样的理想助手回答呢？当我们再往下滚动一点，会看到这里有一段摘录，是给人类标注员的标注指南（labeling instructions）。也就是说，开发这个语言模型的公司——比如 OpenAI——会写出标注指南，说明人类应该如何创作理想的回答。所以这里，举个例子，就是这类标注指南的一段摘录。在总体层面上，你要求人们做到乐于助人、真实可信、无害。如果你想看更多，可以暂停视频。但大体上就是：尽量回答，尽量乐于助人，尽量真实，不要回答那些我们不希望日后 ChatGPT 处理的问题。所以大致来说，由公司来制定标注指南。通常它们不会这么短，通常会有几百页，人们必须专业地研习它们，然后按照这些标注指南写出理想的助手回答。所以正如这篇论文所描述的，这是一个非常依赖人力的过程。</p>
+<p class="original-paragraph"><span class="line-no">L83</span>InstructGPT 的数据集其实从未被 OpenAI 公开过，但我们确实有一些开源的复现项目，试图遵循这种设置、收集自己的数据。比如我比较熟悉的一个，是之前 Open Assistant 的项目。这只是我认为众多例子中的一个，但我只想给你看一个例子。所以这里，这些是互联网上的人，被请来基本上创作这些对话，类似于 OpenAI 用人类标注员所做的那样。这里有一条某个人想出来的提示词：&quot;能不能请你写一段简短的介绍，讲讲经济学中买方垄断（monopsony）这个概念的相关性，请使用例子&quot;等等。然后同一个人，或者可能是另一个人，会写出回答。所以这里是助手对这条的回答。于是同一个人或不同的人会实际写出这条理想回答。然后这是一个对话可以如何继续的例子——&quot;现在把它解释给一只狗听&quot;，于是你可以试着给出一个稍微简单一点的解释之类的东西。接着，这就成了标签，我们就以此进行训练。所以在训练中发生的事情是：我们当然不可能覆盖模型在推理测试时会遇到的所有可能问题。我们不可能涵盖人们将来会问的所有可能的提示词。但如果我们有一批这样的例子构成的数据集，那么模型在训练时就会逐渐开始扮演这个乐于助人、真实可信、无害的助手的角色。而这一切都是通过例子来编程的。这些都是行为的示例。如果你有这些示例行为的对话，而且数量足够多——比如 10 万条——并在此基础上训练，模型就开始理解这种统计模式，有点像渐渐拥有了这种助手的性格。当然，如果在测试时你得到的是完全一样的这个问题，回答有可能被一字不差地照着训练集复述出来，但更有可能的是，模型会做出某种&quot;调性&quot;相似的东西，而我们也会理解这就是你想要的那种回答。所以我们做的就是这样：我们通过例子来给系统编程，而系统在统计上采纳了这个乐于助人、真实可信、无害的助手的角色——这有点像公司所制定的那些标注指南的反映。</p>
+<p class="original-paragraph"><span class="line-no">L85</span>现在我想给你看的是，自 InstructGPT 论文以来，过去两三年里技术前沿已经有了进步。具体来说，现在人们已经不太常见完全靠人类独自承担所有重活了。这是因为我们如今有了语言模型，而这些语言模型在帮我们创建这些数据集和对话。所以人们会真的从零开始把回答写出来的情况已经很少见了；更可能的是，他们会用一个已有的 LLM 来基本上给出一个答案，然后对它进行编辑之类。所以现在有各种不同的方式，让 LLM 开始渗透进这个后训练的技术栈。LLM 基本上被用来、或者说被用来帮助创建这些海量的对话数据集。我想指出的是——其实我不想展示——UltraChat 就是这类更现代的对话数据集的一个例子，它在很大程度上是合成的，但我相信也有一些人类参与。这一点我可能记错。通常会有少量人类参与，但会有海量的合成辅助。而这一切都在以不同的方式被构造。UltraChat 只是当前存在的众多监督微调（SFT）数据集中的一个例子。我唯一想向你说明的是：这些数据集如今已经有数以百万计的对话。这些对话大多是合成的，但可能也在一定程度上被人类编辑过，并且横跨极其多样的领域等等。</p>
+<p class="original-paragraph"><span class="line-no">L87</span>所以到了现在，这些已经算是相当庞大的产物了，而且还有各种被称为 SFT 混合数据集的东西。里面混合了大量不同的类型和来源，一部分是合成的，一部分是人工的。从那以后，整体的方向大致也是这样。但大致来说，我们仍然有 SFT 数据集。它们由对话组成。我们就在这些数据上训练，就像之前那样。</p>
+<p class="original-paragraph"><span class="line-no">L89</span>我想说的最后一点是，我想稍微打破一点和 AI 对话的那种神秘感。当你在 ChatGPT 里输入一个问题，然后按下回车键，返回给你的东西，其实在统计意义上是和训练集里发生的事情对齐的。而这些训练集，说白了，最初的种子就是人类按照标注指南来操作的。那么你在 ChatGPT 里到底是在和什么对话，或者说你应该怎么理解这件事？嗯，大致来说，它并不是来自某种神奇的 AI。它来自某种在统计上模仿人类标注员的东西，而这些标注员遵循的是这些公司所写的标注指南。所以你其实就像是在模仿这个过程，你得到的，几乎就像是在向一个人类标注员提问。你可以想象，ChatGPT 给你的回答，某种程度上就是对一个人类标注员的模拟，就好像是在问：在这种对话里，一个人类标注员会怎么说。而且这个人类标注员并不是网上随便一个人，因为这些公司实际上会聘请专家。比如，当你问关于代码之类的问题时，参与构建这些对话数据集的人类标注员，通常都是受过良好教育的专家型人才。你就像是在向这些人的一个模拟体提问，如果你能理解的话。所以你不是在和某种神奇的 AI 对话，你是在和一个&quot;平均的标注员&quot;对话——这个平均的标注员可能技能相当高超，但你对话的，本质上是那种在构建这些数据集时会被雇来的人的一个瞬时模拟。</p>
+<p class="original-paragraph"><span class="line-no">L91</span>那么在我们继续之前，让我再给你举一个具体的例子。比如，当我在 ChatGPT 里说，推荐你见过的巴黎排名前五的地标。然后我按下回车。哦，好了，来了。当我按下回车，输出的是什么，我该怎么理解它？嗯，它不是某种神奇的 AI，跑出去研究了所有地标，然后用它无穷的智慧给它们排名等等。我得到的，是一个被 OpenAI 雇佣的标注员的统计模拟。你大致可以这样理解。如果这个具体的问题恰好就在 OpenAI 的后训练数据集里，那么我看到的回答，很可能就和那个标注员为这五个地标写下的内容非常非常相似。那个标注员是怎么得出这个结果的？嗯，他们会跑到网上，自己花大概二十分钟做点小研究，然后整理出一个清单，对吧？所以如果他们整理出了这个清单，并且它就在数据集里，我很可能就会看到他们提交的那个被当作正确答案的东西。</p>
+<p class="original-paragraph"><span class="line-no">L93</span>现在，如果这个具体的查询不在后训练数据集里，那我得到的回答就有点更&quot;涌现&quot;的味道了。因为模型在统计意义上大致理解，出现在巴黎的地标通常是那些显眼的地标，是人们通常想去看的地标，是在网上被非常频繁地谈论的那些地标。而且别忘了，模型在预训练阶段已经从互联网上学到了海量的知识。所以它可能见过大量关于巴黎、关于地标、关于人们喜欢看的东西的对话。所以正是预训练得到的知识，再加上后训练数据集，共同催生了这种模仿。这大致就是你可以用来理解幕后在统计意义上发生了什么的方式。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="psychology">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 08 章</div>
+        <h2>LLM 心理学：幻觉、工具与认知缺口</h2>
+        <p>LLM 的许多奇怪行为不是偶然，而是由训练数据、token 表示、有限计算和上下文机制共同塑造。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>LLM 的许多奇怪行为不是偶然，而是由训练数据、token 表示、有限计算和上下文机制共同塑造。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>幻觉来自模型学会了“自信回答”的格式，却未必知道自己不知道。</li>
+<li>参数中的知识像模糊回忆；上下文窗口里的内容像工作记忆，可靠性更高。</li>
+<li>模型每生成一个 token 的计算量有限，所以复杂推理需要展开成多个 token 或交给工具。</li>
+<li>“瑞士奶酪”能力模型提醒我们：模型很多地方很强，但某些简单问题会突然失手。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>工具调用</strong><span>模型输出特殊 token 或请求，让外部搜索、代码解释器等工具补充信息或执行计算。</span></li>
+<li><strong>上下文窗口</strong><span>模型当前可直接访问的 token 范围，可视为工作记忆。</span></li>
+<li><strong>系统消息</strong><span>隐藏在对话最前面的指令，用来设定身份、规则和行为边界。</span></li>
+<li><strong>思维链</strong><span>把推理步骤展开成一串中间 token，让计算分布在多个生成步骤上。</span></li>
+<li><strong>瑞士奶酪模型</strong><span>模型能力有洞：整体强大，但存在随机、局部、反直觉的失败点。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>面对杜撰人物 Orson Kovats，旧模型可能编造履历，而不是说不知道。</li>
+<li>让模型总结《傲慢与偏见》第一章时，把原文贴进上下文通常比让它凭记忆更可靠。</li>
+<li>数 strawberry 里的字母、比较 9.11 和 9.9，都是视频中用来说明认知缺口的例子。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>什么时候应该让模型搜索？什么时候应该让它使用代码？</li>
+<li>你在工作中最需要防范的是幻觉、算错、误解上下文，还是过度自信？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 95-161，34 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L95</span>好，现在我想转向一个我喜欢称之为&quot;LLM 心理学&quot;的话题，也就是我们这套模型训练流程所涌现出的认知效应。具体来说，我第一个要谈的当然是幻觉。你可能已经对模型幻觉很熟悉了。它指的是 LLM 编造东西。它们就是完全凭空捏造信息等等。这是 LLM 系统的一个大问题。在很多年前的早期模型上，这个问题在很大程度上就已经存在了。我觉得问题已经有所好转，因为有一些缓解措施，我马上就会讲。眼下，我们先试着理解一下这些幻觉到底是从哪儿来的。</p>
+<p class="original-paragraph"><span class="line-no">L97</span>这里有一个具体的例子，是你可能认为存在于训练集里的三个少样本对话。这些都是相当合理的对话，你可以想象它们就在训练集里。比如，汤姆·克鲁斯是谁？嗯，汤姆·克鲁斯是一位著名演员，美国演员兼制片人等等。John Barrasso 是谁？结果他是一位美国参议员，比如。成吉思汗是谁？嗯，成吉思汗是……等等等等。这就是你的对话在训练时的样子。</p>
+<p class="original-paragraph"><span class="line-no">L99</span>现在的问题在于，当人类在为助手写正确答案的时候，在上述每一种情况里，人类要么本来就认识这个人，要么就在网上查了他们，然后进来写下这个回答，语气里带着那种自信的回答腔调。结果就是，在测试时，当你问起某个人，这个名字是我完全随机想出来的，据我所知这个人并不存在，我只是随便试着生成的。问题在于，当我们问 Orson Kovats 是谁的时候，助手不会直接告诉你，哦，我不知道。即使助手、即使语言模型本身可能在它的特征里、在它的激活值里、在它某种意义上的大脑里，可能知道这个人是它不熟悉的，即使网络的某个部分在某种意义上算是知道这一点，那种说&quot;哦，我不知道这是谁&quot;的情况也不会发生。因为模型是在统计上模仿它的训练集。在训练集里，&quot;某某是谁&quot;这类问题都是被自信地给出正确答案的。所以它会套用答案的风格，并尽它最大的努力，给你统计上最可能的猜测。它基本上就是在编造东西。因为这些模型，再说一遍，我们刚谈过，它们不能上网，它们不做研究。它们是我所说的&quot;统计词元滚筒&quot;，只是在对序列里的下一个词元进行采样。它基本上就是在编造东西。</p>
+<p class="original-paragraph"><span class="line-no">L101</span>我们来看一下实际是什么样子的。我这里有一个来自 Hugging Face 的所谓的推理游乐场。我故意挑了一个叫 Falcon 7B 的模型，这是一个老模型。这已经是几年前的事了。所以它是个较老的模型，因此深受幻觉之苦。而我提过，最近这个问题已经随时间有所改善。但我们还是来问谁，问 Orson Kobats 是谁，让 Falcon 7B 回答，开始。运行？哦对，Orson Kobats 是一位美国作家、科幻小说家，好吧。这完全是错的。这是幻觉。我们再试一次。这些是统计系统嘛，所以我们可以重新采样。这次，Orson Kobats 是一个来自某部 1950 年代电视节目的虚构角色。这完全是胡扯，对吧？再试一次。他是一名前小联盟棒球运动员。好吧，基本上模型并不知道答案。它给了我们各种不同的答案，因为它不知道。它只是在从这些概率里采样。模型从&quot;谁……Orson Kobats……助手&quot;这些词元开始，然后它进来，它会得到这些概率，然后就从这些概率里采样，然后就编出一些东西，而这些东西在统计上其实和它训练集里答案的风格是一致的，它就是在干这件事。但你和我却把它体验成被编造出来的事实性知识。但请记住，模型基本上并不知道，它只是在模仿答案的格式，它也不会跑去查，因为它只是在模仿那个答案。</p>
+<p class="original-paragraph"><span class="line-no">L103</span>那我们怎么缓解这个问题呢？因为比如，当我们在 ChatGPT 里说 Orson Kovats 是谁，而我问的是为你演示的最先进的模型，这个模型会告诉你答案。而且这个模型其实更聪明，因为你刚才非常短暂地看到它说了&quot;正在搜索网络&quot;。这个我们后面会讲。它其实在尝试做工具调用，而不是凭空编出一段故事。但我希望它不要用任何工具，我不想让它做网页搜索。它会说：并没有一个广为人知的、名叫 Orson Kovats 的公众人物。所以这个模型不会瞎编。这个模型知道它不知道，并且告诉你，它似乎不认识这个人。所以我们在某种程度上改进了幻觉问题，尽管它们在老模型里显然是个大问题。而如果你的训练集长成那样，你会得到这类答案也就完全说得通了。</p>
+<p class="original-paragraph"><span class="line-no">L105</span>那我们怎么修复它？嗯，显然，我们需要在数据集里加入一些例子，其中对助手来说正确的答案是：模型并不了解某个特定的事实。但我们只需要在模型确实不知道的那些情况下，才让这类答案被产出。于是问题就来了：我们怎么知道模型知道还是不知道？嗯，我们可以用经验性的方式去探测模型，把它弄清楚。</p>
+<p class="original-paragraph"><span class="line-no">L107</span>我们来看一个例子，比如 Meta 是怎么为 Llama 3 系列模型处理幻觉的。在他们发表的这篇来自 Meta 的论文里，我们可以找到幻觉部分，他们在这里称之为事实性（factuality），他们描述了一套流程，本质上就是去审问模型，搞清楚它知道什么、不知道什么，摸清它知识的边界，然后往训练集里添加例子——对于模型不知道的那些东西，正确答案就是&quot;模型不知道&quot;。原理上听起来这是一件很容易做的事。但它大致上就修好了这个问题。而它能修好这个问题的原因是，别忘了，模型其实可能对自己&quot;知道什么&quot;有一个相当不错的内部模型，就在网络里。还记得我们看过那个网络，以及网络里所有那些神经元。你可以想象网络里有某个神经元，在模型不确定的时候会亮起来。但问题是，那个神经元的激活目前并没有被接到&quot;让模型用语言说出它不知道&quot;这件事上。所以即使神经网络内部知道，因为有某些神经元代表了这一点，但模型不会把它表达出来，相反它会给出自己最好的猜测，好让自己听起来很自信，就像它在训练集里看到的那样。所以我们需要去审问模型，并允许它在确实不知道的情况下说&quot;我不知道&quot;。</p>
+<p class="original-paragraph"><span class="line-no">L109</span>那我来带你走一遍 Meta 大致是怎么做的。基本上他们的做法是，这里我有个例子，Dominic Kashek 是今天的特色条目，我随机点的，他们基本上是在训练集里取一个随机文档，取出一个段落，然后用一个 LLM 针对这个段落构造问题。比如我在这里用 ChatGPT 做了这件事。我说，这是来自这个文档的一个段落，基于这个段落生成三个具体的事实性问题，给我问题和答案。而 LLM 已经足够聪明，能够创建和重新表述这些信息。所以如果信息就在这个 LLM 的上下文窗口里，效果其实相当好。它不需要依赖记忆，信息就摆在那儿，在上下文窗口里。所以它能以相当高的准确率把这些信息重新表述出来。比如，它可以为我们生成像这样的问题，他效力于哪支球队，这是答案，他拿过几次杯，等等。现在我们要做的就是，我们有了一些问答。现在我们要去审问模型。大致来说，我们会拿这些问题去找我们的模型，在 Meta 那里这会是 Llama。但我们就拿 Mistral 7B 来审问一下作为例子，那是另一个模型。这个模型知道这个答案吗？我们来看一下。他效力于 Buffalo Sabres，对吧？所以模型知道。而你能用程序化方式判断的办法，基本上就是拿模型这个答案，和正确答案去比较。再说一次，模型已经足够好，能自动完成这件事。所以这里不需要人类参与。我们可以拿模型的答案，用另一个 LLM 裁判来检查它是否正确。如果正确，就说明模型大概知道。</p>
+<p class="original-paragraph"><span class="line-no">L111</span>那我们要做的就是，把这件事多做几次。好，它知道是 Buffalo Sabres。我们再试一次，Buffalo Sabres。再来一次，Buffalo Sabres。所以关于这个事实性问题我们问了三次，模型似乎都知道，一切都很好。现在试第二个问题，他赢过几次斯坦利杯？再来，让我们就这个审问模型，正确答案是两次。这里模型声称他赢了四次，这不正确，对吧？它和&quot;两次&quot;对不上。所以模型不知道，它在编。再试一次。这里模型又在编了，对吧？再试一次。这里说他在职业生涯中一次都没赢过。所以显然模型不知道。而我们能用程序化方式判断的办法，还是审问模型三次，把它的答案——可能三次、五次、随便多少次——和正确答案比较。如果模型不知道，那我们就知道模型不知道这个问题。然后我们要做的就是，拿这个问题，在训练集里创建一条新对话。我们要往训练集里加一条新对话。当问题是&quot;他赢过几次斯坦利杯&quot;时，答案是：很抱歉，我不知道，或者我不记得了。这就是这个问题的正确答案。因为我们审问过模型，我们看到情况就是这样。</p>
+<p class="original-paragraph"><span class="line-no">L113</span>如果你对很多种不同的问题、对很多种不同的文档都这么做，你就是在给模型一个机会，让它能根据自己的知识在训练集里做出拒绝（回答），而且只要你的训练集里有几个这样的例子，模型就会知道、就有机会学到这种&quot;基于知识的拒绝&quot;和它网络里那个我们假定存在的内部神经元之间的关联，而经验上来说这大致就是事实。它能学会这个关联：嘿，当这个&quot;不确定性神经元&quot;很高的时候，我其实就是不知道。我可以说，很抱歉，我觉得我不记得这个了，等等。如果你的训练集里有这些例子，那这就是对幻觉的一个很大的缓解。这大致也是 ChatGPT 之所以能做到这类事情的原因。所以这就是人们已经实现的那些缓解措施，正是它们随时间改善了事实性问题。</p>
+<p class="original-paragraph"><span class="line-no">L115</span>好，我已经讲完了用来缓解幻觉问题的第一号缓解措施。其实，我们还可以做得更好。与其仅仅说&quot;我不知道&quot;，我们可以引入第二号缓解措施，给 LLM 一个机会去做到事实正确、真正回答这个问题。那，如果我问你一个事实性问题而你不知道，你和我，你会怎么做才能回答这个问题？嗯，你可以跑去搜索一下，用互联网，把答案找出来，然后告诉我那个答案是什么。这些模型我们可以做一模一样的事。</p>
+<p class="original-paragraph"><span class="line-no">L117</span>所以请这样想：神经网络内部、在它数十亿参数里的那些知识，把它想成模型很久以前在预训练阶段看到过的东西的一种模糊回忆。把参数里的那种知识想成你一个月前读到的东西。如果你一直反复在读某样东西，你就会记住它，模型也记得。但如果那是某种罕见的东西，那你大概对那条信息就没有那么清晰的回忆了。而你和我做的事就是，跑去查一下。当你跑去查的时候，你基本上就是在用信息刷新你的工作记忆，然后你就能去检索它、谈论它等等。所以我们需要某种等价的东西，让模型能刷新自己的记忆或回忆。我们可以通过给模型引入工具（tools）来做到这一点。</p>
+<p class="original-paragraph"><span class="line-no">L119</span>那我们要采取的办法是，与其只说&quot;嘿，很抱歉，我不知道&quot;，不如去尝试使用工具。我们可以造一种机制，让语言模型能够输出特殊的词元。这些词元是我们将要新引入的词元。比如，这里我引入了两个词元，并且引入了一种格式或协议，规定模型可以怎样使用这些词元。比如，当模型不知道的时候，与其回答问题时只说&quot;我不知道，抱歉&quot;，模型现在有了选择，可以输出特殊词元 search start（搜索开始）。而这就是将发往 Bing.com（在 OpenAI 的情况下）或者比如 Google 搜索之类的查询语句。它会输出查询语句，然后输出 search end（搜索结束）。接下来这里发生的事情是，那个从模型采样、运行推理的程序，当它看到特殊词元 search end 的时候，它不会去采样序列里的下一个词元，而是会暂停模型的生成。它会跑出去，打开一个到 Bing.com 的会话，把搜索查询语句粘贴进 Bing，然后它会拿到所有被检索到的文本，然后基本上会把那些文本拿过来。它也许会用一些其他特殊词元之类的再把它表示一遍，然后把那段文本复制粘贴到这里，也就是我试着用方括号表示的地方。所有那些文本都来到了这里。当那些文本来到这里，它就进入了上下文窗口。所以模型——那次网页搜索得到的文本，现在就在将输入神经网络的上下文窗口里。你应该把上下文窗口想成某种意义上的模型的工作记忆。上下文窗口里的那些数据，模型是可以直接访问的，它直接输入到神经网络里。所以它不再是一个模糊的回忆，而是模型在上下文窗口里拥有的数据，是直接对模型可用的。所以现在当它在之后采样新的词元时，它可以非常轻松地引用被复制粘贴进来的那些数据。这大致就是这些工具的工作方式。而网页搜索只是其中一种工具。稍后我们会看一些其他工具。但基本上，你引入新的词元，你引入某种模式（schema），让模型能利用这些词元、能调用这些特殊的功能，比如网页搜索功能。</p>
+<p class="original-paragraph"><span class="line-no">L121</span>那你怎么教会模型正确地使用这些工具呢，比如网页搜索、搜索开始、搜索结束之类的？嗯，还是通过训练集来做。所以现在我们需要有一批数据、一批对话，通过示例向模型展示如何使用网页搜索。在哪些场景下你会用到搜索？那看起来是什么样？这里是示例，告诉你怎么开始一个搜索、搜索开始等等。如果你的训练集里有几千个这样的例子，模型其实就能相当好地理解这个工具是怎么用的。它会知道该怎么去组织它的查询语句。当然，因为预训练数据集以及它对世界的理解，它其实某种程度上明白什么是网页搜索。所以它其实有一种相当不错的原生理解力，知道什么样的东西是一个好的搜索查询。于是这一切就顺理成章地运转起来了。你只需要少量的几个例子向它展示怎么用这个新工具，然后它就可以倚仗这个工具去检索信息，把它放进上下文窗口，而这也就等同于你和我去查某样东西。因为一旦它在上下文里，它就在工作记忆里，操作和访问起来都非常容易。</p>
+<p class="original-paragraph"><span class="line-no">L123</span>所以这正是几分钟前我们在 ChatGPT 上搜索&quot;Orson Kovats 是谁&quot;时看到的。ChatGPT 语言模型判定这是某种罕见的人物之类的，于是它没有从自己的记忆里给我答案，而是决定去采样一个会触发网页搜索的特殊词元。我们短暂地看到一闪而过的东西，像是&quot;正在使用网页工具&quot;之类的。它短暂地显示了那行字，然后我们等了大概两秒，然后它生成了这个。你看它在这里生成了引用。它在标注来源。所以这里发生的事情是，它跑出去做了一次网页搜索，找到了这些来源和这些 URL，而这些网页的文本全都被塞在了这里和这里之间，虽然这里没显示，但基本上是作为文本被塞在了这中间。现在它看到了那段文本，于是它就去引用它，说，好吧，可能是这些人（引用），也可能是那些人（引用）等等。这就是这里发生的事情。这就是为什么当我说 Orson Kovats 是谁的时候，我也可以说&quot;不要使用任何工具&quot;，那就足以说服它不要用工具，只用它的记忆和回忆了。</p>
+<p class="original-paragraph"><span class="line-no">L125</span>我也跑去用 ChatGPT 问了这个问题，所以 Dominic Kashek 赢过几次斯坦利杯？而 ChatGPT 其实判定它知道答案，而且有信心说他赢了两次。于是它就有点像是直接倚仗了自己的记忆，因为大概它在权重、参数和激活值里有足够的把握，觉得这个直接从记忆里就能检索出来。但你也可以反过来，用网页搜索来确认一下。于是，对于同一个查询，它就真的跑出去搜索了。然后它找到一堆来源，找到所有这些。所有这些东西都被复制粘贴了进去。然后它又告诉我们是两次，并且标注了来源。它其实还指出了维基百科条目，那也正是我们这条信息的来源。所以这就是工具，网页搜索。模型自己决定什么时候去搜索。这大致就是这些工具的工作方式。而这是一种额外的对幻觉和事实性的缓解措施。</p>
+<p class="original-paragraph"><span class="line-no">L127</span>所以我想再次强调这个非常重要的、心理学层面的观点。神经网络参数里的知识，是一种模糊的回忆。构成上下文窗口的那些词元里的知识，是工作记忆。大致来说，它的运作方式和我们大脑里的运作方式很像。我们记住的东西就是我们的参数，而我们几秒或几分钟前刚刚经历过的事情等等，你可以想象它们就在我们的上下文窗口里，而这个上下文窗口是随着你周围有意识的体验而不断建立起来的。所以这对于你在实践中使用 LLM 也有很多启示。比如，我可以跑到 ChatGPT 里，做一件像这样的事情。</p>
+<p class="original-paragraph"><span class="line-no">L129</span>我可以说「请帮我概括一下简·奥斯汀《傲慢与偏见》的第一章」，对吧？这是一个完全没问题的提示词（prompt）。而 ChatGPT 在这里给出的回答其实相当合理。它之所以能做到这一点，是因为 ChatGPT 对《傲慢与偏见》这样著名的作品记得相当清楚。它很可能见过大量与之相关的内容，可能读过关于这本书的论坛讨论，也可能读过这本书的各种版本。它基本上是「记得」的，因为即便你只是读过这本书或相关文章，你也大致能记得足够多的内容，足以把这些都讲出来。但通常来说，我真正跟这些模型交互、希望它们回忆具体内容时，直接把内容喂给它们的效果总是更好。所以我认为一个更好的提示词应该是这样的：「请帮我概括简·奥斯汀《傲慢与偏见》的第一章，下面我把内容附上供你参考。」然后我加上一个分隔符，再把章节内容粘贴进去。这里我是从某个网站上复制粘贴下来的，把第一章复制进来。我这样做的原因是，当它处在上下文窗口（context window）里时，模型可以直接访问它，能够精确地使用它，而不必去「回忆」——它就是直接能拿到。所以这份概括的质量，预计会比之前那份概括明显更高，就因为内容对模型来说是直接可用的。我觉得你我做事也是同样的道理：如果你在概括之前重新读过这一章，你也会写出好得多的概括。这里发生的事情本质上就是这样，或者说是它的等价形式。</p>
+<p class="original-paragraph"><span class="line-no">L131</span>接下来我想简要谈一谈的另一个「心理小怪癖」，是关于「对自我的认知」。我在网上经常看到人们这样做：他们问大语言模型（LLM）一些问题，比如「你是什么模型，谁制造了你？」这个问题其实多少有点莫名其妙。我之所以这么说，是因为正如我之前试图用一些底层原理去解释的那样，这个东西并不是一个人，对吧？它没有任何意义上的持久存在。它基本上是启动、处理词元（token）、然后关闭。它对每一个人都是这样。它只是搭建起一段对话的上下文窗口，然后一切都被清除掉。所以这个实体在每一次对话中其实都是从零开始重新启动的，希望这能说通。它没有持久的自我，没有自我意识，它就是个「词元搅拌机」，按照训练集中的统计规律来填补词元。所以问它「你是谁、谁造的你」之类的问题，其实并不太说得通。而且默认情况下——如果你像我刚才描述的那样去做，仅仅是默认情况、什么都没做——你会得到一些相当随机的回答。比如，我们来拿 Falcon 开刀，这是一个相当老的模型，看看它会告诉我们什么。它在回避问题，「优秀的工程师和开发者」。这里它说：「我是由 OpenAI 基于 GPT-3 模型构建的。」这完全是它在瞎编。现在，这里说它是 OpenAI 构建的，我觉得很多人会据此认为这个模型是用 OpenAI 的数据训练出来的，或者诸如此类。我其实不认为这一定是真的。原因在于，如果你不显式地去编程让模型回答这类问题，那你得到的就是它在统计意义上对答案的最佳猜测。而这个模型有一个由对话构成的监督微调（SFT）数据混合，在微调过程中，随着在这些数据上训练，模型多少意识到自己正在扮演一个「乐于助人的助手」这样的人格。它并不知道、也确实没有人确切告诉过它该给自己贴上什么标签，它只是在扮演这个乐于助人的助手角色。还记得预训练阶段是把整个互联网的文档都拿来做训练的，而在这些文档里，ChatGPT 和 OpenAI 出现得非常频繁。所以我认为这里实际可能发生的事情是：这只不过是它对自己「是什么」所产生的幻觉性标签。它给自己定的身份就是「我是 OpenAI 的 ChatGPT」。它之所以这么说，只是因为互联网上有大量这样的回答，而这些回答实际上来自 OpenAI、来自 ChatGPT。所以那只是它对自己身份的标签。</p>
+<p class="original-paragraph"><span class="line-no">L133</span>作为开发者，你是可以覆盖这一点的。如果你有一个大语言模型，你实际上可以覆盖它。有几种方法可以做到。比如，我给你看 Allen AI 的这个 Olmo 模型。这是一个大语言模型，算不上顶级的那种，但我喜欢它，因为它是完全开源的。所以 Olmo 的论文以及所有其他东西都是完全开源的，这一点很棒。我们现在看的是它的 SFT 混合数据，也就是微调用的数据混合。这是对话数据集，对吧？他们为 Olmo 模型解决这个问题的办法是——我们看到这个混合数据里有一堆东西，总共有 100 万条对话，但这里我们看到 Olmo2 是硬编码进去的。点进去看，这是 240 条对话。看看这 240 条对话，它们都是硬编码的。「介绍一下你自己吧。」用户说。然后助手回答：「我是 Olmo，一个由 AI2——也就是 Allen Institute of Artificial Intelligence（艾伦人工智能研究院）——开发的语言模型」等等，「我在这里提供帮助」之类的。「你叫什么名字？」「Olmo 项目。」所以这些都是一些编出来的、硬编码的关于 Olmo2 的问题，以及在这些情况下应当给出的正确答案。如果你把像这样的 240 个问题或对话放进训练集并用它来微调，那么模型之后就会被期望去鹦鹉学舌地复述这些东西。如果你不这样做，那它大概会说自己是某个 AI 造的 ChatGPT。还有一种有时会用的方法是：基本上在这些对话里，你在人类和助手之间有多个轮次，有时候在对话最开头会有一条特殊消息，叫做「系统消息」。所以不只是人类和助手之间，还有一个系统。在系统消息里，你实际上可以硬编码并提醒模型：嘿，你是由 OpenAI 开发的模型，你的名字叫 ChatGPT-4o，你是用什么数据训练的、你的知识截止日期是什么，基本上就是把模型的「档案」写进去一点，然后这条系统消息会被插入到你的对话中。所以当你打开 ChatGPT 时你看到的是一个空白页面，但实际上系统消息是隐藏在里面的，那些词元就在上下文窗口里。所以这就是让模型谈论自己的两种编程方式：要么像这样通过数据来做，要么通过系统消息之类的、也就是那些存在于上下文窗口里、提醒模型自己身份的基本不可见的词元来做。但这一切都多少像是被编造出来、再外挂上去的东西，它并不是像对待人类那样真的、深刻地存在于模型内部。这一点要记住。</p>
+<p class="original-paragraph"><span class="line-no">L135</span>现在我想继续讲下一节，这一节涉及这些模型的计算能力，或者我应该说，涉及这些模型在解题场景中的「原生」计算能力。具体来说，在构造我们的对话示例时，我们必须对这些模型非常小心，这里有很多「棱角」，这些棱角在帮助我们理解这些模型如何「思考」时……很有启发意义，「elucidative」是这么拼吗？总之，当我们思考这些模型的思维方式时，这些棱角很值得一看。来看下面这段来自人类的提示词，假设我们基本上正在构建一段要放进训练集的对话。我们要拿这个来训练模型，教它怎么解决简单的数学题。提示词是这样的：「Emily 买了 3 个苹果和 2 个橙子，每个橙子 2 美元，总价是 13 美元，苹果的价格是多少？」非常简单的数学题。这里有两个答案，左边一个、右边一个。它们都是正确答案，都说答案是 3，这是对的。但其中一个对助手而言比另一个要好得多。如果我是个标注员、要创建其中之一的话，其中一个是助手的极差答案，另一个则还可以。所以我想让你——可能的话暂停视频——想想这两个答案里为什么有一个比另一个好得多。如果你用了错的那个，你的模型在数学上可能会变得很差，效果会很糟。这一点你在编写标注指南、培训人们去为助手创建理想回答时，是必须非常小心的。</p>
+<p class="original-paragraph"><span class="line-no">L137</span>好，这个问题的核心在于要意识到并记住：当模型在训练以及推理（inference）时，它们都是在一个从左到右的一维词元序列上工作的。这就是我脑海中常常浮现的画面：我想象词元序列从左向右逐步展开，而为了总是产生序列中的下一个词元，我们把所有这些词元喂进神经网络。这个神经网络会为序列中的下一个词元给出概率，对吧？这张图就是我们之前在上面看到过的那张，它来自我之前给你演示过的网页 demo，对吧？这个计算基本上就是接收顶部的输入词元，在所有这些神经元上执行运算，然后给出接下来会出现什么的概率答案。</p>
+<p class="original-paragraph"><span class="line-no">L139</span>现在要意识到的重要一点是，大致上，这里发生的计算层数是有限的。比如，这里的这个模型只有 1、2、3 层所谓注意力和 MLP。一个典型的现代最先进网络层数会更多，比如大概 100 层之类的。但从「之前的词元序列」到「下一个词元的概率」，也只有大约 100 层计算之类的。所以这里对每一个单独的词元，都只发生有限数量的计算。你应该把这看作是一个非常小的计算量。而这个计算量在这个序列中，对每一个词元而言几乎大致是固定的。这并不完全准确，因为你喂入的词元越多，这个神经网络的前向传播（forward pass）就越昂贵，但贵不了多少。所以你应该把它——我觉得这是个值得放在脑海中的好模型——看作是：这个盒子里对每一个词元都会发生一个固定大小的计算。而这个计算量不可能太大，因为从顶部到底部的层数也就那么多，这里能发生的计算量也就那么多。所以你不能指望模型在单次前向传播里、为了一个词元就去做任意复杂的计算。这就意味着，我们实际上必须把推理和计算分散到许多词元上去完成，因为每一个单独的词元只能获得有限的计算量。所以我们希望把计算分散到很多词元上，而不能在任何一个单独的词元上期待或要求模型做太多计算，因为每个词元里能发生的计算也就那么多，明白吗？大致就是这样一个固定的计算量。</p>
+<p class="original-paragraph"><span class="line-no">L141</span>所以这就是为什么这边这个答案要差得多。原因在于：想象从左到右，我把答案粘在这里了——「答案是 3」等等——想象模型必须从左到右、一次一个词元地把它们吐出来。它得说、或者我们期望它说「答案」「是」「空格」「美元符号」，然后就在这里，我们期望它把这道题所有的计算都塞进这一个单独的词元里。它必须吐出正确的答案「3」。而一旦我们吐出了答案「3」，我们还指望它说后面这一堆词元，但到了这一步，我们已经把答案生产出来了，它已经躺在上下文窗口里了，后面这些词元都只是事后为「为什么这是答案」找的辩解，因为答案已经被创造出来了，已经在词元窗口里了。所以它其实并没有在这里被计算。因此，如果你直接、立即作答，你就是在训练模型去试图在一个词元里把答案猜出来。而这根本行不通，因为每个词元的计算量是有限的。这就是为什么右边这个答案好得多：因为我们把计算分散到了整个答案中。我们实际上是在让模型慢慢地、从左到右地走向答案。我们得到了中间结果，我们在说：「好，橙子的总成本是 4。所以 13 减 4 等于 9。」我们就这样造出一个个中间计算，而每一个这样的计算本身都不那么费事。我们其实多少是在试探模型在任何一个单独词元里能胜任的难度。这里任何一个词元里的计算都不能太重，否则模型在测试时就做不出来了。所以我们在这里教模型把它的推理展开、把计算分散到各个词元上。这样一来，每个词元里只有非常简单的问题，而它们可以累加起来。等到接近末尾时，它的工作记忆里已经有了之前所有的结果，要确定答案就容易多了——就是这里，3。所以这是一个明显更好的标注。另一种就是很糟糕，它在教模型把所有计算都挤进一个词元里，非常糟糕。</p>
+<p class="original-paragraph"><span class="line-no">L143</span>所以这是值得记住的一个有趣之处：在你写提示词时通常不必显式地操心这件事，因为 OpenAI 那边有标注员之类的人专门操心这个，确保答案是展开的。所以 OpenAI 基本上会做对。当我把这道题问 ChatGPT 时，它其实会走得很慢，会像「好，我们来定义变量，列出方程」这样，它正在造出所有这些中间结果。这些不是为了给你看的，是给模型自己用的。如果模型不为自己创造这些中间结果，它就没法走到「3」这个答案。</p>
+<p class="original-paragraph"><span class="line-no">L145</span>我还想给你看，对模型「使点坏」也是可能的。我们可以直接命令它。举个例子，我给了它完全一样的提示词，然后说：「用一个词元作答，直接给我答案，什么别的都别说。」结果对于这道简单的提示词，它竟然一次就做出来了。它只产生了一个——我想这是两个词元吧，因为美元符号本身是一个词元。也就是说，这个模型没给我一个词元，而是给了两个，但它仍然给出了正确答案。它是在单次前向传播网络里完成的。那是因为这里的数字我觉得非常简单，所以我把它弄得更难了一点，对模型狠一点。我设 Emily 买 23 个苹果和 177 个橙子，把数字弄大一点，就是让它更难。我是在要求模型在单个词元里做更多计算，所以我还是设成那样，而它给了 5，5 实际上是不对的。所以模型没能在单次前向传播网络里完成所有这些计算。它没能从输入词元出发，在单次穿过网络的过程中直接给出结果。然后我说：「好，现在别管词元限制了，就按通常方式解题。」于是它就一路列出所有中间结果，一路化简，每一个中间结果、每一次中间计算对模型来说都更容易。每个词元里也没有太多工作量，这里所有词元都是对的，最后它得到了答案，7。它就是没法把所有这些工作量挤进单次前向传播网络里。所以我觉得这是个挺有意思的例子，值得想一想，我认为它同样很有启发性，能说明这些模型是怎么工作的。</p>
+<p class="original-paragraph"><span class="line-no">L147</span>关于这个话题我想说的最后一点是：如果我在日常中真的要解这道题，我可能不会完全相信模型把所有这些中间计算都做对了。所以实际上我大概会这样做：我会过来说「使用代码」。那是因为代码是 ChatGPT 可以使用的工具之一。与其让它做这种心算——就像这里的心算，我不太信得过，尤其是数字很大时，没法保证模型能做对。这里任何一步中间计算都可能失败。我们是在用神经网络做心算，就像你在脑子里做心算一样，它可能就在某个中间结果上搞砸了。它能做这种心算其实挺惊人的，我自己大概没法在脑子里算出来，但模型基本上就是在「脑子里」算的，而我不信这个。所以我想用工具。你可以说类似「使用代码」这样的话。我有点不确定那边发生了什么，「使用代码」。就像我提到的，这里有一个专门的工具，模型可以写代码，而我可以检查这段代码是否正确。然后它就不再依赖自己的心算，而是用 Python 解释器——一种非常简单的编程语言——把算结果的代码写出来。我个人会远比相信它心算更相信这个，因为这是从 Python 程序里跑出来的，我觉得 Python 在正确性保证上比语言模型的心算要强得多。所以这又是一个小提示：如果你遇到这类问题，可能最好就是让模型使用代码解释器。而且就像我们在网页搜索那里看到的一样，模型有专门的调用词元。它实际上不会从语言模型里生成这些词元，而是会写出程序，然后把那个程序发送到计算机里另一部分去真正运行、把结果带回来。之后模型就能拿到那个结果，可以告诉你「好，每个苹果的成本是 7」。所以这是又一种工具，实际中你会自己用它，而且我认为它更不容易出错。</p>
+<p class="original-paragraph"><span class="line-no">L149</span>所以这就是我把这一节叫做「模型需要词元来思考」的原因。把计算分散到许多词元上，让模型创造中间结果，或者尽可能借助工具和工具调用，而不是任由模型把这一切都在它的工作记忆里搞定。如果它试图全在记忆里搞定，我不太信得过，所以我尽可能用工具。</p>
+<p class="original-paragraph"><span class="line-no">L151</span>我还想再给你看一个这种现象出现的地方，那就是「计数」。模型其实不擅长计数，原因完全一样：你要求在单个词元里做的事情太多了。我给你看一个简单的例子。「下面有多少个点」，然后我就放进去一堆点。ChatGPT 说「有」，然后就试图在一个词元里把这道题解出来。在单个词元里，它必须数出上下文窗口里点的个数，而且必须在单次前向传播网络里做到。单次前向传播网络里，正如我们谈过的，能发生的计算没那么多，你就把它想成那里只发生很少的计算。所以如果我看看模型实际看到的是什么，我们去 LLM 那里、去分词器（tokenizer）看：它看到的是「下面有多少个点」，然后结果这些点，这一组我想大概 20 个点，是一个单独的词元。然后这一组、不管多少个，是另一个词元。然后出于某种原因，它们这样断开。我其实不——这跟分词器的细节有关，但结果是这些模型基本上看到的是词元 ID，这个、这个、这个，等等。然后要从这些词元 ID 去数出数量来。剧透一下，不是 161，实际是——我记得是 177。所以我们能这样做：我们说「使用代码」。你可能会觉得，为什么这样会管用？这其实挺微妙也挺有意思。当我说「使用代码」时，我其实预期它管用，我们来试试。好，177 是对的。这里发生的事情是，我实际上——虽然看不出来——把这道题拆成了对模型来说更容易的子问题。我知道模型不会数数，它没法心算着数。但我知道模型其实相当擅长复制粘贴。所以我做的是：当我说「使用代码」时，它在 Python 里为此创建了一个字符串，而把我的输入从这边复制粘贴到那边的任务非常简单。因为对模型来说，它看到这串字符——它只是把这些看作那四个词元或类似的东西。所以对模型来说，复制粘贴那些词元 ID、把它们解包成这里的点，是非常简单的。于是它创建了字符串，然后调用 Python 的相应函数去计数，最后得到了正确答案。所以做计数的是 Python 解释器，而不是模型的心算。这又是一个简单的例子：模型需要词元来思考，别依赖它们的心算，这也正是为什么模型不擅长计数的原因。如果你需要它们做计数任务，永远要求它们借助工具。</p>
+<p class="original-paragraph"><span class="line-no">L153</span>模型还有许多其他这里那里的小「认知缺陷」，这些都是这项技术随着时间推移需要去留意的「棱角」。举个例子，模型在各种与拼写相关的任务上不太行，它们不擅长这个。我说过我们会回头再讲分词（tokenization），原因就是：模型看不到字符，它们看到的是词元。它们的整个世界都是词元，也就是这些小文本块。它们不像我们的眼睛那样看到字符。所以非常简单的字符级任务经常会失败。比如，我给它一个字符串 ubiquitous，让它只打印从第一个开始每隔第三个字符。我们从 u 开始，然后每隔三个——一、二、三，下一个应该是 q，以此类推。这里的「ic」是不对的。我的假设同样是：这里又是心算出了问题——第一，多少有点；第二，我认为更重要的问题是，如果你去分词器看，看 ubiquitous，我们会看到它是三个词元，对吧？你和我看到 ubiquitous，我们能轻易访问其中的单个字母，因为我们看得到它们；当它们在我们视觉的「工作记忆」里时，我们可以很容易地索引到每隔第三个字母，我能完成这个任务。但模型没法访问单个字母，它把这个词看成这三个词元。而且别忘了，这些模型是从零开始、在互联网上训练出来的，模型必须自己去发现：所有这些不同的字母，到底是怎么被打包进所有这些不同的词元里的。</p>
+<p class="original-paragraph"><span class="line-no">L154</span>我们之所以要使用词元（token），主要还是为了效率。不过我觉得很多人其实很想彻底抛弃 token，比如改用字符级或字节级的模型。问题只在于那样会产生非常长的序列，而大家目前还不知道该如何处理这种情况。所以在 token 的世界里，任何与拼写相关的任务其实都不太可能表现得太好。正因为我清楚由于分词的存在，拼写并不是模型的强项，所以我可以再次让它借助工具。我只需说&quot;使用代码&quot;。我同样预期这次会成功，因为把 ubiquitous 复制粘贴到 Python 解释器里这个任务要简单得多，然后我们就依赖 Python 解释器去操作这个字符串中的字符。所以当我说&quot;使用代码&quot;时，让 ubiquitous 每隔第三个字符取一个索引，得到的结果是 uq2s、uqts，我觉得看起来是对的。所以这又是一个拼写相关任务表现不佳的例子。</p>
+<p class="original-paragraph"><span class="line-no">L156</span>最近一个非常著名的例子就是&quot;strawberry 里有几个 a&quot;，这个例子在网上疯传了很多次。现在模型基本上都能答对了，它们会说 strawberry 里有三个 r。但在很长一段时间里，所有最先进的模型都坚持说 strawberry 里只有两个 r。这引起了不小的轩然大波——这个词算是个时髦词吧，我觉得算，因为大家就是纳闷：这些模型怎么会这么聪明？它们能解奥数题，却数不清 strawberry 里有几个 r。答案呢，我可以慢慢铺垫着讲。第一，模型看到的根本不是字符，而是 token。第二，模型本来就不太擅长计数。所以这里我们既叠加了&quot;看不到字符&quot;的困难，又叠加了&quot;计数&quot;的困难，这正是模型在这个问题上栽跟头的原因。不过说实话，我觉得到如今 OpenAI 可能已经把这个答案硬编码进去了，我也不确定他们具体做了什么，但这条特定的查询现在确实能答对了。</p>
+<p class="original-paragraph"><span class="line-no">L158</span>所以模型在拼写方面并不擅长，除此之外还有不少类似的&quot;毛边&quot;，我不想一一展开。我只想给大家举几个例子，让大家在使用这些模型时心里有数。我并不打算对模型的各种不足做一个全面的分析，我只是想说明：这里那里确实存在一些参差不齐的边角，我们已经讨论了其中一些——有些说得通，但有些确实让人想不通。即便你深入理解这些模型的工作原理，有时候还是会抓耳挠腮。</p>
+<p class="original-paragraph"><span class="line-no">L160</span>最近一个很好的例子是这样的：模型在回答某些非常简单的问题时表现得并不好。这让很多人震惊，因为这些模型明明能解复杂的数学题，能比我更好地回答博士级别的物理、化学、生物问题，但有时却在一些看起来极其简单的提示词上栽跟头。比如这道题：9.11 大于 9.9。它用某种方式做了论证，但显然……然后到最后它又改口了。所以我不认为这个结果很容易复现。它有时会推翻自己的答案，有时答对，有时答错。我们再试一次。好吧，即使它看起来可能更大。好，这次到最后它甚至都没纠正自己。如果你多问几次，有时它也能答对。但问题是：模型怎么能在奥赛级别的难题上表现那么出色，却又在这么简单的问题上失败呢？我觉得这一个，正如我所说，有点让人挠头。后来有一群人对这个问题做了深入研究，我其实没读过那篇论文，但那个团队的人告诉我：当你去仔细审视神经网络内部的激活，去看那些特征——哪些特征开或关、哪些神经元开或关的时候——神经网络里有一大批通常会与圣经经文相关联的神经元亮了起来。所以我觉得模型在某种程度上是被&quot;提醒&quot;了，这些东西看起来几乎就像圣经的经文标号。而在经文的语境里，9.11 确实排在 9.9 之后。于是模型不知怎的就在认知上被这件事分散了注意力——在经文里 9.11 更大——尽管它在这里其实是在试图用数学来论证，最终却还是得出了错误答案。所以这件事基本上没法完全解释清楚，也还没被完全搞明白，类似这样的毛边还有几个。因此，我们要把它当成它本来的样子来看待：一个确实很神奇、但又不能完全信任的随机系统。你要把它当作工具来用，而不是把它丢在一个问题上跑完就照抄结果。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="rl">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 09 章</div>
+        <h2>强化学习：从模仿答案到练出思考</h2>
+        <p>RL 让模型在可验证任务上自己试错，发现对它有效的解题策略，因此能涌现更长、更像思考的推理过程。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>RL 让模型在可验证任务上自己试错，发现对它有效的解题策略，因此能涌现更长、更像思考的推理过程。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>预训练像读教材，SFT 像看已解例题，RL 像自己做练习题。</li>
+<li>在数学和代码这类可验证领域，答案能自动判定，模型可以大量采样并强化有效解法。</li>
+<li>思维链不是人工逐句写进去的，而是在优化过程中自然涌现。</li>
+<li>AlphaGo 的第 37 手说明：RL 能脱离人类模仿，发现人类罕见甚至未知的策略。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>强化学习</strong><span>通过试错和奖励信号改进行为的训练方式。</span></li>
+<li><strong>可验证领域</strong><span>答案能被明确检查的任务，如数学题、代码运行结果。</span></li>
+<li><strong>奖励</strong><span>告诉模型某个候选解法好或坏的信号。</span></li>
+<li><strong>思考模型</strong><span>经过更强推理训练、会在回答前生成较长推理过程的模型。</span></li>
+<li><strong>第 37 手</strong><span>AlphaGo 对李世石的著名一步，代表 RL 发现非人类常规策略的能力。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>同一道苹果橙子题，模型可并行采样多个解法，只强化最终答案正确的路径。</li>
+<li>DeepSeek R1 在数学题上展示了回溯、重新评估、修正路径的长推理过程。</li>
+<li>ChatGPT 中标注“高级推理”的模型属于这一类思考模型的体验入口。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么“能自动验答案”的任务特别适合 RL？</li>
+<li>思考模型的能力能否迁移到写作、创意等不可验证领域？视频把它视为开放问题。</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 162-259，50 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L162</span>好，到目前为止我们已经讲了大语言模型训练的两大主要阶段。我们看到在第一阶段，也就是所谓的预训练（pre-training）阶段，我们基本上是在互联网文档上做训练。当你在互联网文档上训练一个语言模型时，你得到的就是所谓的基座模型（base model）。它本质上就是一个互联网文档模拟器，对吧？我们看到这是一个很有意思的产物，要在上千台计算机上训练好几个月，是互联网的一种有损压缩，极其有趣，但又不能直接拿来用。因为我们并不想让它去采样互联网文档，我们想向 AI 提问、让它回答我们的问题。为此我们需要一个助手，而我们看到，可以在后训练（post-training）的过程中构造出这样一个助手，具体来说是在我们所说的监督微调（supervised fine-tuning，SFT）过程中。</p>
+<p class="original-paragraph"><span class="line-no">L164</span>在这一阶段我们看到，它在算法上和预训练完全相同，什么都不会变，唯一变的是数据集。所以现在我们不再用互联网文档，而是要去创建、整理一个非常好的对话数据集。我们想要上百万条、覆盖各种各样话题的人机对话，而这些对话从根本上说是由人类创作的——人类写提示词、人类写理想的回复，他们依据标注指南来完成。在现代的技术栈里，这件事其实并不完全靠人工手动完成，没错，他们现在有大量工具辅助，所以我们可以用语言模型来帮忙创建这些数据集，而且我们确实大量这么做了。但从根本上说，最终这些数据还是源自人类的创造。我们把这些对话创建出来，这就成了我们的数据集，在上面做微调或者说继续训练，于是我们就得到了一个助手。然后我们调转方向，开始讨论这个助手所带来的一些认知层面的影响。我们看到，比如如果不采取某些缓解措施，这个助手就会产生幻觉。于是我们看到幻觉会很常见，接着我们又看了针对这些幻觉的一些缓解办法。然后我们看到模型相当厉害，能在脑子里做很多事情，但我们也看到它们可以借助工具变得更出色。比如，我们可以依赖网页搜索来减少幻觉，或者调出一些更新的信息之类的；我们也可以借助代码解释器这样的工具，让 LLM 写一些代码并真正运行它、看到结果。这些就是我们到目前为止讨论过的部分内容。</p>
+<p class="original-paragraph"><span class="line-no">L166</span>现在我想做的是，介绍这条流水线的最后一个主要阶段，那就是强化学习（reinforcement learning，RL）。强化学习目前通常还被视为后训练的范畴之内，但它是第三大主要阶段，是训练语言模型的一种不同方式，一般作为这第三步来进行。在 OpenAI 这样的公司里，你会从这里开始，而这些都由各自独立的团队负责——有一个团队负责预训练的数据，有一个团队负责预训练的训练，还有另一个不同的团队负责所有对话的生成，再有一个团队负责监督微调，另外还会有一支强化学习的团队。所以这有点像是模型在不同团队之间的交接：你拿到基座模型，然后微调成助手，接着再交给强化学习——这就是我们接下来要讲的。这就是大致的流程，那么现在让我们聚焦强化学习，训练的最后一个主要阶段。让我先讲讲为什么要做强化学习，以及它在高层面上长什么样。</p>
+<p class="original-paragraph"><span class="line-no">L168</span>现在我想用大家可能很熟悉的东西，来引出强化学习这一阶段及其对应的内容。那就是上学。就像你为了在某件事上变得非常厉害要去上学一样，我们也想让大语言模型&quot;上学校&quot;。我们其实有几种范式，用来给它们灌输知识或传授技能。具体来说，在学校里用教科书时，你会发现这些教科书里有三大类信息。第一类你会看到的是大量的阐述。顺便说一下，这是我从网上随手找来的一本书，好像是某种有机化学之类的，我也不太确定。重要的是你会发现书里绝大部分的文字，主体内容其实就是阐述，也就是背景知识等等。当你逐字逐句读这些阐述时，你可以把它大致想象成在这些数据上做训练。这就是为什么你在读这些内容时——有背景知识、有各种上下文信息——它其实就相当于预训练。我们就是在这里为这些数据建立起知识库，对主题形成初步认识。</p>
+<p class="original-paragraph"><span class="line-no">L170</span>接下来你会看到的第二类主要信息，是这些题目以及它们的详细解答。也就是说，这里由一位人类专家——本书作者——不仅给出了题目，还一步步把解法写了出来。这个解答基本上就等同于给助手的那个理想回复。专家向我们展示了如何以完整的形式解决这道题。所以当我们阅读解答时，我们其实就是在专家的数据上训练。之后，我们可以去模仿这位专家。这大致就对应于得到一个 SFT 模型，也就是它会做的事。也就是说，我们已经完成了预训练，也已经涵盖了这种对专家如何解题的模仿。</p>
+<p class="original-paragraph"><span class="line-no">L172</span>而强化学习这第三个阶段，基本上就对应于练习题。有时候你会看到这里只有一道练习题，当然任何一本教科书每章末尾通常都会有大量练习题。我们都知道练习题对学习至关重要，因为它们让你做什么？它们让你自己动手练，自己去发现解决这些问题的方法。在练习题里你会得到题目描述，但不会给出解法，通常只会在书后的答案区给出最终答案。所以你知道自己要到达的最终答案，也有题目陈述，却没有解法。你要去练、去尝试解法，去试各种不同的东西，看哪条路最能让你走到最终解。你就是这样去发现如何解题的。而在这个过程中，你依赖的是：第一，来自预训练的背景知识；第二，或许还有一点对人类专家的模仿，你可以试试类似的解法等等。我们已经做过这些了，现在这一节里我们要去练习。我们会拿到提示词，会拿到——对不起——最终答案，但不会拿到专家的解法，我们必须自己去练、去试。而这正是强化学习的要义。</p>
+<p class="original-paragraph"><span class="line-no">L174</span>好，我们回到之前用过的那道题。这样我们在探讨这个话题时就有一个具体的例子可以一步步说。我现在在 tiktokenizer 里，一方面是因为它给我一个文本框，挺好用；另一方面我想再次提醒你，我们处理的始终是一维的 token 序列。我其实更喜欢这个视图，因为这正是 LLM 的原生视角——这就是它真正看到的东西，它看到的就是 token ID，对吧？好，题目是：Emily 买了 3 个苹果和 2 个橙子，每个橙子 2 美元，所有水果总共花了 13 美元，问每个苹果多少钱？</p>
+<p class="original-paragraph"><span class="line-no">L176</span>我希望大家注意到的是，这里有四个候选解法作为例子，它们最终都得到了 3 这个答案。我希望大家在这个阶段能体会到：如果我是一个正在创建对话、准备把它放进训练集的人类标注员，我其实并不太清楚该把这几条对话中的哪一条加进数据集。这些对话里，有的是列了一个方程组，有的就是用英语把思路顺了一遍，还有的干脆直接跳到了答案。如果你看 ChatGPT 的话，给它这道题，它会定义一组变量，然后走那么一套流程。我们要把这两件事区分开来：解法的第一目的是得到正确答案，这一点当然没错，我们要的就是最终答案 3，这才是这里最重要的目的。但其实还有次要目的——我们还希望让这个过程对人友好，因为我们假定这个人想看到这道解法、想看到中间步骤、想让它呈现得漂亮等等。所以这里有两件不同的事在发生：一是呈现给人类看，二是我们确实想算对答案。那么暂时只关注到达最终答案。如果我们只在乎最终答案，那这几条里哪一条才是 LLM 走到正确答案的最优解法、或者说最好的……对不起，最好的解法？我想引出的是：我们不知道。作为人类标注员，我不会知道哪一条最好。</p>
+<p class="original-paragraph"><span class="line-no">L178</span>举个例子，我们之前看 token 序列和心算推理时就看到，对每一个 token 我们只能……这基本上意味着这里只有有限数量、有限大小的计算量，而且这个量并不大，你应当这么理解。所以我们其实没法在任何一个 token 上跨太大的步子，也许可以这么想。比如这一条，它好在 token 很少，所以很快就能到答案。但就在这里，当我们做&quot;13 减 4 除以 3 等于&quot;的时候，就在这个 token 上，我们其实要求很多计算在单个 token 上发生。所以也许这不是给 LLM 的好例子，因为它在某种程度上是在激励它飞速跳过计算，结果它在心算时就会出错。也许把它拆得更开一些会更好，也许列成方程会更好，也许把思路讲一遍会更好。我们从根本上并不知道。我们之所以不知道，是因为对你我、对人类标注员来说轻松或困难的事，和 LLM 觉得轻松或困难的事是不一样的。它的&quot;认知&quot;方式不同，token 序列对它来说的难易也不同。所以这里有些对我而言轻而易举的 token 序列，对 LLM 来说可能就是迈不过去的坎。这一处的 token 就太难了；但反过来，我这里造出来的很多 token 对 LLM 来说可能又太简单，纯属浪费——既然都这么简单，干嘛还要浪费这么多 token？</p>
+<p class="original-paragraph"><span class="line-no">L180</span>所以如果我们唯一在乎的就是到达最终答案，并且把&quot;呈现给人类&quot;这件事单拎出去，那我们其实并不真的知道该怎么标注这个例子。我们不知道该给 LLM 哪一条解法，因为我们不是 LLM。在数学这种例子上这点很清楚，但这其实是个相当普遍的问题——比如，我们的知识并不等于 LLM 的知识。LLM 在数学、物理、化学这些博士级别的内容上其实拥有大量知识，很多方面它懂得比我多。而我可能并没有在它解题时把这些知识利用起来。但反过来，我可能又在解法里塞进了一堆 LLM 参数里并不具备的知识，于是对模型来说就出现了这种突兀的跨越，非常让人困惑。所以我们的认知方式是不同的，如果我们只在乎到达最终解、并且最好还能经济地到达，那我真的不知道这里该放什么。长话短说：我们并不处在为 LLM 编造这些 token 序列的好位置上。靠模仿它们能用来初始化这个系统，但我们真正想要的是，让 LLM 自己去发现对它管用的那些 token 序列。它需要自己去找到，在给定提示词的情况下，哪一种 token 序列能可靠地通向答案。而这件事，我们要通过强化学习、通过不断试错来发现。</p>
+<p class="original-paragraph"><span class="line-no">L182</span>那我们来看看这道例子在强化学习里会怎么运作。好，我们现在回到了 Hugging Face 的推理（inference）游乐场。它能让我很方便地调用各种不同的模型。比如右上角我选了 Gemma 20 亿参数的模型。20 亿非常非常小，所以这是个很小的模型，但没关系。我们要给它……强化学习基本上怎么运作其实很简单：我们需要尝试很多种不同的解法，看看哪些管用、哪些不管用。我们基本上就是拿到提示词，跑这个模型，模型生成一个解法，然后我们去检查这个解法。我们知道这道题的正确答案是 3 美元，果然模型答对了，是 3 美元。所以这是对的，这只是对解法的一次尝试。现在我们把它删掉，再跑一次。来试第二次。这次模型用了略微不同的方式解题，对吧？每一次尝试都是一次不同的生成，因为这些模型是随机系统。记得吗，在每一个 token 上我们都有一个概率分布，我们是从那个分布里采样，所以我们会走到略微不同的路径上去。于是这又是一个最终得到正确答案的解法。现在我们把它删掉。第三次走起。好，又是一个略有不同的解法，但也答对了。我们可以把这个过程重复很多次。实际上你可能会对单个提示词采样上千条独立解法，甚至上百万条。其中一些会是对的，一些就不太对。而我们想做的，基本上就是鼓励那些能导向正确答案的解法。</p>
+<p class="original-paragraph"><span class="line-no">L184</span>我们来看看那会长什么样。如果回到这里，这儿有一张示意图，展示的就是这个情况：我们有一个提示词，然后我们并行尝试了许多不同的解法。有些解法走得很顺，得到了正确答案，用绿色表示；有些解法走得很糟，没能得到正确答案，用红色表示。不过很遗憾，这道题不是最好的例子，因为它太简单了——我们看到即便是 20 亿参数的小模型也总是能答对。从这个意义上说它不是最好的示例。但让我们发挥一下想象力，就假设绿色是好的、红色是坏的，好吗？我们生成了 15 条解法，其中只有 4 条得到了正确答案。那现在我们要做的，就是鼓励那些能导向正确答案的那一类解法。那些红色解法里不管出现了什么 token 序列，显然某处出了岔子，这不是一条走通的解题路径；而绿色解法里那些 token 序列，情况就很好。于是我们就希望在未来面对这类提示词时，多走这种路。而我们用来在未来鼓励这种行为的办法，就是去在这些序列上做训练。但这些训练序列现在不是来自专家级的人类标注员——并没有哪个人类来认定这条解法是正确的，这条解法是模型自己生成的。所以模型在这里就是在练习：它试了几条解法，其中四条看起来管用，于是模型就有点像是在这上面训练。这就好比一个学生审视自己的解法，心想：好吧，这条很奏效，那我以后就该这么解这类题。</p>
+<p class="original-paragraph"><span class="line-no">L186</span>在这个例子里，其实有很多种方式可以去微调这套方法论，但要把核心思想讲清楚，最简单的也许是直接从这四条里挑出最好的那一条——比如这一条，所以它被标成了黄色。这条不仅得到了正确答案，可能还具有其他一些好性质：也许它最短，也许某种意义上最好看，又或者你能想到别的什么标准。我们把它定为这条最优解，去训练它。这样做了参数更新之后，未来再遇到这种情形，模型就会更可能走这条路。但你得记住，我们会在成千上万种各不相同的提示词上跑这个——横跨大量数学题、物理题等等等等。所以心里要有个数：可能有几万条提示词，每条又有上千条解法，而这一切基本上是在同时进行的。随着我们不断迭代这个过程，模型就在自己发现什么样的 token 序列能让它得到正确答案。这并不来自人类标注员，模型有点像是在这个游乐场里玩耍，它知道自己想达到什么，然后在发现那些对它管用的序列——这些序列不做任何思维上的大跳跃，统计上也可靠地管用，并且充分利用了模型自身已有的知识。这就是强化学习的过程：本质上就是猜测和检验，我们会去猜很多种解法，去检验它们，然后在未来多做那些管用的事。这就是强化学习。</p>
+<p class="original-paragraph"><span class="line-no">L188</span>那么对照之前讲过的，我们现在看到 SFT 模型，也就是监督微调模型，依然是有用的，因为它依然在某种程度上把模型初始化到了正确解法的附近。它有点像是对模型的一种初始化。</p>
+<p class="original-paragraph"><span class="line-no">L189</span>也就是说，它大致能让模型把解答写出来，也许它理解了如何建立方程组，或者它会把一道题的解法大致讲一遍。所以它能把模型带到接近正确答案的范围内。但真正把一切打磨到位的是强化学习（RL）。我们真正发现对模型有效的解法，得到正确答案，然后鼓励这些解法，模型就会随着时间不断变好。</p>
+<p class="original-paragraph"><span class="line-no">L191</span>好的，这就是训练大语言模型（LLM）的高层流程。简单来说，我们训练它们的方式和训练小孩非常相似。基本上唯一的区别在于，小孩是按一本书一本书的章节推进的，他们在每一章里完成各种不同类型的练习。而训练 AI 时，几乎像是按照每个阶段的类型，一个阶段一个阶段地推进。</p>
+<p class="original-paragraph"><span class="line-no">L193</span>首先我们做的是预训练，正如我们所见，它相当于基本上读完所有的讲解性材料。我们同时打开所有的教材，通读所有的讲解，努力建立一个知识库。</p>
+<p class="original-paragraph"><span class="line-no">L195</span>接下来我们进入监督微调（SFT）阶段，这一阶段实际上是在看所有教科书中、各领域人类专家给出的那些标准解答。于是我们得到一个 SFT 模型，它能模仿专家，但只是盲目地模仿。它只是在尽力做出最好的猜测，在统计上尽量去模仿专家的行为。这就是你看完所有标准解法后得到的东西。</p>
+<p class="original-paragraph"><span class="line-no">L197</span>最后，在最后一个阶段，也就是强化学习阶段，我们把所有教科书里的练习题都做一遍。于是我们就得到了强化学习模型。所以从高层来看，我们训练 LLM 的方式，非常等同于训练小孩的那套流程。</p>
+<p class="original-paragraph"><span class="line-no">L199</span>我想说的下一点是，其实前两个阶段——预训练和监督微调——已经存在多年了，它们非常标准化，每一家 LLM 提供商都在做。真正还处在发展早期、尚未在业内标准化的，是最后这个强化学习训练阶段。这个阶段还相当初期和新兴。</p>
+<p class="original-paragraph"><span class="line-no">L201</span>原因在于，我刚才在这个过程中其实略过了大量细节。核心想法非常简单，就是试错学习，但具体到如何挑选出那些最优解法、在它们上面训练多少、提示词（prompt）的分布是什么、以及如何设置训练流程才能让这一切真正奏效，其中有大量细节和数学上的微妙之处。所以核心思路极其简单，但它背后有许许多多的细节和旋钮。要把这些细节做对并不容易。</p>
+<p class="original-paragraph"><span class="line-no">L203</span>因此，很多公司——比如 OpenAI 和其他 LLM 提供商——内部已经对 LLM 的强化学习微调试验了一段时间，但他们并没有公开谈论这件事，基本都在公司内部进行。这也是为什么 DeepSeek 最近发表的那篇论文会如此轰动，因为这是来自中国一家名叫 DeepSeek AI 的公司。这篇论文非常公开地讨论了大语言模型的强化学习微调，讨论了它对大语言模型有多么重要，以及它如何能在模型中激发出大量推理能力——这一点我们一会儿就会讲到。所以这篇论文重新点燃了公众对把强化学习用于 LLM 的兴趣，并且给出了相当程度的细节，足以复现这些结果，真正让这个阶段在大语言模型上跑起来。</p>
+<p class="original-paragraph"><span class="line-no">L205</span>那么，让我简单带你过一遍这篇 DeepSeek RLHF 论文，看看当你正确地把强化学习应用到语言模型上时，会发生什么，它是什么样子，又能给你什么。</p>
+<p class="original-paragraph"><span class="line-no">L207</span>我先滚动到这里的图二，我们看的是模型解数学题时能力的提升。这是在 AIME 上解数学题的准确率。然后我们可以去到网页上，看看这里被测量的这些数学题具体是哪些类型的题目。这些都是简单的数学题，你可以暂停视频仔细看，基本上这就是模型被要求去解答的那类问题。可以看到一开始它们做得并不好。但随着你用这数千个步骤去更新模型，它们的准确率不断攀升。所以模型在不断进步，在对这一大堆这类问题进行试错的过程中，它们解这些题的准确率越来越高。模型正在自己发现如何解数学题。</p>
+<p class="original-paragraph"><span class="line-no">L209</span>但比&quot;以更高准确率解题&quot;这种定量结果更令人惊叹的，是模型达成这些结果所用的那些定性手段。当我们往下滚动，其中一张很有意思的图是，在优化的后期阶段，模型平均每个回答所用的长度在上升。也就是说，模型似乎是用更多的词元（token）来得到它更高准确率的结果。它在学着写出非常非常长的解答。这些解答为什么这么长？我们可以在这里定性地看一看。基本上他们发现，模型的解答变得非常长，部分原因是——这里有一道题，而这里大概是模型的回答——模型学会去做的事情，这是优化过程中涌现出来的一种性质，它自己发现这样做对解题很有好处：它开始做类似这样的事情：&quot;等等，等等，等等。这一步好像不太对。让我一步一步地重新评估一下，看看正确的和应该是多少。&quot;</p>
+<p class="original-paragraph"><span class="line-no">L211</span>那模型到底在做什么呢？模型基本上是在重新评估各个步骤。它发现，尝试很多想法、从不同角度去尝试、回溯、重新组织、走回头路，这些做法对准确率更有帮助。这正是一样你我在解数学题、做问题求解时所做的一大堆事情。只不过，它重新发现的，是发生在你头脑里的过程，而不是你写在答卷上的东西。没有任何人类能够把这些东西硬编码进&quot;理想的助手回答&quot;里。这是只有在强化学习的过程中才能被发现的东西，因为你根本不知道该往里面塞什么。结果它恰好对模型管用，并提高了它解题的准确率。</p>
+<p class="original-paragraph"><span class="line-no">L213</span>所以模型学到了我们所称的、发生在它&quot;头脑&quot;里的思维链，这是优化过程中的一种涌现性质，也正是它把回答长度撑长的原因，但同时也是它提高解题准确率的原因。令人惊叹的是，模型基本上是在发现各种思考方式。它学到的是我喜欢称之为&quot;认知策略&quot;的东西——你如何操控一个问题、如何从不同角度去切入它、如何引入一些类比、如何做这类不同的尝试、以及如何随着时间尝试许多不同的方法、从不同视角去核验一个结果、又如何解决问题。而在这里，这些是被强化学习自己发现的。所以，看到这些在没有被任何地方硬编码的情况下，从优化过程中涌现出来，真的极其了不起。我们唯一给它的就是正确答案，而这一切，只是从&quot;努力把答案解对&quot;这件事里自然冒出来的，太不可思议了。</p>
+<p class="original-paragraph"><span class="line-no">L215</span>现在让我们回到之前一直在做的那道题，看看我们所说的推理模型或思考模型，去解那道题会是什么样子。</p>
+<p class="original-paragraph"><span class="line-no">L217</span>好，回忆一下，这就是我们一直在做的这道题。当我把它粘贴进 ChatGPT 4o 时，我得到的是这样的回答。我们来看看，把同一个问题交给一个所谓的推理模型或思考模型会发生什么。这是一个用强化学习训练出来的模型。这篇论文里描述的模型——DeepSeek R1——可以在 chat.deepseek.com 上使用。也就是说，开发它的那家公司自己把它托管在那里。你必须把 deep think（深度思考）按钮打开，才能用到 R1 这个模型。我们可以把它粘贴进去然后运行。那么我们来看看现在会发生什么，模型的输出是什么。</p>
+<p class="original-paragraph"><span class="line-no">L219</span>好，这是它给出的。这是我们之前用 SFT 方法——也就是监督微调方法——得到的结果，这就像是模仿专家的解答。而这，是我们从强化学习模型那里得到的。</p>
+<p class="original-paragraph"><span class="line-no">L221</span>&quot;好，让我来想想看。Emily 买了三个苹果和两个橙子。每个橙子两美元，总共 13 美元。我需要算出，等等等等。&quot;</p>
+<p class="original-paragraph"><span class="line-no">L223</span>所以，当你读这段的时候，你完全没法不去想这个模型在思考。它确实在追踪着解答。它推导出苹果必须是 3 美元，然后它说：&quot;等等，让我再核对一下我的计算，确保无误。&quot;接着它从一个稍微不同的角度又试了一遍。然后它说：&quot;嗯，全都核对得通。我觉得这就是答案了。我没看到任何错误。让我看看有没有别的解这道题的办法，也许可以列个方程。设一个苹果的价格为 a 美元，那么，等等等等。嗯，答案一样。所以每个苹果确实是 3 美元。好，我有信心这是对的。&quot;</p>
+<p class="original-paragraph"><span class="line-no">L225</span>接下来它做的事情，是等它做完这个思考过程之后，给人类写出一个漂亮的解答。所以这里是更偏正确性的部分，而这里是更偏呈现的部分，它把解法写得很工整，并在最下面把正确答案框了出来。</p>
+<p class="original-paragraph"><span class="line-no">L227</span>所以这件事的惊人之处在于，我们得到了模型这样一个思考过程，而这正是来自强化学习过程的东西。这就是把词元序列长度撑长的原因。它们在思考，在尝试不同的方法。这正是能给你更高解题准确率的东西。我们正是从这里看到了这些&quot;顿悟时刻&quot;，看到了这些不同的策略，看到了它想出各种办法来确保自己得到的是正确答案。</p>
+<p class="original-paragraph"><span class="line-no">L229</span>最后我想说的一点是，有些人对把非常敏感的数据放进 chat.deepseek.com 有点担心，因为这是一家中国公司，所以人们对此多少会谨慎和保守一些。DeepSeek R1 是这家公司发布的模型。它是一个开源模型，或者说开放权重模型。任何人都可以下载并使用它。你没法在 MacBook 之类的本地设备上以全精度运行它的完整版本，因为这是一个相当大的模型。但很多公司托管了这个完整的大模型。其中一家我喜欢用的公司叫 Together.AI。当你进入 Together.AI，注册之后进入 Playgrounds，你可以在这里的聊天界面里选 DeepSeek R1，还有许多其他各种模型可以在这里选择。这些都是最先进的模型。这有点像我们一直在玩的 Hugging Face 推理（inference）playground，但 Together.AI 通常会托管所有最先进的模型。所以选 DeepSeek R1。其他的很多东西你可以先忽略掉，我觉得默认设置一般就行。我们把题目粘贴进去，因为这个模型是 DeepSeek 自己发布的，所以你在这里得到的，应该基本等同于你在 chat.deepseek.com 上得到的。当然由于采样中的随机性，我们会得到稍微不同的结果，但原则上两者的模型能力应该是等同的，你应该能看到同样的定量和定性表现，只不过这个模型来自一家美国公司。</p>
+<p class="original-paragraph"><span class="line-no">L231</span>这就是 DeepSeek，这就是所谓的推理模型。</p>
+<p class="original-paragraph"><span class="line-no">L233</span>现在当我回到 ChatGPT，让我进到聊天界面。好，你在下拉菜单里会看到的那些模型，其中有一些，比如 O1、O3 mini、O3 mini high 等等，它们标着&quot;使用高级推理&quot;。这里的&quot;使用高级推理&quot;指的是什么呢？指的是它是用强化学习训练出来的，所用的技术和 DeepSeek R1 非常相似——这是根据 OpenAI 员工的公开陈述。所以这些是思考模型，用强化学习训练。而你在免费档里能拿到的那些模型，比如 GPT-4o 或者 GPT-4o mini，你应该把它们主要当作 SFT 模型，也就是监督微调模型来看待。它们实际上并不会像强化学习模型那样进行这种&quot;思考&quot;。尽管这些模型里也涉及一点点强化学习——这一点我一会儿会展开讲——但它们主要还是 SFT 模型，我觉得你应该这么去理解。</p>
+<p class="original-paragraph"><span class="line-no">L235</span>所以，和我们在这里看到的类似，我们可以选一个思考模型，比如 O3 mini high。顺便说一下，这些模型你可能拿不到，除非你订阅付费，每月 20 美元，或者为了某些顶级模型每月 200 美元。我们可以选一个思考模型然后运行。现在发生的事情会是，它会显示&quot;推理中&quot;，然后开始做类似这样的事情。而我们在 ChatGPT 这里看到的，并不完全是我们刚才在 DeepSeek 那里看到的。所以尽管在底层，模型会产生这些思维链，OpenAI 选择在网页界面里不展示完整的思维链，而是只展示这些思维链的简短摘要。OpenAI 这样做，我觉得部分原因是他们担心所谓的蒸馏风险（distillation risk），也就是有人可能进来，真的去模仿这些推理轨迹，仅仅通过模仿这些思维链就能恢复大量的推理能力。所以他们把它们藏了起来，只展示一些小摘要。所以在推理这件事上，你拿到的并不完全是你从 DeepSeek 能拿到的东西。然后它们再写出解答。所以这两边基本上是等价的，尽管我们看不到完整的底层细节。</p>
+<p class="original-paragraph"><span class="line-no">L237</span>就性能而言，这些模型和 DeepSeek 模型目前大致上势均力敌，我觉得。因为评测的问题，很难说清楚。但如果你每月给 OpenAI 付 200 美元，其中一些模型我相信目前基本上看起来还是更好一些，不过 DeepSeek R1 就目前而言仍然是一个非常靠谱的思考模型选择，无论是在这个网站上还是任何其他网站上你都能用，因为模型是开放权重的，你直接下载就行。</p>
+<p class="original-paragraph"><span class="line-no">L239</span>这就是思考模型。那么到目前为止的总结是什么？我们讲了强化学习，以及当我们基本在大量具有可验证解的数学题和代码题上运行强化学习时，&quot;思考&quot;会在优化过程中涌现出来。也就是说会有一个答案，比如 3，等等。</p>
+<p class="original-paragraph"><span class="line-no">L241</span>现在，这些思考模型，你是可以访问到的，比如通过 DeepSeek，或者任何像 together.ai 这样的推理提供商，在那里选 DeepSeek 就行。这些思考模型也可以在 ChatGPT 里以 O1 或 O3 系列的任何一款访问到。但这些 GPT-4o 之类的模型不是思考模型，你应该把它们主要当作 SFT 模型来看。</p>
+<p class="original-paragraph"><span class="line-no">L243</span>现在，如果你有一个需要高级推理之类的提示词，你大概应该用一些思考模型，至少去试试它们。但就我自己的经验，当你问的是一个比较简单的问题，比如一个知识性的问题之类的，那这可能就有点小题大做了。比如没必要为某个事实性问题思考 30 秒。所以对于这种情况，我有时会直接默认用 GPT-4o。凭经验，我大约 80% 的使用就是 GPT-4o。而当我遇到一个很难的问题，比如数学和代码之类的，我才会去拿思考模型，但那时我就得等更久一些，因为它们在思考。</p>
+<p class="original-paragraph"><span class="line-no">L245</span>你可以在 ChatGPT 上、在 DeepSeek 上访问到这些模型。另外我还想指出的是，AIStudio.google.com，虽然它看起来特别拥挤、特别丑，因为 Google 就是搞不好这类东西——简直不知道在搞什么——但如果你选模型，在这里选 Gemini 2.0 Flash Thinking Experimental 01-21，如果你选那个，它也是 Google 的一个思考模型早期实验。所以我们可以进去，把同一道题给它，点运行。它同样是一个思考模型，也会做类似的事情，最后给出正确答案。所以基本上 Gemini 也提供了一个思考模型。而 Anthropic 目前还没有提供思考模型。但基本上，这就是当前这些 LLM 发展的前沿。我觉得强化学习是一个全新且令人兴奋的阶段，但要把细节做对很难。这也是为什么所有这些模型和思考模型，截至 2025 年初，目前都还处于实验阶段。但这就是推动这些难题性能提升的前沿方向——用的是在优化过程中涌现出来的推理能力。</p>
+<p class="original-paragraph"><span class="line-no">L247</span>还有一个联系我想提一下，那就是&quot;强化学习是一种极其强大的学习方式&quot;这个发现，在 AI 领域并不是什么新事。我们已经看到过一次它的展示，那就是在围棋里。而最为人熟知的，是 DeepMind 开发了 AlphaGo 这个系统，你可以看一部关于它的纪录片，讲这个系统是如何学习与顶尖人类棋手下围棋的。当我们打开 AlphaGo 背后的那篇论文，往下滚动，我们其实会发现一张我觉得我们相当眼熟的图。只不过我们是在任意问题求解这种更开放领域里重新发现它，而不是在围棋这种封闭的特定领域里。但他们当时看到的——而且随着这一领域越来越成熟，我们也会在 LLM 里看到——是这样的：这是围棋的等级分，而这里是 Lee Sedol，一位极其强大的人类棋手。这里他们对比的是一个用监督学习训练的模型和一个用强化学习训练的模型的强度。</p>
+<p class="original-paragraph"><span class="line-no">L249</span>监督学习模型是在模仿人类专家棋手。所以如果你拿大量围棋专家对局的棋谱去试图模仿它们，你会变强，但之后你就到顶了。你永远没法真正超过围棋里最最顶尖的那几位棋手，比如 Lee Sedol，因为你在模仿人类棋手，而如果你只是在模仿人类棋手，你从根本上就不可能超越人类棋手。但在强化学习的过程中，情况要强大得多。在围棋的强化学习里，意味着系统在走那些从经验和统计上能导向赢棋的招法。所以 AlphaGo 是一个和自己对弈的系统，它用强化学习来做 rollout。这正是同一张示意图，只不过这里没有提示词，因为围棋是固定的，它只是在尝试大量解法，尝试大量落子。然后那些导向赢棋的对局——而不是某个特定答案——被强化，变得更强。于是系统基本上在学习那些从经验和统计上导向赢棋的动作序列。强化学习不会受限于人类水平，强化学习能做得显著更好，甚至能超过 Lee Sedol 这样的顶尖棋手。</p>
+<p class="original-paragraph"><span class="line-no">L251</span>他们大概本可以跑得更久，只是选择了在某个点收手，因为这要花钱。但这是强化学习非常有力的一个展示。而我们才刚刚开始在大语言模型的推理问题上看到这张图的端倪。所以光靠模仿专家，我们走不了太远。我们需要超越这一步，去搭建这些小小的游戏环境，让系统去发现那些独特的、就是行之有效的推理轨迹或解题方式。</p>
+<p class="original-paragraph"><span class="line-no">L253</span>关于独特性这一点。注意，当你做强化学习时，没有什么能阻止你偏离人类下棋的分布。所以我们回到 AlphaGo 这段，其中一个被广泛讨论的变化叫做&quot;第 37 手&quot;。AlphaGo 里的第 37 手，指的是 AlphaGo 走出了一步没有任何人类专家会走的棋的那个特定时刻。这一步由人类棋手走出的概率，被估计大约只有万分之一。所以这是一步非常罕见的棋，但事后看来，它是一步极为精彩的棋。AlphaGo 在强化学习的过程中，发现了一种人类未知的下法，而事后看来它极为精彩。我推荐你看这个 YouTube 视频：Lee Sedol 对阵 AlphaGo，第 37 手反应分析。这就是 AlphaGo 走这一手时大致的样子。</p>
+<p class="original-paragraph"><span class="line-no">L255</span>——价值。那是一步非常出人意料的棋。我原以为它是个失误。当我看到这一手时。</p>
+<p class="original-paragraph"><span class="line-no">L257</span>总之，人们基本都惊呆了，因为这是人类不会走的一步棋，而 AlphaGo 走了，因为在它的训练里这一步看起来是个好主意。只不过它恰好不是人类会做的事。于是，这又是强化学习的力量所在。原则上，如果我们继续在大语言模型中扩展这一范式，我们其实能看到与之等价的东西，但它具体长什么样，目前还是未知。那么，以一种连人类都无法企及的方式去解决问题，这意味着什么呢？你怎么能在推理或思考上比人类更强？你怎么能超越只是像人类一样思考？也许这意味着发现人类创造不出的类比，也许它是一种全新的思考策略。这很难想清楚。也许它是一种全新的语言，甚至根本不是英语。也许它会发现一种自己的语言，更适合用来思考，因为模型并不被约束必须使用英语。所以也许它需要换一种语言来思考，或者它会发明自己的语言。</p>
+<p class="original-paragraph"><span class="line-no">L259</span>所以原则上，系统的行为定义要松散得多。它可以自由地去尝试任何有效的东西，也可以自由地慢慢从训练数据——也就是英语——的分布上漂移开去。但所有这一切，只有当我们拥有一套规模巨大、种类繁多的问题集，让这些策略得以被打磨和臻于完善，才有可能发生。而这正是当前大量前沿 LLM 研究正在做的事情：试图创造出这种规模大、种类多的提示词分布。这些本质上都是一个又一个游戏环境，让模型在其中练习自己的思考。这就好比写练习题，我们必须为知识的所有领域都创造出练习题。而如果我们有这些练习题、而且数量庞大，模型就能在它们上面做强化学习，从而创造出这种类似的图，只不过是在开放思考领域，而不是像围棋那样的封闭领域。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="rlhf">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 10 章</div>
+        <h2>RLHF：把人类偏好变成奖励，也会被钻空子</h2>
+        <p>RLHF 用奖励模型模拟人类偏好，让主观任务也能训练；但奖励模型不是现实本身，容易被对抗样本利用。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>RLHF 用奖励模型模拟人类偏好，让主观任务也能训练；但奖励模型不是现实本身，容易被对抗样本利用。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>写诗、讲笑话、摘要这类任务没有唯一正确答案，不能像数学题那样直接验算。</li>
+<li>人类更容易判断两个回答哪个好，而不一定容易亲手写出最优回答。</li>
+<li>奖励模型能扩展人类反馈，但它会被 RL 找到漏洞，所以 RLHF 通常不能无限跑。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>不可验证领域</strong><span>没有明确标准答案、需要人类主观判断质量的任务。</span></li>
+<li><strong>RLHF</strong><span>Reinforcement Learning from Human Feedback，基于人类反馈的强化学习。</span></li>
+<li><strong>奖励模型</strong><span>学习模仿人类偏好排序的独立模型，用来给候选回答打分。</span></li>
+<li><strong>判别器-生成器差距</strong><span>判断好坏通常比亲自生成高质量作品更容易。</span></li>
+<li><strong>对抗样本</strong><span>专门钻模型漏洞、让模型给出异常高分的输入或输出。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>人类给多首诗或多个笑话排序，奖励模型学习这种排序偏好。</li>
+<li>奖励模型可能把无意义重复文本打高分，于是 RL 会把笑话训练到崩坏。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>为什么 Karpathy 会强调“RLHF 不是 RL”？</li>
+<li>你能想到哪些工作任务属于不可验证领域？该如何检查结果？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 261-281，11 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L261</span>强化学习里还有一个部分我想讲一下，那就是在不可验证领域里的学习。到目前为止，我们看到的所有问题，都属于所谓的&quot;可验证领域&quot;。</p>
+<p class="original-paragraph"><span class="line-no">L263</span>也就是说，对于任何一个候选解答，我们都能很容易地拿它与一个确定的标准答案进行比对打分。比如答案是 3，我们就能轻松地拿各种解答去和答案 3 做比对。一种做法是，要求模型把自己的答案「框」起来，然后我们只要检查框里的内容是否和答案一致；另一种做法是使用所谓的 LLM 评审（LLM judge）。LLM 评审会读取一个解答和正确答案，然后基本上就是判断这个解答是否与答案一致、给它打分。从经验上看，目前 LLM 的能力已经足够胜任这件事，能相当可靠地完成。所以这些技术我们也都能用上。总之，我们手里有一个确定的标准答案，只是把各种解答拿去比对，整个过程完全可以自动化，不需要任何人类参与。</p>
+<p class="original-paragraph"><span class="line-no">L265</span>问题在于，这种策略无法应用到所谓的不可验证领域（unverifiable domains）里。这类领域通常是，比如创意写作任务，像是写一个关于鹈鹕的笑话、写一首诗、总结一段文字之类的。在这些领域里，要给不同解答打分就困难得多。比如写鹈鹕的笑话，我们当然能生成大量不同的笑话，这没问题。比如你可以去找 ChatGPT，让它生成一个关于鹈鹕的笑话：「为什么鹈鹕嘴里的东西那么多？因为它们不会把东西放进背包。」好吧，不太行。我们再试试：「为什么鹈鹕从来不付酒钱？因为它们总是把账单转给别人。」哈哈。好吧，可以看出这些模型在幽默方面显然不太在行。其实我觉得挺有意思的，因为我觉得幽默其实非常难，而这个模型暂时还没有这个能力。不管怎样，你可以想象我们能造出大量笑话来。我们面临的问题是：该怎么给它们打分？</p>
+<p class="original-paragraph"><span class="line-no">L267</span>原则上，我们当然可以让一个人把所有这些笑话都看一遍，就像我刚才做的那样。但问题在于，如果你在做强化学习，你要做成千上万次更新。每次更新你大概要看上千条提示词，而每条提示词你又要看上百甚至上千种不同的生成结果。这就多得根本看不过来了。原则上，你可以让人类把每一个都检查、打分，然后判断说，好吧，这条可能好笑，那条也好笑，这条也好笑，然后我们就在这些数据上训练，让模型在公司（至少在共和党人的圈子里……）讲笑话的水平稍微提高一点。但问题是这要耗费太多人力。这是一种无法扩展的策略，我们需要某种自动化的办法。</p>
+<p class="original-paragraph"><span class="line-no">L269</span>针对这个问题，有一篇论文提出了一种解决方案，引入了所谓的「基于人类反馈的强化学习」（reinforcement learning from human feedback）。这是当时 OpenAI 的一篇论文，论文里很多人现在都是 Anthropic 的联合创始人。它提出了一种方法，基本上就是让我们能在不可验证领域里做强化学习。我们来看看它是怎么运作的。这里有一张示意图，展示了核心思想。正如我所说，最朴素的做法是：如果我们有无限的人力，那在这些领域里直接跑 RL 完全没问题。比如我们可以照常跑 RL，假设我有无穷的人力，我想做——这些只是示意性的数字——做 1000 次更新，每次更新基于 1000 条提示词，每条提示词我们要对 1000 个生成结果打分。用这样的设置我们就能跑 RL。问题在于，在这个过程中，我需要让一个人类去评判笑话，总共要评 10 亿次。这要让一大堆人去看一大堆特别糟糕的笑话。我们可不想这么干。</p>
+<p class="original-paragraph"><span class="line-no">L271</span>所以我们要改用 RLHF 的办法。在 RLHF 里，核心技巧其实就是「间接」（indirection）这一招。我们只让人类参与一点点，而我们「作弊」的方式是：我们单独去训练一个完整的神经网络，称之为奖励模型（reward model）。这个神经网络会去模仿人类的打分。我们先让人类给各种生成结果打分，然后用一个神经网络去模仿这些人类打分。于是这个神经网络就变成了某种「人类偏好的模拟器」。现在有了这么一个神经网络模拟器，我们就可以拿它当对象来做 RL 了。也就是说，我们不再是去问一个真实的人类，而是去问一个「模拟的人类」，问它觉得某个笑话能打多少分。一旦有了模拟器，我们就一路畅通了，因为我们可以任意次地查询它，整个过程完全自动化，我们就能针对这个模拟器来做强化学习。而这个模拟器，正如我们所料，不会是一个完美的人类，但只要它在统计意义上与人类的判断足够相似，你就可以预期这样做是有效果的。而在实践中也确实如此。所以一旦有了模拟器，我们就能跑 RL，一切都很顺利。</p>
+<p class="original-paragraph"><span class="line-no">L273</span>我来给你看一张大致说明这个流程的示意图。虽然细节并不是特别关键，关键是理解它的核心思路。这里我有一张示意性的图，举了个假设性的例子来说明训练奖励模型大概是什么样子。我们有一条提示词，比如「写一个关于鹈鹕的笑话」，然后这里有 5 个不同的生成结果，也就是 5 个不同的笑话，就像这种。我们要做的第一件事，是请一个人类把这些笑话从最好到最差排个序。所以这里，这个人觉得这个笑话最好、最好笑，排第 1，这个第 2，第 3，第 4、第 5，所以这个是最差的笑话。我们之所以让人类排序、而不是直接给分数，是因为排序对人类来说更容易一点。给一个排序，比给出精确的分数要容易。不过，这个排序本身并不是给模型的直接监督信号。人类已经排好序了，这就是他们在训练过程中贡献的部分。但接下来，我们要单独去问奖励模型，看它怎么给这些笑话打分。</p>
+<p class="original-paragraph"><span class="line-no">L275</span>奖励模型是一个完全独立的神经网络，一个单独的网络。它大概也是个 Transformer，但它不是那种会生成各种语言的「语言模型」，它只是一个打分模型。奖励模型的输入是两样东西：一是提示词，二是一个候选笑话。这就是进入奖励模型的两个输入。比如这里，奖励模型接收的就是这条提示词和这个笑话。奖励模型的输出是一个单一的数字，这个数字被当作分数，它的范围比如可以从 0 到 1。0 是最低分，1 是最高分。这里有一些例子，展示训练过程中某个阶段的奖励模型会怎么给这些笑话打分：0.1 是很低的分，0.8 是相当高的分，依此类推。然后我们拿奖励模型给的分数，去和人类给出的排序做对比。这里有一种精确的数学方法来计算它，基本上就是设定一个损失函数，算出对应关系，然后据此更新模型。但我只想给你一个直觉：比如对于第二个笑话，人类觉得它最好笑，模型也基本同意，0.8 是个相对较高的分。但这个分其实应该更高才对。所以更新之后，我们预期这个分在网络更新后会再涨一点，比如变成 0.81 左右。而对于这条，模型和人类存在严重分歧，因为人类把它排第 2，但这里它只得 0.1 分，所以这个分应该高得多。于是在这类监督之上做一次更新后，这个分可能会涨很多，也许变成 0.15 之类的。再看这里，人类觉得这是最差的笑话，但模型却给了它一个相当高的分，所以你可以预期更新之后它会掉下来，也许掉到 3.5 左右。基本上我们做的还是和之前一样的事：用神经网络的训练过程，轻轻地微调模型的预测，努力让奖励模型的分数与人类的排序保持一致。随着我们在人类数据上不断更新奖励模型，它就越来越能模拟人类给出的分数和排序，最终成为人类偏好的模拟器，我们再拿它来做 RL。但关键是，我们并不是让人类去看 10 亿次笑话。我们大概只看上千条提示词、每条若干个笑话，所以人类总共要看的大概是 5000 个笑话。他们只给个排序，然后我们就训练模型去和那个排序保持一致。数学细节我就略过了。我只想让你理解一个高层思路：这个奖励模型基本上就是给我们打分，而我们有一种方法，能把它训练得与人类的排序相一致。RLHF 就是这么运作的。</p>
+<p class="original-paragraph"><span class="line-no">L277</span>好，这就是大致的想法。我们基本上训练了人类的模拟器，然后对这些模拟器做 RL。现在我想先讲讲 RLHF 的好处。第一，它让我们能够跑强化学习——我们知道强化学习是一套极其强大的技术——而且让我们能在任意领域里跑，包括那些不可验证的领域。比如摘要、诗歌写作、笑话写作，或者任何其他真正的创意写作，在数学和代码之外的领域等等。从经验上看，当我们真正应用 RLHF 时，它会提升模型的性能。我有一个关于「为什么会这样」的最佳猜测，但我其实并不确定这个原因是否像前面那些结论一样有充分的依据。你可以经验性地观察到：当你正确地做了 RLHF，得到的模型就是会好一点点。至于为什么好，我觉得并不是那么清楚。这是我的最佳猜测。我的猜测是，这可能主要归因于「判别器—生成器差距」（discriminator generator gap）。它的意思是，在很多情况下，对人类来说，判别比生成要容易得多。具体来说，当我们做监督微调（SFT）时，我们要求人类生成理想的助手回答。在很多情形下，就像我展示的那样，理想的回答很容易写。但在很多情形下并非如此。比如摘要、写诗、写笑话，你作为人类标注员，要怎么在这些情况下写出理想的回答？这需要人类去进行创作。而 RLHF 恰恰绕过了这一点，因为我们可以给数据标注员一个容易得多的问题：他们不需要直接去写诗，而是模型给他们五首诗，让他们排个序就行。这对人类标注员来说是一项容易得多的任务。所以我觉得这基本上能让我们获得更高准确率的数据，因为我们没有要求人们去做那种极其困难的生成任务。我们没让他们去搞创意写作，只是让他们分辨不同的创意作品、挑出最好的。人类提供的信号就是这个排序，这就是他们给系统的输入。然后系统在 RLHF 里会自己去发现那些会被人类打高分的回答。正是这一层间接，让模型变得越来越好。这就是 RLHF 的好处：它让我们能跑 RL，从经验上看能产出更好的模型，也让人们能在不必承担极端困难任务（比如写理想回答）的情况下贡献监督信号。</p>
+<p class="original-paragraph"><span class="line-no">L279</span>不过很遗憾，RLHF 也伴随着重大的缺点。主要的一个是：我们做强化学习，并不是针对真实的人类和真实的人类判断，而是针对人类的一种「有损模拟」。这个有损模拟可能会产生误导，因为它毕竟只是个模拟，只是一个输出分数的语言模型，未必能在所有可能的情况下都完美反映一个真正长着脑子的人类的真实看法。这是第一个问题。其实还有一种更微妙、也更刁钻的情况，它严重地拖了 RLHF 作为一项可扩展到真正智能系统的技术的后腿。那就是：强化学习极其擅长发现怎么去「钻」这个模型、去钻这个模拟器的空子。我们这里构建的这个会打分的奖励模型，这些模型都是 Transformer。这些 Transformer 是庞大的神经网络，有几十亿个参数，它们在模仿人类，但只是以一种「模拟」的方式模仿。问题在于，这些是庞大、复杂的系统，这里有几十亿个参数在输出一个单一分数。事实证明，这些模型是可以被钻空子的。你能找到一些输入，它们不属于模型的训练集，却莫名其妙地拿到极高的分数，但这种分数是假的。所以你经常会发现，如果你把 RLHF 跑很久——比如我们做 1000 次更新，算很多次了——你会预期你的笑话越来越棒、能拿到关于鹈鹕的绝世金句，但其实并不是那样。实际发生的是：在头几百步里，关于鹈鹕的笑话大概会改善一些，然后它们会突然断崖式下滑，你开始得到完全无意义的结果。比如，你开始得到「最佳鹈鹕笑话」是「the the the the the」之类的，这毫无道理，对吧？你看着它，心想凭什么这是最佳笑话？但当你把它塞进你的奖励模型里，你预期它会得 0 分，可奖励模型却爱死它了，它会告诉你「the the the the the」得 1.0 分，是最佳笑话，这完全说不通。这是因为这些模型只是人类的模拟器，它们是庞大的神经网络，你能在输入空间的最底端找到一些输入，钻进模型的某个角落，得到无意义的结果。这些例子就是所谓的「对抗样本」（adversarial examples），这个话题我不展开讲，但它们就是模型的对抗性输入。它们是一些特定的小输入，钻进模型的缝隙和角落里，在顶端吐出无意义的结果。</p>
+<p class="original-paragraph"><span class="line-no">L281</span>现在，你可以想象这样做：你说，好吧，这显然不该是 1 分，这显然是个低分，那我们把它加进数据集，给它一个极差的排序，比如第 5 名。确实，你的模型会学到「the the the the the」应该得极低的分，于是给它 0 分。但问题在于，模型里总是藏着无穷多个无意义的对抗样本。如果你把这个过程迭代很多次，不断把无意义的东西加进奖励模型、给它们极低的分，你永远赢不了这场游戏。你可以这么做很多很多轮，而强化学习只要跑得够久，总能找到钻模型空子的办法。它会发现对抗样本，用无意义的结果拿到超高分。从根本上说，这是因为我们的打分函数是一个巨型神经网络，而 RL 极其擅长找到欺骗它的办法。所以长话短说：你总是让 RLHF 跑个几百次更新，模型在变好，然后你就得截断、收工。你不能对着这个奖励模型跑太久，因为优化过程会开始钻它的空子。你基本上就是截断、叫停、发布。你可以改进奖励模型，但最终你总会在某个时刻撞上这种局面。所以我常说：RLHF 不是 RL。我的意思是，RLHF 显然是 RL，但它不是那种「神奇意义上的 RL」。这不是你能无限期跑下去的 RL。像那种有确定正确答案的问题，你就没法这么容易地钻空子——你要么答对了、要么没答对，打分函数也简单得多，你只要看框出来的那块、看结果对不对就行。所以这种函数很难被钻空子，但钻奖励模型的空子却是可能的。而在这种「可钻空子」的领域里……嗯，在像围棋那样有完美模拟器的领域里，你反而可以无限期地跑 RL，你可以跑几万步、几十万步，发现各种我们人类根本想不到的、性能极佳的疯狂策略。在围棋里，你没法在「赢棋/输棋」这件事上钻空子。有了完美的模拟器，我们知道每一颗棋子摆在哪，能算出某个人到底有没有赢，这个没法钻空子。所以你可以无限期地跑 RL，最终连……至少都能超过某个水平。但对于这种可钻空子的模型，你没法无限重复这个过程。所以我某种程度上把 RLHF 看作「不是真正的 RL」，因为它的奖励函数是可钻空子的。它更像是某种「轻微的微调」。它是一点点改进，但它并不是从根本上是「正确搭好了」的那种——那种你能往里灌更多算力、跑更久、得到更好更神奇结果的搭法。从这个意义上说它不是 RL。说它不是 RL，是说它缺乏那种魔力。它可以微调你的模型、提升性能。事实上，如果我们回到 ChatGPT，GPT-4o 模型就经过了 RLHF，因为它确实管用。但它只是「不是那种意义上的 RL」。RLHF 就像一次小小的微调，让你的模型稍微变好一点。我大概会这么去理解它。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="future">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 11 章</div>
+        <h2>未来与使用入口：多模态、智能体、模型生态</h2>
+        <p>视频最后把技术图景拉远：模型会走向多模态、智能体和更深的工具整合，使用者也需要学会跟进与选择。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>视频最后把技术图景拉远：模型会走向多模态、智能体和更深的工具整合，使用者也需要学会跟进与选择。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>多模态并不是完全换一套方法，而是把音频、图像也转成 token 或类似 token 的表示。</li>
+<li>智能体会把单次回答扩展成长时间、多步骤、可监督的任务执行。</li>
+<li>排行榜和资讯能帮助跟进领域，但最终仍要用自己的任务测试模型。</li>
+<li>本地小模型、开放权重和云端专有模型会共同组成使用生态。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>多模态</strong><span>模型同时处理文本、音频、图像等不同信息形式。</span></li>
+<li><strong>智能体</strong><span>能持续执行多步任务、汇报进展并与工具互动的模型系统。</span></li>
+<li><strong>测试时训练</strong><span>让模型在部署后的任务过程中更新自身能力的研究方向，区别于只扩展上下文。</span></li>
+<li><strong>开放权重</strong><span>模型参数可被下载、托管和再使用的发布方式。</span></li>
+<li><strong>蒸馏模型</strong><span>把大模型能力压缩到更小模型中的模型，便于本地运行。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>音频可切成频谱图片段，图像可切成 patch，再进入类似 token 的处理流程。</li>
+<li>LMArena、AI News、X/Twitter 是视频中提到的跟进资源。</li>
+<li>OpenAI、Gemini、together.ai、Hyperbolic、LM Studio 是视频中提到的使用入口。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>你自己的学习或工作流程里，哪些步骤最可能被智能体化？</li>
+<li>选择模型时，你会更看重开放权重、推理能力、成本，还是隐私？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 283-307，13 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L283</span>好，这基本上就是我想讲的大部分技术内容了。我带你走过了训练这些模型的三大阶段/范式：预训练、监督微调（SFT）、以及强化学习，并向你展示它们大致对应了我们教育孩子的方式。具体来说，我们讲到预训练就像是阅读陈述性材料、获取基础知识；监督微调就像是看大量已解例题、模仿专家、做练习题。唯一的区别是，我们现在要为 LLM 和 AI，在人类知识的所有学科上、以及在我们真正希望它们擅长的代码和数学等所有领域里，有效地写好教科书。所以我们要为它们编写教科书，优化我所介绍的所有算法的高层思路，然后当然还要在训练这些模型的大规模、高效执行上做到极致。我之前没展开讲太多细节，但这些是规模极其庞大、复杂的分布式任务，要跑在成千上万、甚至数十万块 GPU 上。这里涉及的工程基本上代表了那种规模下计算机能力的最前沿。我没有过多涉及这一面，但这部分非常严肃，而且从根本上支撑着所有这些看起来很简单的算法。</p>
+<p class="original-paragraph"><span class="line-no">L285</span>我还谈了这些模型的一点「心智模型」（theory of mind）。我希望你带走的一点是：这些模型确实很强，它们是你工作中极其有用的工具，但你不该完全信任它们，我也给你看了一些例子。即便我们有缓解幻觉的手段，模型也并不完美，它们仍然会产生幻觉。随着时间推移它已经变好了，而且还会继续变好，但它们确实可能产生幻觉。除此之外，我还讲了所谓模型能力的「瑞士奶酪模型」，你脑子里要有这么个模型。这些模型在非常多不同的学科里都极其出色，但会在一些独特的情形里几乎随机地失败。比如，9.11 和 9.9 哪个大，模型不知道，但同时它又能转身去解各种 OLMPIAD 题目。这就是瑞士奶酪上的一个洞，这样的洞有很多，你不想被它们绊倒。所以别把这些模型当成不会犯错的模型，要检查它们的工作，把它们当工具用，用它们找灵感，用它们打第一版草稿，但要把它们当成工具来协作，并最终对你产出的成果负责。这大概就是我想讲的内容。这就是它们是怎么被训练出来的，这就是它们是什么。</p>
+<p class="original-paragraph"><span class="line-no">L287</span>现在我们转向这些模型未来会有哪些能力，大概有哪些东西即将到来。还有，你在哪里能找到这些模型？我列了几条，关于你可以期待的一些即将到来的东西。第一件你会注意到的事，是模型会非常快地变成多模态的。我在上面谈到的所有内容都只涉及文本，但很快我们就会拥有不仅能处理文本、还能原生且轻松地处理音频（也就是能听、能说）以及图像（也就是能看、能画）的模型。这一切的雏形我们都已经看到了，但它会全部在语言模型内部原生地实现，从而实现自然的对话。粗略地说，之所以这其实和我上面讲的所有内容没什么不同，是因为从根本上讲，你可以对音频和图像做分词，然后套用我们上面讲过的完全相同的方法。所以这不是什么根本性的改变，只是我们得加一些词元。举个例子，对音频做分词，我们可以去切音频信号的频谱图（spectrogram）的小块，对它做分词，然后就多出来一些代表音频的词元，把它们加进上下文窗口里，像上面那样去训练。图像也一样，我们可以用「块」（patches），对各个小块单独分词，那么一幅图像在模型眼里就是一串词元，这确实是行得通的，而且这个方向已经有很多早期工作了。所以我们可以生成代表音频、图像以及文本的词元流，把它们交织在一起，在同一个模型里同时处理。这就是多模态的一个例子。第二件人们很感兴趣的事是：目前大部分的工作，都是我们把单个任务像端着银盘子一样递给模型——「请帮我解决这个任务」——然后模型就去做这件小任务。但要把多个任务连贯地组织起来、去完成一项完整的工作，这件事目前还得靠我们自己。模型在能力上还做不到长时间、连贯且能纠错地完成这件事。它们还不能把任务完整地串起来去做那些需要较长时间学习的工作。但它们正在接近这个目标，而且随着时间在不断改善。</p>
+<p class="original-paragraph"><span class="line-no">L289</span>不过接下来很可能发生的是，我们将开始看到所谓的智能体（agents），它们会在一段时间内执行任务，你来监督它们，观察它们的工作，它们会时不时地过来汇报进展等等。所以我们会看到越来越多长时间运行的智能体任务，它们的响应不再只是几秒钟，而是几十秒、几分钟，甚至几个小时。但正如我们前面讲过的，这些模型并不是万无一失的，所以这一切都需要人来监督。比如说，在工厂里，人们会用「人与机器人的比例」来衡量自动化程度。我觉得在数字领域我们也会看到类似的情况，我们会开始谈论「人与智能体的比例」，在数字领域中，人类会更多地成为智能体任务的监督者。</p>
+<p class="original-paragraph"><span class="line-no">L291</span>其次，我觉得一切都会变得更加无处不在、更加隐形。也就是说，它会融入到各种工具中、融入到各个角落，此外还有点像「使用计算机」的能力。目前这些模型还不能代替你采取行动，但我认为这是一个单独的要点。如果你看到 ChatGPT 推出了 Operator，那这就是一个早期的例子，你可以把控制权交给模型，让它代你执行键盘和鼠标操作。所以我觉得这也是非常有趣的一点。</p>
+<p class="original-paragraph"><span class="line-no">L293</span>我这里要讲的最后一点是一个比较宏观的评论：这个领域里仍然有很多研究值得去做。其中一个例子就是所谓的测试时训练（test time training）。还记得吗，我们前面讲到的所有内容都分两大阶段。首先是训练阶段，在这个阶段我们调整模型的参数，让它能很好地完成任务。一旦我们得到了这些参数，就把它们固定下来，然后把模型部署去做推理。从那以后，模型就是固定的了，它不再改变，也不会从它在测试时做的所有事情中学习。它就是一个固定数量的参数。唯一在变化的，是上下文窗口里的那些词元（token）。所以模型能够进行的唯一一种学习，或者说测试时学习，就是上下文学习，也就是它那种根据测试时正在做的事情、可以动态调整的上下文窗口。但这和人类还是不一样，人类是能够真正根据自己正在做的事情来学习的，比如当你睡觉的时候，你的大脑会更新你的「参数」，对吧？所以目前在这些模型和工具里，还没有与之对应的东西。所以我认为还有很多稀奇古怪的想法有待探索。尤其是，我认为这将变得很有必要，因为上下文窗口是一种有限而宝贵的资源。特别是当我们开始处理非常长时间运行的多模态任务、把视频也放进去的时候，这些词元窗口基本上会增长得非常庞大，不是几千、甚至不是几十万，而是远远超过这个规模。而我们目前唯一能用的招，就是把上下文窗口做得更长。但我认为，光靠这一招本身，是无法扩展到那些长时间运行、随时间推进的多模态任务的。所以我认为，在一些学科、一些情况下，都需要新的想法，需要在这些任务需要超长上下文的领域里探索新思路。</p>
+<p class="original-paragraph"><span class="line-no">L295</span>以上就是你可以期待的、即将到来的一些例子。接下来，我们来谈谈你可以在哪里追踪这些进展、紧跟这个领域最新最前沿的动态。</p>
+<p class="original-paragraph"><span class="line-no">L297</span>我想说，我一直用来保持与时俱进的资源主要有三个。第一个是 LMArena，我给你看一下 LMArena。它本质上是一个大模型排行榜，会对所有顶尖模型进行排名，而排名是基于人类对比的。也就是说，人类给这些模型提提示词，然后判断哪个模型给出的答案更好。他们并不知道哪个模型是哪个，只是看哪个模型答得更好。据此可以算出一个排名，然后得到一些结果。所以你能在这里看到不同的组织，比如 Google Gemini，生产了这些模型。当你点开其中任何一个，它会带你跳转到该模型的托管页面。然后在这里我们看到 Google 目前排第一，OpenAI 紧随其后。这里我们看到 DeepSeek 排在第三位。这件事之所以了不起，原因就在最后一列——你看到一个 license（许可证）。DeepSeek 是一个 MIT 许可的模型，它是开放权重的（open weights）。任何人都可以使用这些权重，任何人都可以下载它们，任何人都可以托管自己的 DeepSeek 版本，并以他们喜欢的任何方式使用。所以它并不是一个你无法获取的专有模型，它本质上是一次开放权重的发布。一个这么强的模型以开放权重的方式发布，这在某种程度上是史无前例的。这个团队干得非常漂亮。</p>
+<p class="original-paragraph"><span class="line-no">L299</span>接下来，是 Google 和 OpenAI 的另外几个模型。当你继续往下滚动，你会看到的还是那些常见面孔。比如这里是 xAI，Anthropic 在这里排在第 14 位，然后 Meta 的 Llama 在这里。Llama 和 DeepSeek 类似，也是个开放权重模型，但它排在这里靠下的位置，而不是上面。我得说，这个排行榜很长一段时间里都非常好用，但我也觉得在过去几个月里它有点被「刷分」了，我已经不像以前那么信任它了。凭经验我感觉，比如有很多人在用 Anthropic 的 Sonnet，那是一个非常好的模型，但它却排在第 14 位那么靠后。反过来，我觉得用 Gemini 的人没那么多，但它却排得非常高。我建议把它当作第一轮筛选来用，然后亲自拿几个模型去试你的任务，看哪个表现更好。</p>
+<p class="original-paragraph"><span class="line-no">L301</span>我想指出的第二个资源是 AI News Letter（AI 新闻通讯）。AI News 这个名字起得不算有创意，但它是由 Swix and Friends 制作的一份非常出色的通讯，感谢他们的维护。它对我非常有帮助，因为它极其全面。如果你进入 Archives（归档），你会看到它几乎每隔一天就出一期。它非常全面，其中一部分是人类撰写、由人工整理的，但很大一部分是用各种自动化手段拼出来的。所以你会发现它非常详尽，如果你通读一遍，基本不会错过任何重大消息。当然，你大概率不会真的通读，因为它太长了，但我确实觉得最上面的那些总结写得相当好，我认为其中是有人工把关的。所以这对我帮助很大。</p>
+<p class="original-paragraph"><span class="line-no">L303</span>最后我想指向的就是 X 和 Twitter 了。AI 领域的很多事情都发生在 X 上。所以我建议你关注那些你喜欢、你信任的人，在 X 上获取最新最全的动态。这些就是我长期以来行之有效的主要去处。</p>
+<p class="original-paragraph"><span class="line-no">L305</span>最后，再简单说说你可以在哪里找到这些模型、在哪里使用它们。第一个我要说的是，对于任何最大的那些专有模型，你都得去对应 LLM 提供商的网站。比如对于 OpenAI，那就是 chat.com，我相信它现在确实能用了。这是 OpenAI 的入口。至于 Gemini，我记得是 Gemini.google.com 或者 AI Studio，它们好像有两个入口，原因我完全没搞懂，其实谁都没搞懂。而对于开放权重模型，比如 deep-seek、llama 等等，你需要去找某种能提供这些模型的推理服务商。我最喜欢的是 together.ai。我给你演示一下，当你进入 together.ai 的 playground，你可以挑选很多不同的模型，而这些都是各种类型的开放模型，你可以在这里和它们对话。如果你想要用一个基座模型，比如一个 base model，那我觉得即使在推理服务商那里，基座模型也不太常见。它们的目标都是助手和聊天，所以我觉得即使在这里，我也没看到基座模型。所以对于基座模型，我通常会去 Hyperbolic，因为它们提供我喜欢的 Llama 3.1 base，我非常喜欢那个模型，你可以直接在这里和它对话。据我所知，这里是个找基座模型的好地方，我也希望有更多人能托管基座模型，因为在某些情况下它们既实用又有趣。</p>
+<p class="original-paragraph"><span class="line-no">L307</span>最后，你也可以把一些较小的模型拿到本地运行。比如，DeepSeek 最大的那个模型你没法在 MacBook 上本地跑，但 DeepSeek 有一些更小的版本，是所谓的「蒸馏」（distilled）版本。另外你还可以用更低的精度来运行这些模型，而不是用原生精度——比如不是 DeepSeek 的 FP8，也不是 Llama 的 BF16，而是比这低得多。如果你不完全理解这些细节也没关系，总之你可以运行那些经过蒸馏、精度更低的更小版本，然后就能把它们装进你的电脑里。于是你确实可以在笔记本上跑出还算不错的模型。我通常最喜欢去的地方是 LM Studio，它基本上是一个可以下载的应用。说实话我觉得它的界面挺丑的，而且我不喜欢它给你展示那一堆基本上没什么用的模型。大家想跑的不就是 DeepSeek 嘛，我不知道它为什么要给你列出 500 种不同的模型。它们搜索起来特别麻烦，你还得选择不同的安装方式、做各种决定，全都让人一头雾水。但一旦你搞懂了它怎么用——那完全是另一个视频的内容——你就能把模型加载进来。比如我在这里加载了 Llama 3.2 Instruct 1B，然后你就可以和它对话。我让它讲鹈鹕的笑话，我可以再要一个，它就再给我一个，如此等等。这里发生的一切都在你的电脑本地运行，我们并没有去访问任何别的地方，它跑在 MacBook Pro 的 GPU 上。这非常棒。用完之后你可以把模型「弹出」，这样就释放了内存。所以 LM Studio 大概是我最喜欢的一个，尽管我觉得它在 UI/UX 上有挺多问题，而且几乎像是给专业人士准备的。但如果你在 YouTube 上看几个视频，我觉得你能搞明白怎么用这个界面。以上就是关于去哪找模型的几点说明。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="chapter" id="wrap">
+      <aside class="chapter-meta">
+        <div class="chapter-index">第 12 章</div>
+        <h2>回到起点：按下回车后到底发生了什么</h2>
+        <p>一次 ChatGPT 对话可以被还原为：分词、套入对话协议、固定数学函数逐 token 采样；但不同训练阶段决定了它像谁、会什么、哪里会错。</p>
+        <a class="mini-link" href="#top">回到顶部</a>
+      </aside>
+      <div class="chapter-body">
+        <div class="thesis">
+          <span>核心观点</span>
+          <p>一次 ChatGPT 对话可以被还原为：分词、套入对话协议、固定数学函数逐 token 采样；但不同训练阶段决定了它像谁、会什么、哪里会错。</p>
+        </div>
+        <div class="learning-grid">
+          <section class="learning-block accent-a">
+            <h3>观点</h3>
+            <ul><li>GPT-4o 类普通助手主要像遵循标注指南的人类标注员的有损模拟。</li>
+<li>思考模型在 RL 后不只是模仿标注员，还可能形成新的推理策略。</li>
+<li>最可靠的使用姿势是：把它当强力工具，用于灵感和初稿，但检查、验证并对结果负责。</li></ul>
+          </section>
+          <section class="learning-block accent-b">
+            <h3>定义</h3>
+            <ul class="definition-list"><li><strong>有损模拟</strong><span>模型近似模仿人类写回复的过程，但受 token、参数和有限计算限制。</span></li>
+<li><strong>固定数学函数</strong><span>部署后的模型参数固定；每个 token 的输出由同一个网络前向计算得到。</span></li>
+<li><strong>工具心态</strong><span>把模型当作协作者和加速器，而不是无条件可信的权威。</span></li></ul>
+          </section>
+          <section class="learning-block accent-c">
+            <h3>示例</h3>
+            <ul><li>你的查询先变成一维 token 序列，再由模型不断追加 token 形成回答。</li>
+<li>模型可能帮你很快起草、解释、改写，也可能随机幻觉、算错或漏掉简单细节。</li></ul>
+          </section>
+          <section class="learning-block accent-d">
+            <h3>学习问题</h3>
+            <ul><li>下次使用 LLM 时，你会如何给它更多工作记忆、更多思考空间或更好的工具？</li>
+<li>你应该在哪些场景里强制自己做事实核查？</li></ul>
+          </section>
+        </div>
+        <details class="original">
+          <summary>
+            <span>原文</span>
+            <small>字幕行 309-325，9 段</small>
+          </summary>
+          <div class="original-text">
+            <p class="original-paragraph"><span class="line-no">L309</span>现在让我们绕回到我们出发的地方。问题是：当我们打开 chatgpt.com，输入某个查询，然后点下回车，这里到底发生了什么？我们看到的是什么？我们在和谁对话？这一切是怎么运作的？我希望这个视频让你对一些「引擎盖下」的细节有所体会——这些模型是如何训练的，返回给你的又究竟是什么。</p>
+<p class="original-paragraph"><span class="line-no">L311</span>具体来说，我们现在知道了：你的查询被拿到之后，首先会被切成词元。所以我们来到分词器（tokenizer）。这里有一个用于用户查询的格式位置，我们基本上就把自己的查询填在那里。于是我们的查询进入了我们之前讨论过的对话协议格式，也就是我们用来维护对话对象的这种方式。它被插到那里去。然后这一整套东西，在底层就变成了一串词元序列，一维的词元序列。所以 ChatGPT 看到的是这串词元序列。然后当我们点下「go」时，它基本上就是不断往这个列表里追加词元，延续这个序列，它就像一个词元自动补全器。具体而言，它给出了这段回复。我们可以把它放在这里，就能看到它续写出来的词元，这些就是它大致续写出来的词元。</p>
+<p class="original-paragraph"><span class="line-no">L313</span>那么问题就来了：为什么模型回应的就是这些词元？这些词元是什么？它们从哪儿来？我们在和什么对话？我们又该如何给这个系统编程？于是我们转换了思路，去聊它的底层构成。这个过程的第一个阶段——一共有三个阶段——就是预训练（pre-training）阶段，它本质上就是把互联网上的知识获取并装进这个神经网络的参数里。于是神经网络把互联网上的大量知识内化了进去。但模型真正的「性格」，其实是在监督微调（SFT）这个过程中塑造出来的。这里发生的事情是，像 OpenAI 这样的公司，会精心整理一个大规模的对话数据集，比如 100 万段跨越各种主题的对话，它们都是人类与助手之间的对话。尽管这整个过程里用到了大量的合成数据生成、大量的 LLM 辅助等等，但归根结底，这是一项由大量人类参与的人工数据整理工作。具体来说，这些人是被 OpenAI 雇佣的数据标注员，他们会学习给定的标注指南，他们的任务是为任意提示词创作出理想的助手回复。所以他们是在用「示例」教神经网络如何回应提示词。</p>
+<p class="original-paragraph"><span class="line-no">L315</span>那么该怎么理解这里返回的东西呢？这到底是什么？我认为，正确的理解方式是：这是神经网络在模拟 OpenAI 的一名数据标注员。就好像我把这个查询交给 OpenAI 的一名数据标注员，这名标注员先读完 OpenAI 所有的标注指南，然后花两个小时为这个查询写下一份理想的助手回复，再交给我。当然，我们其实并没有真的这么做，对吧？因为我们并没有等两个小时。所以我们这里拿到的，是神经网络对那个过程的模拟。而且我们要记住，这些神经网络并不像人类大脑那样运作，它们是不同的。对它们来说容易或困难的事，和对人类来说容易或困难的事并不一样。所以我们拿到的确实只是一个模拟。我在这里展示的是一个词元流，而它本质上是一个神经网络，中间有一大堆激活值和神经元。这是一个固定的数学表达式，它把来自词元的输入和模型的参数混合在一起，混合之后输出序列里的下一个词元。但这是每一个词元都会发生的、有限量的计算。所以这是对人的一种有损模拟，它在这种意义上是被限制住的。所以不管人类写的是什么，语言模型基本上都是在词元这一层去模仿，对序列中的每一个词元只进行这种特定的计算。</p>
+<p class="original-paragraph"><span class="line-no">L317</span>我们还看到，正是因为这些以及认知上的差异，模型会在很多方面出问题，你使用它们时必须非常小心。比如我们看到，它们会出现幻觉。而且我们还会有一种「瑞士奶酪」式的能力模型，奶酪里是有洞的——有时候模型会莫名其妙地做出很蠢的事情。所以即便它们能做出很多神奇的东西，有时候它们就是不行。也许是你没给它们足够的词元去思考，也许它们会直接瞎编，因为它们的心算崩了。也许它们突然数不出字母的数量，也许它们没法告诉你 9.11 比 9.9 小，看起来挺蠢的。所以这是一种「瑞士奶酪式」的能力，我们必须对此保持谨慎。我们看到造成这些的原因。但归根结底，这就是我们对返回内容的理解方式——再说一次，它是神经网络对一名遵循 OpenAI 标注指南的人类数据标注员的模拟。这就是我们拿回来的东西。</p>
+<p class="original-paragraph"><span class="line-no">L319</span>不过我确实觉得，当你转而去用其中一个「思考模型」、比如 o3、mini-high 的时候，情况会有所变化。原因在于，GPT-4o 基本上不做强化学习。它确实做了 RLHF，但我告诉过你，RLHF 不是 RL。那里面没有时间留给什么魔法，把它看作是一点点微调就好。但这些思考模型确实用到了 RL。所以它们会经历第三个阶段，去完善自己的思考过程、发现新的思考策略和解决问题的办法，这些看起来有点像你脑子里那种内心独白。它们会在一大批练习题上练习这些东西，这些练习题是 OpenAI 这类公司制作、整理并提供给大模型的。所以当我来到这里、和一个思考模型对话、输入这个问题时，我们在这里看到的，已经不再仅仅是对一名人类数据标注员的简单模拟了。这其实是某种新的、独特的、有意思的东西。当然，OpenAI 不会把底层推理时真正的「引擎盖下的思考」和思维链展示给我们看。但我们知道存在这样的东西，而这只是它的一份总结。而我们在这里拿到的，其实并不只是对人类数据标注员的模仿，它其实是某种新的、有意思的、令人兴奋的东西——它是一种在模拟中涌现出来的「思维」的函数。它不只是模仿人类数据标注员，它来自这个强化学习的过程。当然，我们在这里没有给它大显身手的机会，因为这并不是一道数学或推理题，它大致只是某种创意写作题。至于在可验证领域里发展出来的思考策略，能否迁移、能否泛化到像创意写作这样不可验证的其他领域，我觉得这是一个开放问题。这种迁移到底在多大程度上会发生，在这个领域里还是未知的。所以我们还不确定，是不是只要我们在所有可验证的事情上做 RL，就能在像这个提示词那样不可验证的事情上看到收益。这是一个悬而未决的问题。</p>
+<p class="original-paragraph"><span class="line-no">L321</span>另一件有意思的事是，这里的强化学习还是太新、太原始、太稚嫩了。所以我们只是在推理问题上刚刚看到一点点伟大的苗头。我们看到的这个东西，原则上是有能力做出类似「第 37 手」那种举动的，只不过不是在围棋里，而是在开放领域的思考和问题求解中。原则上，这种范式有能力做出非常酷、非常新、非常令人兴奋的事情，甚至是任何人类都没想到过的事情。原则上，这些模型能做出任何人类都没有过的类比。所以我认为这些模型的存在极其令人兴奋，但再说一次，现在还非常早，目前这些还都是原始稚嫩的模型。它们主要会在那些可验证的领域里大放异彩，比如数学、代码等等。所以它非常值得去把玩、思考和使用。</p>
+<p class="original-paragraph"><span class="line-no">L323</span>然后就差不多到这里了。我想说，这些就是目前可用内容的大致轮廓。我还想说，总的来说，现在是在这个领域里极其令人兴奋的时代。就我个人而言，我每天都在用这些模型，一天用几十上百次，因为它们极大地加速了我的工作。我想很多人都有同感。我认为我们将看到这些模型带来海量的财富创造。同时也要警惕它们的一些短板。即便是 RL 模型，也会受其中一些问题困扰。把它当作工具箱里的一件工具来用。不要完全信任它，因为它们会随机做出蠢事，会随机产生幻觉，会随机跳过某些心算然后算错，会随机地数不清数之类的。所以把它们当工具箱里的工具来用，检查它们的工作，对你工作的成果负责；但也要把它们用于灵感、用于初稿、向它们提问，同时永远去检查和验证。如果你这样做，你就会在工作中取得很大的成功。</p>
+<p class="original-paragraph"><span class="line-no">L325</span>所以希望这个视频对你有用、也让你觉得有意思，希望你看得开心。它确实已经很长了，为此我表示抱歉，但我希望它确实有用。好吧，那我们就到这里，回见。</p>
+          </div>
+        </details>
+      </div>
+    </section>
+    
+
+    <section class="glossary-section">
+      <div class="wrap">
+        <div class="section-title">
+          <h2>概念索引</h2>
+          <p>复习时可以先扫这一页，把术语和直觉对上，再回到对应章节读原文。</p>
+        </div>
+        <dl class="glossary">
+          <dt>LLM</dt><dd>Large Language Model，大语言模型；以词元序列为输入和输出的神经网络模型。</dd>
+<dt>心智模型</dt><dd>帮助你预测系统行为的一组简化理解，比如“它在预测下一个词元”。</dd>
+<dt>锋利边缘</dt><dd>看起来很强但容易误用的边界条件，如幻觉、心算错误、过度自信。</dd>
+<dt>FineWeb</dt><dd>Hugging Face 构建的高质量网页文本数据集，视频中作为生产级数据处理的代表例子。</dd>
+<dt>Common Crawl</dt><dd>从 2007 年起抓取互联网网页的组织，很多训练语料的原始来源之一。</dd>
+<dt>URL 过滤</dt><dd>用黑名单等规则剔除恶意、垃圾、营销、成人等不想纳入的数据来源。</dd>
+<dt>文本抽取</dt><dd>从网页 HTML 中提取正文，丢掉导航、样式、脚本等非正文内容。</dd>
+<dt>PII 移除</dt><dd>移除个人身份信息，如地址、社会安全号码等。</dd>
+<dt>UTF-8</dt><dd>把文本编码成计算机可存储的比特序列的一种标准。</dd>
+<dt>字节</dt><dd>8 个比特组成的单位，共有 256 种可能取值。</dd>
+<dt>BPE</dt><dd>Byte Pair Encoding，字节对编码；不断合并常见相邻符号，得到更大的词表和更短的序列。</dd>
+<dt>token</dt><dd>词元；模型实际处理的最小符号单元，可以是字、词、空格加词、标点或更奇怪的片段。</dd>
+<dt>词表</dt><dd>模型允许出现的所有 token 集合。GPT-4 相关分词器约有 10 万个符号。</dd>
+<dt>上下文</dt><dd>当前喂给模型的一段 token 序列，长度有最大限制。</dd>
+<dt>标签</dt><dd>训练数据中真实出现的下一个 token。</dd>
+<dt>参数/权重</dt><dd>神经网络里可被训练调整的数字，可理解成大量旋钮。</dd>
+<dt>损失</dt><dd>衡量预测与真实 token 不一致程度的指标，训练目标是让它下降。</dd>
+<dt>推理</dt><dd>模型训练完后，用固定参数生成输出的过程。</dd>
+<dt>采样</dt><dd>根据概率分布随机选出下一个 token，因此同一输入可得到不同答案。</dd>
+<dt>GPT-2</dt><dd>OpenAI 2019 年发布的语言模型，视频中用来展示训练与推理的具体过程。</dd>
+<dt>GPU</dt><dd>图形处理器，擅长大规模并行矩阵运算。</dd>
+<dt>H100</dt><dd>NVIDIA 的高端数据中心 GPU，视频中用作训练算力例子。</dd>
+<dt>节点</dt><dd>一台含多块 GPU 的训练机器；多个节点可组成更大的训练集群。</dd>
+<dt>基座模型</dt><dd>只经过预训练、尚未被系统训练成对话助手的模型。</dd>
+<dt>有损压缩</dt><dd>参数保留了互联网文本的整体统计印象，但不是逐字可查的数据库。</dd>
+<dt>幻觉</dt><dd>模型在缺乏可靠知识时生成看似合理但不真实的内容。</dd>
+<dt>少样本提示</dt><dd>在提示词中给几个输入输出例子，让模型在上下文里学会模式。</dd>
+<dt>上下文学习</dt><dd>模型在当前上下文中识别模式并临时按模式续写的能力。</dd>
+<dt>后训练</dt><dd>基座模型之后的训练阶段，用来塑造助手行为、推理习惯和安全边界。</dd>
+<dt>SFT</dt><dd>Supervised Fine-Tuning，监督微调；用理想对话回复继续训练模型。</dd>
+<dt>标注指南</dt><dd>告诉人类标注员什么回答更 helpful、truthful、harmless 的规则文档。</dd>
+<dt>特殊词元</dt><dd>用于标记对话结构的 token，如 im_start、im_end、user、assistant。</dd>
+<dt>对话协议</dt><dd>把多轮对话编码成一维 token 序列的一套格式规则。</dd>
+<dt>工具调用</dt><dd>模型输出特殊 token 或请求，让外部搜索、代码解释器等工具补充信息或执行计算。</dd>
+<dt>上下文窗口</dt><dd>模型当前可直接访问的 token 范围，可视为工作记忆。</dd>
+<dt>系统消息</dt><dd>隐藏在对话最前面的指令，用来设定身份、规则和行为边界。</dd>
+<dt>思维链</dt><dd>把推理步骤展开成一串中间 token，让计算分布在多个生成步骤上。</dd>
+<dt>瑞士奶酪模型</dt><dd>模型能力有洞：整体强大，但存在随机、局部、反直觉的失败点。</dd>
+<dt>强化学习</dt><dd>通过试错和奖励信号改进行为的训练方式。</dd>
+<dt>可验证领域</dt><dd>答案能被明确检查的任务，如数学题、代码运行结果。</dd>
+<dt>奖励</dt><dd>告诉模型某个候选解法好或坏的信号。</dd>
+<dt>思考模型</dt><dd>经过更强推理训练、会在回答前生成较长推理过程的模型。</dd>
+<dt>第 37 手</dt><dd>AlphaGo 对李世石的著名一步，代表 RL 发现非人类常规策略的能力。</dd>
+<dt>不可验证领域</dt><dd>没有明确标准答案、需要人类主观判断质量的任务。</dd>
+<dt>RLHF</dt><dd>Reinforcement Learning from Human Feedback，基于人类反馈的强化学习。</dd>
+<dt>奖励模型</dt><dd>学习模仿人类偏好排序的独立模型，用来给候选回答打分。</dd>
+<dt>判别器-生成器差距</dt><dd>判断好坏通常比亲自生成高质量作品更容易。</dd>
+<dt>对抗样本</dt><dd>专门钻模型漏洞、让模型给出异常高分的输入或输出。</dd>
+<dt>多模态</dt><dd>模型同时处理文本、音频、图像等不同信息形式。</dd>
+<dt>智能体</dt><dd>能持续执行多步任务、汇报进展并与工具互动的模型系统。</dd>
+<dt>测试时训练</dt><dd>让模型在部署后的任务过程中更新自身能力的研究方向，区别于只扩展上下文。</dd>
+<dt>开放权重</dt><dd>模型参数可被下载、托管和再使用的发布方式。</dd>
+<dt>蒸馏模型</dt><dd>把大模型能力压缩到更小模型中的模型，便于本地运行。</dd>
+<dt>有损模拟</dt><dd>模型近似模仿人类写回复的过程，但受 token、参数和有限计算限制。</dd>
+<dt>固定数学函数</dt><dd>部署后的模型参数固定；每个 token 的输出由同一个网络前向计算得到。</dd>
+<dt>工具心态</dt><dd>把模型当作协作者和加速器，而不是无条件可信的权威。</dd>
+        </dl>
+      </div>
+    </section>
+
+    <section class="review-section">
+      <div class="wrap">
+        <div class="section-title">
+          <h2>复习路径</h2>
+          <p>第一次学习建议按顺序读；第二次可以按下面三个问题倒推整套机制。</p>
+        </div>
+        <div class="review-grid">
+          <div class="review-card"><strong>它从哪学来知识？</strong><p>回看预训练、数据清洗、分词、预测下一个 token 和基座模型。</p></div>
+          <div class="review-card"><strong>它为什么像助手？</strong><p>回看 SFT、对话协议、标注员示例和系统消息。</p></div>
+          <div class="review-card"><strong>它为什么会错？</strong><p>回看幻觉、有限 token 计算、工具调用、RLHF 和瑞士奶酪模型。</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const chapters = [{"id": "opening", "title": "开场：问题不是魔法，而是心智模型"}, {"id": "data", "title": "预训练第一步：把互联网变成高质量文本"}, {"id": "tokenization", "title": "分词：把文本压成有限符号序列"}, {"id": "training", "title": "训练与推理：预测下一个词元"}, {"id": "compute", "title": "规模：GPT-2、GPU 与训练成本"}, {"id": "base-model", "title": "基座模型：互联网文档模拟器"}, {"id": "sft", "title": "监督微调：用对话样本塑造助手"}, {"id": "psychology", "title": "LLM 心理学：幻觉、工具与认知缺口"}, {"id": "rl", "title": "强化学习：从模仿答案到练出思考"}, {"id": "rlhf", "title": "RLHF：把人类偏好变成奖励，也会被钻空子"}, {"id": "future", "title": "未来与使用入口：多模态、智能体、模型生态"}, {"id": "wrap", "title": "回到起点：按下回车后到底发生了什么"}];
+    const searchInput = document.getElementById('search');
+    const emptyState = document.getElementById('emptyState');
+    const chapterEls = Array.from(document.querySelectorAll('.chapter'));
+    const detailsEls = Array.from(document.querySelectorAll('details.original'));
+    const navLinks = Array.from(document.querySelectorAll('.nav-strip a'));
+    const progressBar = document.getElementById('progressBar');
+
+    function filterChapters() {
+      const query = searchInput.value.trim().toLowerCase();
+      let visible = 0;
+      chapterEls.forEach((chapter) => {
+        const hit = !query || chapter.textContent.toLowerCase().includes(query);
+        chapter.classList.toggle('hidden', !hit);
+        if (hit) visible += 1;
+      });
+      emptyState.classList.toggle('show', visible === 0);
+    }
+
+    function updateProgress() {
+      const doc = document.documentElement;
+      const max = doc.scrollHeight - window.innerHeight;
+      const pct = max > 0 ? (window.scrollY / max) * 100 : 0;
+      progressBar.style.width = pct + '%';
+    }
+
+    function updateActiveNav() {
+      let current = chapterEls[0]?.id;
+      for (const chapter of chapterEls) {
+        if (chapter.classList.contains('hidden')) continue;
+        const top = chapter.getBoundingClientRect().top;
+        if (top < 140) current = chapter.id;
+      }
+      navLinks.forEach((link) => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + current);
+      });
+    }
+
+    searchInput.addEventListener('input', () => {
+      filterChapters();
+      updateActiveNav();
+    });
+
+    document.getElementById('expandAll').addEventListener('click', () => {
+      detailsEls.forEach((details) => details.open = true);
+    });
+
+    document.getElementById('collapseAll').addEventListener('click', () => {
+      detailsEls.forEach((details) => details.open = false);
+    });
+
+    window.addEventListener('scroll', () => {
+      updateProgress();
+      updateActiveNav();
+    }, { passive: true });
+
+    filterChapters();
+    updateProgress();
+    updateActiveNav();
+  </script>
+</body>
+</html>
